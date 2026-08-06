@@ -1,0 +1,94 @@
+<meta charset="utf-8" />
+<title>math-net · network explorer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./styles.css" />
+
+<div class="app-shell" id="app">
+  <header class="topbar">
+    <div class="brand-lockup">
+      <span class="brand-mark">∴</span>
+      <div>
+        <div class="brand-name">math-net</div>
+        <div class="brand-subtitle">proofs · propositions · ramifications</div>
+      </div>
+    </div>
+    <div class="graph-badge" id="graph-badge">loading graph</div>
+  </header>
+
+  <main class="workspace">
+    <section class="control-rail" aria-label="Network controls">
+      <div class="rail-section intro-section">
+        <div class="eyebrow">Explore a proof landscape</div>
+        <h1>Fermat’s two-square theorem</h1>
+        <p>Follow a proposition from a concrete witness through alternative proof families, concepts, and generalizations.</p>
+      </div>
+
+      <div class="rail-section">
+        <label class="field-label" for="search">Find a node</label>
+        <div class="search-wrap">
+          <span class="search-icon">⌕</span>
+          <input id="search" type="search" placeholder="Search propositions, concepts…" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="rail-section">
+        <div class="field-label">Node kinds</div>
+        <div class="check-grid" id="kind-filters"></div>
+      </div>
+
+      <div class="rail-section">
+        <div class="field-label">Relationship lens</div>
+        <div class="relation-list" id="relation-filters"></div>
+      </div>
+
+      <div class="rail-section">
+        <label class="field-label" for="route-filter">Proof family</label>
+        <select id="route-filter">
+          <option value="all">All proof families</option>
+        </select>
+      </div>
+
+      <div class="rail-footer">
+        <button class="quiet-button" id="reset">Reset view</button>
+        <div class="data-source">source · <code>fermat.json</code></div>
+      </div>
+    </section>
+
+    <section class="network-panel" aria-label="Interactive network graph">
+      <div class="network-toolbar">
+        <div class="toolbar-copy">
+          <span class="eyebrow">Typed proposition graph</span>
+          <span class="toolbar-title" id="network-title">Fermat’s two-square theorem</span>
+        </div>
+        <div class="network-stats" aria-live="polite">
+          <span><strong id="visible-node-count">—</strong> nodes</span>
+          <span><strong id="visible-edge-count">—</strong> links</span>
+        </div>
+      </div>
+      <div class="graph-stage" id="graph-stage">
+        <svg id="network" role="img" aria-label="Interactive mathematical proposition network"></svg>
+        <div class="graph-hint">drag nodes · scroll to zoom · click to inspect</div>
+        <div class="loading-state" id="loading-state">Loading the network…</div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <aside class="inspector" aria-label="Selected node details">
+      <div class="inspector-header">
+        <div class="eyebrow">Selected node</div>
+        <button class="close-button" id="clear-selection" aria-label="Clear selection">×</button>
+      </div>
+      <div id="inspector-content" class="inspector-content">
+        <div class="empty-inspector">
+          <div class="empty-glyph">◎</div>
+          <p>Click a node to inspect its statement, proof route, and nearby ramifications.</p>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script type="module" src="./app.js"></script>

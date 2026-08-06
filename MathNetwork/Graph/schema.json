@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://math-net.local/schema/graph.json",
+  "title": "Math Network typed proposition/proof-family graph",
+  "description": "A small, explicit graph contract for mathematical statements and the families of proofs that establish them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "graphId", "nodes", "edges"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "graphId": { "$ref": "#/$defs/id" },
+    "label": { "type": "string", "minLength": 1 },
+    "nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" },
+      "uniqueItems": true
+    },
+    "edges": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/edge" },
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:[-_.][a-z0-9]+)*$"
+    },
+    "nonEmptyString": { "type": "string", "minLength": 1 },
+    "stringList": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonEmptyString" },
+      "uniqueItems": true
+    },
+    "formalization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["language", "name"],
+      "properties": {
+        "language": { "enum": ["Lean", "Coq", "Isabelle", "Agda", "informal"] },
+        "name": { "$ref": "#/$defs/nonEmptyString" },
+        "file": { "$ref": "#/$defs/nonEmptyString" },
+        "anchor": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "nodeRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "$ref": "#/$defs/nodeKind" }
+      }
+    },
+    "nodeKind": {
+      "enum": ["proposition", "proof-family", "concept", "source"]
+    },
+    "node": {
+      "oneOf": [
+        { "$ref": "#/$defs/proposition" },
+        { "$ref": "#/$defs/proofFamily" },
+        { "$ref": "#/$defs/concept" },
+        { "$ref": "#/$defs/source" }
+      ]
+    },
+    "commonNode": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "kind", "label"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "kind": { "$ref": "#/$defs/nodeKind" },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "description": { "type": "string" },
+        "tags": { "$ref": "#/$defs/stringList" }
+      }
+    },
+    "proposition": {
+      "allOf": [
+        { "$ref": "#/$defs/commonNode" },
+        {
+          "type": "object",
+          "required": ["kind", "statement"],
+          "properties": {
+            "kind": { "const": "proposition" },
+            "statement": { "$ref": "#/$defs/nonEmptyString" },
+            "role": { "enum": ["definition", "theorem", "lemma", "corollary", "conjecture", "example"] },
+            "formalizations": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/formalization" },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "proofFamily": {
+      "allOf": [
+        { "$ref": "#/$defs/commonNode" },
+        {
+          "type": "object",
+          "required": ["kind", "method", "proves"],
+          "properties": {
+            "kind": { "const": "proof-family" },
+            "method": { "$ref": "#/$defs/nonEmptyString" },
+            "proves": { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 1, "uniqueItems": true },
+            "assumptions": { "$ref": "#/$defs/stringList" },
+            "formalizations": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/formalization" },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "concept": {
+      "allOf": [
+        { "$ref": "#/$defs/commonNode" },
+        { "type": "object", "required": ["kind"], "properties": { "kind": { "const": "concept" } } }
+      ]
+    },
+    "source": {
+      "allOf": [
+        { "$ref": "#/$defs/commonNode" },
+        {
+          "type": "object",
+          "required": ["kind", "locator"],
+          "properties": {
+            "kind": { "const": "source" },
+            "locator": { "format": "uri-reference", "type": "string", "minLength": 1 },
+            "citation": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "edgeBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "relation", "source", "target"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "relation": { "$ref": "#/$defs/relation" },
+        "source": { "$ref": "#/$defs/nodeRef" },
+        "target": { "$ref": "#/$defs/nodeRef" },
+        "description": { "type": "string" },
+        "symmetric": { "type": "boolean", "default": false },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "relation": {
+      "enum": ["uses", "proves", "equivalent", "specializes", "generalizes", "reinterprets", "motivates"]
+    },
+    "edge": {
+      "oneOf": [
+        { "$ref": "#/$defs/usesEdge" },
+        { "$ref": "#/$defs/provesEdge" },
+        { "$ref": "#/$defs/equivalentEdge" },
+        { "$ref": "#/$defs/specializesEdge" },
+        { "$ref": "#/$defs/generalizesEdge" },
+        { "$ref": "#/$defs/reinterpretsEdge" },
+        { "$ref": "#/$defs/motivatesEdge" }
+      ]
+    },
+    "usesEdge": {
+      "allOf": [
+        { "$ref": "#/$defs/edgeBase" },
+        { "properties": { "relation": { "const": "uses" }, "source": { "properties": { "kind": { "const": "proof-family" } } }, "target": { "properties": { "kind": { "enum": ["proposition", "concept", "source", "proof-family"] } } } } }
+      ]
+    },
+    "provesEdge": {
+      "allOf": [
+        { "$ref": "#/$defs/edgeBase" },
+        { "properties": { "relation": { "const": "proves" }, "source": { "properties": { "kind": { "const": "proof-family" } } }, "target": { "properties": { "kind": { "const": "proposition" } } } } }
+      ]
+    },
+    "equivalentEdge": {
+      "allOf": [
+        { "$ref": "#/$defs/edgeBase" },
+        { "properties": { "relation": { "const": "equivalent" }, "source": { "properties": { "kind": { "const": "proposition" } } }, "target": { "properties": { "kind": { "const": "proposition" } } }, "symmetric": { "const": true } } }
+      ]
+    },
+    "specializesEdge": {
+      "allOf": [
+        { "$ref": "#/$defs/edgeBase" },
+        { "properties": { "relation": { "const": "specializes" }, "source": { "properties": { "kind": { "const": "proposition" } } }, "target": { "properties": { "kind": { "const": "proposition" } } } } }
+      ]
+    },
+    "generalizesEdge": {
+      "allOf": [
+        { "$ref": "#/$defs/edgeBase" },
+        { "properties": { "relation": { "const": "generalizes" }, "source": { "properties": { "kind": { "const": "proposition" } } }, "target": { "properties": { "kind": { "const": "proposition" } } } } }
+      ]
+    },
+    "reinterpretsEdge": {
+      "allOf": [
+        { "$ref": "#/$defs/edgeBase" },
+        { "properties": { "relation": { "const": "reinterprets" }, "source": { "properties": { "kind": { "const": "proposition" } } }, "target": { "properties": { "kind": { "const": "proposition" } } } } }
+      ]
+    },
+    "motivatesEdge": {
+      "allOf": [
+        { "$ref": "#/$defs/edgeBase" },
+        { "properties": { "relation": { "const": "motivates" }, "source": { "properties": { "kind": { "enum": ["proposition", "concept", "source"] } } }, "target": { "properties": { "kind": { "enum": ["proposition", "proof-family"] } } } } }
+      ]
+    }
+  }
+}

@@ -1,0 +1,248 @@
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+const DATA_URL = "../MathNetwork/Graph/fermat.json";
+const KIND_LABELS = {
+  proposition: "Propositions",
+  "proof-family": "Proof families",
+  concept: "Concepts",
+  source: "Sources",
+};
+const RELATION_LABELS = {
+  uses: "uses",
+  proves: "proves",
+  equivalent: "equivalent",
+  specializes: "specializes",
+  generalizes: "generalizes",
+  reinterprets: "reinterprets",
+  motivates: "motivates",
+};
+const KIND_COLORS = {
+  proposition: "#366b80",
+  "proof-family": "#a66a2a",
+  concept: "#4c7d74",
+  source: "#795a76",
+};
+
+const state = {
+  graph: null,
+  selectedId: null,
+  search: "",
+  kinds: new Set(Object.keys(KIND_LABELS)),
+  relations: new Set(Object.keys(RELATION_LABELS)),
+  route: "all",
+  simulation: null,
+};
+
+const $ = (selector) => document.querySelector(selector);
+const svg = d3.select("#network");
+const stage = $("#graph-stage");
+
+function nodeMap() {
+  return new Map(state.graph.nodes.map((node) => [node.id, node]));
+}
+
+function isSearchMatch(node) {
+  if (!state.search) return true;
+  const haystack = [node.label, node.description, node.statement, node.method, ...(node.tags || [])]
+    .filter(Boolean).join(" ").toLowerCase();
+  return haystack.includes(state.search.toLowerCase());
+}
+
+function routeMatch(node, edges) {
+  if (state.route === "all") return true;
+  if (node.id === state.route) return true;
+  return edges.some((edge) => edge.source.id === state.route && edge.target.id === node.id);
+}
+
+function visibleGraph() {
+  const nodesById = nodeMap();
+  const edgeData = state.graph.edges
+    .filter((edge) => state.relations.has(edge.relation))
+    .map((edge) => ({ ...edge, source: nodesById.get(edge.source.id), target: nodesById.get(edge.target.id) }))
+    .filter((edge) => edge.source && edge.target);
+  const visibleNodes = state.graph.nodes.filter((node) => {
+    if (!state.kinds.has(node.kind) || !isSearchMatch(node)) return false;
+    if (node.kind === "proof-family" && state.route !== "all" && node.id !== state.route) return false;
+    return true;
+  });
+  const allowed = new Set(visibleNodes.map((node) => node.id));
+  const visibleEdges = edgeData.filter((edge) => allowed.has(edge.source.id) && allowed.has(edge.target.id));
+  if (state.route !== "all") {
+    const routeNode = nodesById.get(state.route);
+    const adjacent = new Set([state.route]);
+    visibleEdges.forEach((edge) => {
+      if (edge.source.id === state.route) adjacent.add(edge.target.id);
+      if (edge.target.id === state.route) adjacent.add(edge.source.id);
+    });
+    return { nodes: visibleNodes.filter((node) => adjacent.has(node.id) || node.id === routeNode?.id), edges: visibleEdges.filter((edge) => adjacent.has(edge.source.id) && adjacent.has(edge.target.id)) };
+  }
+  return { nodes: visibleNodes, edges: visibleEdges };
+}
+
+function relationControls() {
+  const container = $("#relation-filters");
+  Object.entries(RELATION_LABELS).forEach(([key, label]) => {
+    const wrapper = document.createElement("label");
+    wrapper.className = "relation-option";
+    wrapper.innerHTML = `<input type="checkbox" data-relation="${key}" checked><span class="relation-swatch ${key}"></span><span>${label}</span>`;
+    wrapper.querySelector("input").addEventListener("change", (event) => {
+      event.target.checked ? state.relations.add(key) : state.relations.delete(key);
+      draw();
+    });
+    container.append(wrapper);
+  });
+}
+
+function kindControls() {
+  const container = $("#kind-filters");
+  Object.entries(KIND_LABELS).forEach(([key, label]) => {
+    const wrapper = document.createElement("label");
+    wrapper.className = "filter-option";
+    wrapper.innerHTML = `<input type="checkbox" data-kind="${key}" checked><span class="filter-dot ${key}"></span><span>${label}</span>`;
+    wrapper.querySelector("input").addEventListener("change", (event) => {
+      event.target.checked ? state.kinds.add(key) : state.kinds.delete(key);
+      draw();
+    });
+    container.append(wrapper);
+  });
+}
+
+function routeControls() {
+  const select = $("#route-filter");
+  state.graph.nodes.filter((node) => node.kind === "proof-family").forEach((node) => {
+    const option = document.createElement("option");
+    option.value = node.id;
+    option.textContent = node.label;
+    select.append(option);
+  });
+  select.addEventListener("change", (event) => { state.route = event.target.value; draw(); });
+}
+
+function legend() {
+  const container = $("#legend");
+  Object.entries(KIND_LABELS).forEach(([key, label]) => {
+    const item = document.createElement("span");
+    item.className = "legend-item";
+    item.innerHTML = `<span class="legend-dot ${key}"></span>${label}`;
+    container.append(item);
+  });
+}
+
+function labelFor(node) {
+  return node.label.length > 29 ? `${node.label.slice(0, 27)}…` : node.label;
+}
+
+function nodeNeighbors(nodeId) {
+  const map = nodeMap();
+  return state.graph.edges.flatMap((edge) => {
+    if (edge.source.id === nodeId) return [{ relation: edge.relation, node: map.get(edge.target.id), direction: "out" }];
+    if (edge.target.id === nodeId) return [{ relation: edge.relation, node: map.get(edge.source.id), direction: "in" }];
+    return [];
+  }).filter((item) => item.node);
+}
+
+function selectNode(nodeId) {
+  state.selectedId = nodeId;
+  renderInspector();
+  updateHighlight();
+}
+
+function renderInspector() {
+  const content = $("#inspector-content");
+  const node = nodeMap().get(state.selectedId);
+  if (!node) {
+    content.innerHTML = `<div class="empty-inspector"><div class="empty-glyph">◎</div><p>Click a node to inspect its statement, proof route, and nearby ramifications.</p></div>`;
+    return;
+  }
+  const neighbors = nodeNeighbors(node.id);
+  const formalizations = (node.formalizations || []).map((item) => {
+    const file = item.file ? `<br><span>${item.file}${item.anchor ? ` · ${item.anchor}` : ""}</span>` : "";
+    return `<div class="formalization">${item.language} · ${item.name}${file}</div>`;
+  }).join("");
+  const tags = (node.tags || []).map((tag) => `<span class="tag">${tag}</span>`).join("");
+  const routes = node.assumptions ? node.assumptions.map((item) => `<span class="tag">${item}</span>`).join("") : "";
+  const neighborRows = neighbors.map(({ relation, node: neighbor, direction }) => `<div class="relation-row"><span class="relation-name">${direction === "out" ? "→" : "←"} ${relation}</span><button class="neighbor" data-neighbor="${neighbor.id}">${neighbor.label}</button></div>`).join("");
+  content.innerHTML = `
+    <span class="node-kind ${node.kind}">${KIND_LABELS[node.kind]}</span>
+    <h2>${node.label}</h2>
+    ${node.statement || node.description || node.method ? `<p class="statement">${node.statement || node.description || node.method}</p>` : ""}
+    ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${node.method}</p></div>` : ""}
+    ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
+    ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
+    ${formalizations ? `<div class="detail-block"><div class="detail-label">Formalization</div>${formalizations}</div>` : ""}
+    ${neighborRows ? `<div class="detail-block"><div class="detail-label">Nearby ramifications · ${neighbors.length}</div><div class="neighbor-list">${neighborRows}</div></div>` : ""}
+  `;
+  content.querySelectorAll("[data-neighbor]").forEach((button) => button.addEventListener("click", () => selectNode(button.dataset.neighbor)));
+}
+
+function updateHighlight() {
+  const neighborhood = new Set(state.selectedId ? [state.selectedId, ...nodeNeighbors(state.selectedId).map((item) => item.node.id)] : []);
+  svg.selectAll(".node-dot").classed("selected", (node) => node.id === state.selectedId).classed("dimmed", (node) => state.selectedId && !neighborhood.has(node.id));
+  svg.selectAll(".node-label").classed("dimmed", (node) => state.selectedId && !neighborhood.has(node.id));
+  svg.selectAll(".graph-link").classed("dimmed", (edge) => state.selectedId && edge.source.id !== state.selectedId && edge.target.id !== state.selectedId);
+}
+
+function draw() {
+  if (!state.graph) return;
+  const { nodes, edges } = visibleGraph();
+  $("#visible-node-count").textContent = nodes.length;
+  $("#visible-edge-count").textContent = edges.length;
+  svg.selectAll("*").remove();
+  const width = stage.clientWidth;
+  const height = stage.clientHeight;
+  svg.attr("viewBox", `0 0 ${width} ${height}`);
+  const defs = svg.append("defs");
+  Object.entries(RELATION_LABELS).forEach(([key]) => {
+    defs.append("marker").attr("id", `arrow-${key}`).attr("viewBox", "0 -4 8 8").attr("refX", 20).attr("refY", 0).attr("markerWidth", 5).attr("markerHeight", 5).attr("orient", "auto").append("path").attr("d", "M0,-4L8,0L0,4").attr("fill", "currentColor");
+  });
+  const root = svg.append("g");
+  svg.call(d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => root.attr("transform", event.transform)));
+  const link = root.append("g").attr("aria-hidden", "true").selectAll("line").data(edges, (edge) => edge.id).join("line").attr("class", (edge) => `graph-link ${edge.relation}`).attr("marker-end", (edge) => `url(#arrow-${edge.relation})`);
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
+  node.append("circle").attr("class", "node-dot").attr("r", (item) => item.kind === "proof-family" ? 10 : item.kind === "proposition" ? 8 : 6).attr("fill", (item) => KIND_COLORS[item.kind]);
+  node.append("text").attr("class", "node-label").attr("x", 13).attr("y", 4).text((item) => labelFor(item)).classed("hidden", (item) => item.label.length > 31 && nodes.length > 12);
+  state.simulation?.stop();
+  state.simulation = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id((item) => item.id).distance(115).strength(0.55)).force("charge", d3.forceManyBody().strength(-430)).force("center", d3.forceCenter(width / 2, height / 2)).force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 30 : 25)).on("tick", () => {
+    link.attr("x1", (edge) => edge.source.x).attr("y1", (edge) => edge.source.y).attr("x2", (edge) => edge.target.x).attr("y2", (edge) => edge.target.y);
+    node.attr("transform", (item) => `translate(${item.x},${item.y})`);
+  });
+  updateHighlight();
+}
+
+async function load() {
+  try {
+    const response = await fetch(DATA_URL);
+    if (!response.ok) throw new Error(`Could not load ${DATA_URL}`);
+    state.graph = await response.json();
+    $("#graph-badge").textContent = `${state.graph.nodes.length} nodes · ${state.graph.edges.length} links`;
+    $("#network-title").textContent = state.graph.label;
+    $("#loading-state").remove();
+    kindControls();
+    relationControls();
+    routeControls();
+    legend();
+    draw();
+  } catch (error) {
+    const loading = $("#loading-state");
+    loading.classList.add("error");
+    loading.textContent = "The graph could not load. Serve the repository root, then open /web/.";
+    console.error(error);
+  }
+}
+
+$("#search").addEventListener("input", (event) => { state.search = event.target.value.trim(); draw(); });
+$("#reset").addEventListener("click", () => {
+  state.selectedId = null;
+  state.search = "";
+  state.route = "all";
+  $("#search").value = "";
+  $("#route-filter").value = "all";
+  document.querySelectorAll("input[type=checkbox]").forEach((input) => { input.checked = true; });
+  state.kinds = new Set(Object.keys(KIND_LABELS));
+  state.relations = new Set(Object.keys(RELATION_LABELS));
+  renderInspector();
+  draw();
+});
+$("#clear-selection").addEventListener("click", () => { state.selectedId = null; renderInspector(); updateHighlight(); });
+window.addEventListener("resize", () => draw());
+load();

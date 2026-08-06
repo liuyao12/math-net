@@ -1,0 +1,145 @@
+{
+  "$schema": "./schema.json",
+  "schemaVersion": "1.0",
+  "graphId": "fermat-two-squares",
+  "label": "Fermat's two-square theorem: propositions and proof families",
+  "nodes": [
+    {
+      "id": "fermat-two-squares",
+      "kind": "proposition",
+      "label": "Fermat's two-square theorem",
+      "role": "theorem",
+      "statement": "For every prime p with p ≡ 1 (mod 4), there exist natural numbers a and b such that a² + b² = p.",
+      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.fermatPrimeTwoSquares", "file": "MathNetwork/Fermat/Registry.lean" }],
+      "tags": ["number-theory", "sum-of-two-squares"]
+    },
+    {
+      "id": "fermat-two-squares-involution",
+      "kind": "proposition",
+      "label": "Fermat theorem via involutions",
+      "role": "theorem",
+      "statement": "The Fermat two-square theorem follows from parity of fixed points of two involutions on a finite set.",
+      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.fermat_two_squares_involution", "file": "MathNetwork/Fermat/Zagier.lean" }]
+    },
+    {
+      "id": "prime-two-squares",
+      "kind": "proposition",
+      "label": "Prime sum-of-two-squares criterion",
+      "role": "theorem",
+      "statement": "A prime p is a sum of two squares when p = 2 or p ≡ 1 (mod 4)."
+    },
+    {
+      "id": "witness-29",
+      "kind": "proposition",
+      "label": "The 29 witness",
+      "role": "example",
+      "statement": "5² + 2² = 29.",
+      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.witness29", "file": "MathNetwork/Fermat/Registry.lean" }]
+    },
+    {
+      "id": "involution-parity",
+      "kind": "concept",
+      "label": "Parity of fixed points of involutions",
+      "description": "Two involutions on the same finite set have fixed-point counts congruent modulo two."
+    },
+    {
+      "id": "gaussian-integers",
+      "kind": "concept",
+      "label": "Gaussian integers",
+      "description": "Representing a + bi as an integer pair with multiplicative norm."
+    },
+    {
+      "id": "zagier-two-squares",
+      "kind": "source",
+      "label": "Zagier two-square development",
+      "locator": "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Archive/ZagierTwoSquares.lean",
+      "citation": "Mathlib Archive.ZagierTwoSquares"
+    },
+    {
+      "id": "involution-fixed-point-family",
+      "kind": "proof-family",
+      "label": "Involution/fixed-point parity",
+      "method": "Build a finite set with two involutions, compare fixed-point parity, and extract a two-square witness.",
+      "proves": ["fermat-two-squares-involution"],
+      "assumptions": ["p is prime", "p ≡ 1 (mod 4)"],
+      "tags": ["finite-combinatorics", "involution"]
+    },
+    {
+      "id": "gaussian-euclidean-family",
+      "kind": "proof-family",
+      "label": "Gaussian integer Euclidean descent",
+      "method": "Use unique factorization or Euclidean descent in ℤ[i] to force a representation by the norm form.",
+      "proves": ["prime-two-squares"],
+      "assumptions": ["work in the Gaussian integers"],
+      "tags": ["algebraic-number-theory", "norm"]
+    }
+  ],
+  "edges": [
+    {
+      "id": "involution-proves-fermat-route",
+      "relation": "proves",
+      "source": { "id": "involution-fixed-point-family", "kind": "proof-family" },
+      "target": { "id": "fermat-two-squares-involution", "kind": "proposition" },
+      "description": "The family certifies the involution-form proposition."
+    },
+    {
+      "id": "involution-uses-parity",
+      "relation": "uses",
+      "source": { "id": "involution-fixed-point-family", "kind": "proof-family" },
+      "target": { "id": "involution-parity", "kind": "concept" }
+    },
+    {
+      "id": "involution-uses-zagier-source",
+      "relation": "uses",
+      "source": { "id": "involution-fixed-point-family", "kind": "proof-family" },
+      "target": { "id": "zagier-two-squares", "kind": "source" }
+    },
+    {
+      "id": "gaussian-uses-gaussian-integers",
+      "relation": "uses",
+      "source": { "id": "gaussian-euclidean-family", "kind": "proof-family" },
+      "target": { "id": "gaussian-integers", "kind": "concept" }
+    },
+    {
+      "id": "fermat-route-equivalent-general",
+      "relation": "equivalent",
+      "source": { "id": "fermat-two-squares-involution", "kind": "proposition" },
+      "target": { "id": "fermat-two-squares", "kind": "proposition" },
+      "symmetric": true,
+      "description": "Same theorem, with the proof route made explicit."
+    },
+    {
+      "id": "witness-specializes-fermat",
+      "relation": "specializes",
+      "source": { "id": "witness-29", "kind": "proposition" },
+      "target": { "id": "fermat-two-squares", "kind": "proposition" },
+      "description": "The example instantiates the theorem at p = 29."
+    },
+    {
+      "id": "fermat-generalizes-witness",
+      "relation": "generalizes",
+      "source": { "id": "fermat-two-squares", "kind": "proposition" },
+      "target": { "id": "witness-29", "kind": "proposition" }
+    },
+    {
+      "id": "gaussian-reinterprets-fermat",
+      "relation": "reinterprets",
+      "source": { "id": "prime-two-squares", "kind": "proposition" },
+      "target": { "id": "fermat-two-squares", "kind": "proposition" },
+      "description": "The criterion presents the theorem through the norm form and includes the exceptional prime 2."
+    },
+    {
+      "id": "parity-motivates-involution-family",
+      "relation": "motivates",
+      "source": { "id": "involution-parity", "kind": "concept" },
+      "target": { "id": "involution-fixed-point-family", "kind": "proof-family" }
+    },
+    {
+      "id": "witness-motivates-gaussian-family",
+      "relation": "motivates",
+      "source": { "id": "witness-29", "kind": "proposition" },
+      "target": { "id": "gaussian-euclidean-family", "kind": "proof-family" },
+      "description": "The concrete norm witness motivates the general norm-based proof family."
+    }
+  ]
+}
