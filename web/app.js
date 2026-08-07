@@ -1,11 +1,12 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
 const requestedGraph = new URLSearchParams(window.location.search).get("graph");
+const REPO_ROOT = window.location.pathname.includes("/web/") ? "../" : "./";
 const DATA_URLS = requestedGraph === "euler"
-  ? ["../MathNetwork/Graph/euler.json"]
+  ? [`${REPO_ROOT}MathNetwork/Graph/euler.json`]
   : requestedGraph === "fermat"
-    ? ["../MathNetwork/Graph/fermat.json"]
-    : ["../MathNetwork/Graph/project.json"];
+    ? [`${REPO_ROOT}MathNetwork/Graph/fermat.json`]
+    : [`${REPO_ROOT}MathNetwork/Graph/project.json`];
 const KIND_LABELS = {
   proposition: "Propositions",
   "proof-family": "Proof families",
@@ -91,7 +92,7 @@ async function loadProofSource(node, container, request) {
     container.classList.remove("pending");
     return;
   }
-  const path = file.startsWith("MathNetwork/") ? `../${file}` : `../${file}`;
+  const path = `${REPO_ROOT}${file}`;
   try {
     const response = await fetch(path);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
