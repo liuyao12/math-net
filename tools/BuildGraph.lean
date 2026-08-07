@@ -7,8 +7,9 @@ import MathNetwork.Euler.Applications
 
 This intentionally works from the elaborated Lean environment. User-facing
 project theorems become proposition nodes, definitions become concept nodes,
-and their direct constants defined in mathlib become imported source nodes.
-Every edge is therefore a strict
+and constants defined in mathlib become imported source nodes. The imported
+closure is expanded to a bounded depth so a selected theorem has multiple
+visible layers of dependencies. Every edge is therefore a strict
 `used-in-proof` edge; this is a declaration graph, not a hand-curated theorem
 relationship graph.
 -/
@@ -47,6 +48,8 @@ private def moduleOf (env : Environment) (name : Name) : String :=
 private def isMathlibDependency (env : Environment) (name : Name) : Bool :=
   (moduleOf env name).startsWith "Mathlib."
 
+private def maxDependencyDepth : Nat := 3
+
 private def directConstants (ci : ConstantInfo) : Array Name :=
   ci.getUsedConstantsAsSet.toArray.qsort Name.lt
 
@@ -61,15 +64,32 @@ private def projectNames (env : Environment) : Array Name :=
   env.constants.fold (init := #[]) fun names name _ =>
     if isProject name && !isInternal name then names.push name else names
 
+private def dependencyDepths (env : Environment) (targets : Array Name) : Array (Name × Nat) :=
+  let rec visit (fuel : Nat) (frontier : Array (Name × Nat)) (seen : NameSet) (out : Array (Name × Nat)) : Array (Name × Nat) :=
+    match fuel with
+    | 0 => out
+    | fuel + 1 =>
+      match frontier.toList with
+      | [] => out
+      | (name, depth) :: rest =>
+        if seen.contains name then visit fuel rest.toArray seen out
+        else
+          let seen := seen.insert name
+          let out := if isMathlibDependency env name && !isInternal name then out.push (name, depth) else out
+          if depth >= maxDependencyDepth then visit fuel rest.toArray seen out
+          else
+            match env.find? name with
+            | some ci =>
+              let next := (directConstants ci).foldl (init := rest.toArray) fun next dependency =>
+                if isMathlibDependency env dependency && !isInternal dependency then
+                  next.push (dependency, depth + 1)
+                else next
+              visit fuel next seen out
+            | none => visit fuel rest.toArray seen out
+  visit 100000 (targets.map (fun name => (name, 0))) {} #[]
+
 private def dependencyNames (env : Environment) (targets : Array Name) : Array Name :=
-  (targets.foldl (init := ({} : NameSet)) fun names target =>
-    match env.find? target with
-    | some ci =>
-      (directConstants ci).foldl (init := names) fun names dependency =>
-        if isMathlibDependency env dependency && !isInternal dependency then
-          names.insert dependency
-        else names
-    | none => names).toArray.qsort Name.lt
+  (dependencyDepths env targets).map (·.1) |>.qsort Name.lt
 
 private def projectNode (env : Environment) (ci : ConstantInfo) (name : Name) (index : Nat) : Json :=
   let (kind, role) := declarationKind ci
@@ -93,7 +113,7 @@ private def projectNode (env : Environment) (ci : ConstantInfo) (name : Name) (i
     ])
   ]
 
-private def dependencyNode (name : Name) (index : Nat) (module : String) : Json :=
+private def dependencyNode (name : Name) (index : Nat) (module : String) (depth : Nat) : Json :=
   Json.mkObj [
     ("id", s!"const-{index}"),
     ("kind", "source"),
@@ -101,6 +121,7 @@ private def dependencyNode (name : Name) (index : Nat) (module : String) : Json 
     ("namespace", name.toString),
     ("locator", s!"mathlib/{module}"),
     ("citation", name.toString),
+    ("dependencyDepth", toJson depth),
     ("verification", Json.mkObj [
       ("state", "imported-checked"),
       ("scope", "imported"),
@@ -109,35 +130,28 @@ private def dependencyNode (name : Name) (index : Nat) (module : String) : Json 
   ]
 
 private def dependencyEdges (env : Environment) (targets dependencies : Array Name) : Array Json :=
-  targets.foldl (init := #[]) fun edges target =>
+  let included := targets ++ dependencies
+  let idFor (name : Name) : String × String :=
+    if targets.contains name then
+      let index := indexOf name targets
+      match env.find? name with
+      | some ci => (s!"decl-{index}", (declarationKind ci).1)
+      | none => (s!"decl-{index}", "proposition")
+    else
+      (s!"const-{indexOf name dependencies}", "source")
+  included.foldl (init := #[]) fun edges target =>
     match env.find? target with
     | some ci =>
-      let (targetKind, _) := declarationKind ci
-      if targetKind != "proposition" then edges else
       (directConstants ci).foldl (init := edges) fun edges dependency =>
-        if dependencies.contains dependency then
-          let targetIndex := indexOf target targets
-          let dependencyIndex := indexOf dependency dependencies
+        if included.contains dependency && dependency != target then
+          let (targetId, targetKind) := idFor target
+          let (sourceId, sourceKind) := idFor dependency
           edges.push <| Json.mkObj [
-            ("id", s!"use-{targetIndex}-{dependencyIndex}"),
+            ("id", s!"use-{sourceId}-{targetId}"),
             ("relation", "used-in-proof"),
-            ("proof", s!"decl-{targetIndex}"),
-            ("source", Json.mkObj [("id", s!"const-{dependencyIndex}"), ("kind", "source")]),
-            ("target", Json.mkObj [("id", s!"decl-{targetIndex}"), ("kind", "proposition")]),
-            ("description", s!"{dependency} is a direct Lean dependency of {target}.")
-          ]
-        else if targets.contains dependency then
-          let targetIndex := indexOf target targets
-          let dependencyIndex := indexOf dependency targets
-          let sourceKind := match env.find? dependency with
-            | some sourceInfo => (declarationKind sourceInfo).1
-            | none => "proposition"
-          edges.push <| Json.mkObj [
-            ("id", s!"local-use-{targetIndex}-{dependencyIndex}"),
-            ("relation", "used-in-proof"),
-            ("proof", s!"decl-{targetIndex}"),
-            ("source", Json.mkObj [("id", s!"decl-{dependencyIndex}"), ("kind", sourceKind)]),
-            ("target", Json.mkObj [("id", s!"decl-{targetIndex}"), ("kind", "proposition")]),
+            ("proof", if targetKind == "proposition" then targetId else ""),
+            ("source", Json.mkObj [("id", sourceId), ("kind", sourceKind)]),
+            ("target", Json.mkObj [("id", targetId), ("kind", targetKind)]),
             ("description", s!"{dependency} is a direct Lean dependency of {target}.")
           ]
         else edges
@@ -149,14 +163,16 @@ elab_rules : command
   | `(build_project_graph) => do
     let env ← getEnv
     let targets := projectNames env
-    let dependencies := dependencyNames env targets
+    let depths := dependencyDepths env targets
+    let dependencies := depths.map (·.1) |>.qsort Name.lt
     let nodes := targets.mapIdx (fun i name =>
       match env.find? name with
       | some ci => projectNode env ci name i
       | none => Json.mkObj [("id", s!"decl-{i}"), ("kind", "proposition"),
           ("role", "theorem"), ("label", shortName name),
           ("statement", s!"Lean declaration {name}")]) ++
-      dependencies.mapIdx (fun i name => dependencyNode name i (moduleOf env name))
+      dependencies.mapIdx (fun i name => dependencyNode name i (moduleOf env name)
+        (depths.find? (·.1 == name) |>.map (·.2) |>.getD 1))
     let edges := dependencyEdges env targets dependencies
     let report := Json.mkObj [
       ("schemaVersion", "1.0"),

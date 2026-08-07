@@ -40,11 +40,12 @@ sorted by declaration name for reproducibility.
 
 `tools/BuildGraph.lean` uses the same elaborated environment to emit
 `MathNetwork/Graph/project.json`. It includes every non-internal
-`MathNetwork.*` declaration loaded by the project and every direct dependency
-defined in a `Mathlib.*` module. Theorems are proposition nodes, definitions
-are concept nodes, and imported mathlib declarations are source nodes. The
-only generated edge is `used-in-proof`, from a declaration used by a theorem
-to the theorem that contains it.
+`MathNetwork.*` declaration loaded by the project and a bounded three-level
+dependency closure of declarations defined in `Mathlib.*` modules. Theorems
+are proposition nodes, definitions are concept nodes, and imported mathlib
+declarations are source nodes. The only generated edge is `used-in-proof`,
+from a declaration used by another included declaration to the declaration
+that contains it.
 
 `tools/MergeGraph.py` then merges proposition nodes only when their elaborated
 statements and Lean modules are identical. Concept/definition nodes remain one
