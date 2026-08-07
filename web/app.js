@@ -457,13 +457,12 @@ function dependencyRanks(nodes, edges) {
   return ranks;
 }
 
-function curvedLinkPath(edge) {
+function straightLinkPath(edge) {
   const x1 = edge.source.x;
   const y1 = edge.source.y;
   const x2 = edge.target.x;
   const y2 = edge.target.y;
-  const bend = Math.max(28, Math.min(120, Math.abs(x2 - x1) * 0.32));
-  return `M${x1},${y1} C${x1 + bend},${y1 + (y2 - y1) * 0.35} ${x2 - bend},${y2 - (y2 - y1) * 0.35} ${x2},${y2}`;
+  return `M${x1},${y1} L${x2},${y2}`;
 }
 
 function draw() {
@@ -497,7 +496,7 @@ function draw() {
   node.append("text").attr("class", "node-label").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => item.label.length > 31 && nodes.length > 12);
   state.simulation?.stop();
   state.simulation = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id((item) => item.id).distance(105).strength(0.3)).force("y", d3.forceY((item) => (ranks.get(item.id) || 0) * layerGap + 45).strength(0.9)).force("x", d3.forceX(width / 2).strength(0.08)).force("charge", d3.forceManyBody().strength(-260)).force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 30 : 25)).on("tick", () => {
-    link.attr("d", curvedLinkPath);
+    link.attr("d", straightLinkPath);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
   });
   updateHighlight();
