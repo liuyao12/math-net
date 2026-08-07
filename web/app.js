@@ -114,9 +114,30 @@ function nodeMap() {
 
 function isSearchMatch(node) {
   if (!state.search) return true;
-  const haystack = [node.label, node.description, node.statement, node.method, ...(node.tags || [])]
+  const formalizationNames = (node.formalizations || []).map((item) => item.name);
+  const haystack = [node.label, node.namespace, node.module, node.description, node.statement, node.method, ...formalizationNames, ...(node.tags || [])]
     .filter(Boolean).join(" ").toLowerCase();
   return haystack.includes(state.search.toLowerCase());
+}
+
+function searchFocus(nodes, edges) {
+  if (!state.search) return new Set(nodes.map((node) => node.id));
+  const focus = new Set(nodes.filter(isSearchMatch).map((node) => node.id));
+  let changed = true;
+  while (changed) {
+    changed = false;
+    edges.forEach((edge) => {
+      if (focus.has(edge.target.id) && !focus.has(edge.source.id)) {
+        focus.add(edge.source.id);
+        changed = true;
+      }
+      if (focus.has(edge.source.id) && !focus.has(edge.target.id)) {
+        focus.add(edge.target.id);
+        changed = true;
+      }
+    });
+  }
+  return focus;
 }
 
 function routeMatch(node, edges) {
@@ -132,8 +153,10 @@ function visibleGraph() {
     .filter((edge) => !state.selectedProofId || edge.proof === state.selectedProofId)
     .map((edge) => ({ ...edge, source: nodesById.get(edge.source.id), target: nodesById.get(edge.target.id) }))
     .filter((edge) => edge.source && edge.target);
-  const visibleNodes = state.graph.nodes.filter((node) => {
-    if (!state.kinds.has(node.kind) || !isSearchMatch(node)) return false;
+  const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(node.kind));
+  const focus = searchFocus(candidateNodes, edgeData);
+  const visibleNodes = candidateNodes.filter((node) => {
+    if (state.search && !focus.has(node.id)) return false;
     if (node.kind === "proof-family" && state.route !== "all" && node.id !== state.route) return false;
     return true;
   });
