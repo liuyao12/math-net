@@ -46,8 +46,15 @@ are concept nodes, and imported mathlib declarations are source nodes. The
 only generated edge is `used-in-proof`, from a declaration used by a theorem
 to the theorem that contains it.
 
+`tools/MergeGraph.py` then merges proposition nodes only when their elaborated
+statements and Lean modules are identical. Concept/definition nodes remain one
+per declaration. Each declaration contributing to a merged proposition becomes
+a proof-provenance record, and its dependency edges retain that record in the
+`proof` field so the UI can color proof routes independently.
+
 Regenerate it after changing the imported project surface with:
 
 ```sh
-lake env lean tools/BuildGraph.lean > MathNetwork/Graph/project.json
+lake env lean tools/BuildGraph.lean \
+  | python3 tools/MergeGraph.py > MathNetwork/Graph/project.json
 ```

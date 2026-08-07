@@ -19,6 +19,7 @@ const KIND_COLORS = {
   concept: "#4c7d74",
   source: "#795a76",
 };
+const PROOF_COLORS = ["#d16b5d", "#3f7f8f", "#b27a2d", "#7a6397", "#4f8b73", "#b05d91", "#6d7fbd", "#9b7a4b"];
 const VERIFICATION = {
   checked: { glyph: "✓", label: "Lean-checked", className: "checked" },
   "imported-checked": { glyph: "↗", label: "Imported + checked", className: "imported" },
@@ -235,6 +236,22 @@ function legend() {
     item.innerHTML = `<span class="legend-dot ${key}"></span>${label}`;
     container.append(item);
   });
+  const labels = proofLabels();
+  if (labels.size) {
+    const heading = document.createElement("div");
+    heading.className = "legend-heading";
+    heading.textContent = "Arrow colors · proof provenance";
+    container.append(heading);
+    const proofContainer = document.createElement("div");
+    proofContainer.className = "legend-proofs";
+    [...labels.entries()].forEach(([id, label]) => {
+      const item = document.createElement("span");
+      item.className = "legend-item";
+      item.innerHTML = `<span class="legend-line" style="background:${proofColor(id)}"></span>${escapeHtml(label)}`;
+      proofContainer.append(item);
+    });
+    container.append(proofContainer);
+  }
 }
 
 function labelFor(node) {
@@ -251,6 +268,19 @@ function verificationText(node) {
   const condition = meta.conditional ? " · conditional on stated hypotheses" : "";
   const scope = meta.scope === "local-with-imports" ? " · local route with imported lemmas" : "";
   return `${status.glyph} ${status.label}${condition}${scope}`;
+}
+
+function proofColor(proofId = "") {
+  let hash = 0;
+  for (const character of proofId) hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0;
+  return PROOF_COLORS[Math.abs(hash) % PROOF_COLORS.length];
+}
+
+function proofLabels() {
+  const labels = new Map();
+  state.graph.nodes.forEach((node) => (node.proofs || []).forEach((proof) => labels.set(proof.id, proof.label)));
+  state.graph.edges.forEach((edge) => { if (edge.proof && !labels.has(edge.proof)) labels.set(edge.proof, edge.proof); });
+  return labels;
 }
 
 function nodeNeighbors(nodeId) {
@@ -338,10 +368,15 @@ function draw() {
   const height = stage.clientHeight;
   svg.attr("viewBox", `0 0 ${width} ${height}`);
   const defs = svg.append("defs");
-  defs.append("marker").attr("id", "arrow-used-in-proof").attr("viewBox", "0 -4 8 8").attr("refX", 20).attr("refY", 0).attr("markerWidth", 5).attr("markerHeight", 5).attr("orient", "auto").append("path").attr("d", "M0,-4L8,0L0,4").attr("fill", "currentColor");
+  defs.append("marker").attr("id", "arrow-used-in-proof").attr("viewBox", "0 -4 8 8").attr("refX", 20).attr("refY", 0).attr("markerWidth", 5).attr("markerHeight", 5).attr("orient", "auto").append("path").attr("d", "M0,-4L8,0L0,4").attr("fill", "context-stroke");
   const root = svg.append("g");
   svg.call(d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => root.attr("transform", event.transform)));
-  const link = root.append("g").attr("aria-hidden", "true").selectAll("line").data(edges, (edge) => edge.id).join("line").attr("class", "graph-link used-in-proof").attr("marker-end", "url(#arrow-used-in-proof)");
+  const labels = proofLabels();
+  const link = root.append("g").attr("aria-hidden", "true").selectAll("line").data(edges, (edge) => edge.id).join("line")
+    .attr("class", "graph-link used-in-proof")
+    .attr("stroke", (edge) => proofColor(edge.proof))
+    .attr("marker-end", "url(#arrow-used-in-proof)");
+  link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
   const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
   node.append("circle").attr("class", "node-dot").attr("r", (item) => item.kind === "proof-family" ? 10 : item.kind === "proposition" ? 8 : 6).attr("fill", (item) => KIND_COLORS[item.kind]);
   node.append("text").attr("class", "node-label").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => item.label.length > 31 && nodes.length > 12);

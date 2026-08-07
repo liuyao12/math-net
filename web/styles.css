@@ -138,6 +138,9 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .loading-state.error { color: var(--red); max-width: 280px; text-align: center; }
 .legend { display: flex; flex-wrap: wrap; gap: 10px 14px; padding: 13px 0 0; color: var(--muted); font-size: 11px; }
 .legend-item { display: flex; align-items: center; gap: 6px; }
+.legend-heading { width: 100%; margin-top: 3px; color: var(--faint); font: 10px "DM Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+.legend-proofs { display: grid; grid-template-columns: 1fr; gap: 6px; width: 100%; max-height: 130px; overflow: auto; padding-right: 3px; }
+.legend-line { width: 18px; height: 2px; display: inline-block; border-radius: 2px; }
 
 .inspector { border-left: 1px solid var(--line); max-height: calc(100vh - 76px); overflow: auto; }
 .inspector-header { display: flex; align-items: center; justify-content: space-between; padding: 23px 20px 15px; border-bottom: 1px solid var(--line); }
