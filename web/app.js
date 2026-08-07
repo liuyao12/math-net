@@ -373,6 +373,34 @@ function updateHighlight() {
   svg.selectAll(".graph-link").classed("dimmed", (edge) => state.selectedId && edge.source.id !== state.selectedId && edge.target.id !== state.selectedId);
 }
 
+function dependencyRanks(nodes, edges) {
+  const ranks = new Map(nodes.map((item) => [item.id, 0]));
+  // Edges point from a used declaration to the proof that uses it. Repeated
+  // relaxation gives a readable top-to-bottom layering while remaining robust
+  // if an imported graph contains a small cycle.
+  for (let pass = 0; pass < nodes.length; pass += 1) {
+    let changed = false;
+    edges.forEach((edge) => {
+      const next = Math.min(nodes.length - 1, (ranks.get(edge.source.id) || 0) + 1);
+      if (next > (ranks.get(edge.target.id) || 0)) {
+        ranks.set(edge.target.id, next);
+        changed = true;
+      }
+    });
+    if (!changed) break;
+  }
+  return ranks;
+}
+
+function curvedLinkPath(edge) {
+  const x1 = edge.source.x;
+  const y1 = edge.source.y;
+  const x2 = edge.target.x;
+  const y2 = edge.target.y;
+  const bend = Math.max(28, Math.min(120, Math.abs(x2 - x1) * 0.32));
+  return `M${x1},${y1} C${x1 + bend},${y1 + (y2 - y1) * 0.35} ${x2 - bend},${y2 - (y2 - y1) * 0.35} ${x2},${y2}`;
+}
+
 function draw() {
   if (!state.graph) return;
   const { nodes, edges } = visibleGraph();
@@ -387,7 +415,14 @@ function draw() {
   const root = svg.append("g");
   svg.call(d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => root.attr("transform", event.transform)));
   const labels = proofLabels();
-  const link = root.append("g").attr("aria-hidden", "true").selectAll("line").data(edges, (edge) => edge.id).join("line")
+  const ranks = dependencyRanks(nodes, edges);
+  const maxRank = Math.max(0, ...Array.from(ranks.values()));
+  const layerGap = Math.max(38, Math.min(105, (height - 90) / Math.max(1, maxRank)));
+  nodes.forEach((item, index) => {
+    item.x = item.x || width / 2 + ((index % 7) - 3) * 42;
+    item.y = (ranks.get(item.id) || 0) * layerGap + 45;
+  });
+  const link = root.append("g").attr("aria-hidden", "true").selectAll("path").data(edges, (edge) => edge.id).join("path")
     .attr("class", "graph-link used-in-proof")
     .attr("stroke", (edge) => proofColor(edge.proof))
     .attr("marker-end", "url(#arrow-used-in-proof)");
@@ -396,8 +431,8 @@ function draw() {
   node.append("circle").attr("class", "node-dot").attr("r", (item) => item.kind === "proof-family" ? 10 : item.kind === "proposition" ? 8 : 6).attr("fill", (item) => KIND_COLORS[item.kind]);
   node.append("text").attr("class", "node-label").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => item.label.length > 31 && nodes.length > 12);
   state.simulation?.stop();
-  state.simulation = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id((item) => item.id).distance(115).strength(0.55)).force("charge", d3.forceManyBody().strength(-430)).force("center", d3.forceCenter(width / 2, height / 2)).force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 30 : 25)).on("tick", () => {
-    link.attr("x1", (edge) => edge.source.x).attr("y1", (edge) => edge.source.y).attr("x2", (edge) => edge.target.x).attr("y2", (edge) => edge.target.y);
+  state.simulation = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id((item) => item.id).distance(105).strength(0.3)).force("y", d3.forceY((item) => (ranks.get(item.id) || 0) * layerGap + 45).strength(0.9)).force("x", d3.forceX(width / 2).strength(0.08)).force("charge", d3.forceManyBody().strength(-260)).force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 30 : 25)).on("tick", () => {
+    link.attr("d", curvedLinkPath);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
   });
   updateHighlight();
