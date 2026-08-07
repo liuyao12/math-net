@@ -8,10 +8,12 @@ The intended release name, local folder, and GitHub repository name are all
 
 ## Interactive explorer
 
-The first network browser is in [`web/`](web/). It reads the typed Fermat graph,
-supports proposition search, proof-family focus, relationship filters, and
-click-to-inspect ramifications. Run `python3 -m http.server 4173` from the
-repository root and open <http://localhost:4173/web/>.
+The first network browser is in [`web/`](web/). By default it reads the
+generated project-wide Lean declaration graph, currently centered on 194 local
+declarations and 332 imported mathlib dependencies. It supports proposition
+search, strict proof-dependency edges, and click-to-inspect verification
+status. Run `python3 -m http.server 4173` from the repository root and open
+<http://localhost:4173/web/>.
 
 The first comparison is between:
 
@@ -72,6 +74,27 @@ Import graphs are useful orientation, but the main object is the declaration
 graph extracted from elaborated Lean declarations and proof terms. A theorem
 that happens to import a large module should not automatically inherit the
 whole module's conceptual dependency set.
+
+### Library proofs and selected routes
+
+The presence of a complete mathlib proof does not close the route list. Each
+proposition may carry several proof records, distinguished by their intended
+role:
+
+- a **library-complete** route records the most general imported theorem or
+  interface;
+- a **pedagogical-narrow** route intentionally works through a smaller
+  interface, such as a Riemann integral instead of mathlib's general measure
+  integral;
+- a **foundation-comparison** route is chosen to expose a different
+  dependency boundary, for example a computable or geometric construction.
+
+The route is still conditional when it treats imported lemmas as black boxes.
+Its status means that the local Lean term checks; its `closure` and
+`blackBoxes` fields say how much of the surrounding library has been opened.
+Thus “mathlib already proves it” and “math-net has explored this route” are
+separate facts. The Euler integral benchmarks are the first place where the
+Riemann-versus-general-integral distinction is recorded explicitly.
 
 ## First benchmark suite
 
@@ -221,6 +244,19 @@ The initial external comparison target is the local `ComputableAnalysis`
 checkout at `/Users/liuyao/Documents/Codex/projects/computable-analysis` and a
 pinned mathlib revision recorded by this repository.
 
+The first application catalog is documented in
+[`docs/fermat-application-catalog.md`](docs/fermat-application-catalog.md).
+Twenty further calculus and computable-analysis applications are proposed in
+[`docs/application-catalog-twenty-more.md`](docs/application-catalog-twenty-more.md).
+The revised outside-computable-analysis catalog is in
+[`docs/application-catalog-outside-computable-analysis.md`](docs/application-catalog-outside-computable-analysis.md).
+The analysis-facing starting tranche from Wiedijk's 100 Theorems list is in
+[`docs/100-theorems-calculus-corpus.md`](docs/100-theorems-calculus-corpus.md).
+The checked theorem-shaped entries live in
+`MathNetwork/Fermat/ApplicationProblems.lean`; the small arithmetic examples
+are deliberately separated from the larger factorization, representation-count,
+geometry, and transcendental-function problems.
+
 ## Pedagogical mode
 
 The long-term purpose is not only to measure proof dependencies, but to let a
@@ -229,17 +265,19 @@ show its statement, concrete examples, proof routes, prerequisites,
 equivalent formulations, special cases, generalizations, computational
 experiments, and historical or geometric interpretations.
 
-These relationships must be typed. In particular, the graph should distinguish
+The strict network view deliberately has one edge relation: **used-in-proof**.
+An arrow means that the source declaration or imported result is used in the
+proof represented by the target node. Equivalence, specialization, historical
+motivation, and geometric reinterpretation belong in separate atlas views or
+node metadata; they must not masquerade as proof dependencies.
 
-- **uses:** a declaration is needed by a proof;
-- **proves:** a route establishes the proposition;
-- **equivalent:** two formulations describe the same mathematical content;
-- **specializes:** a general statement yields a concrete instance;
-- **generalizes:** a statement extends the scope of another;
-- **reinterprets:** the same structure receives a geometric, algebraic, or
-  computational meaning; and
-- **motivates:** a proposition naturally leads to a later construction without
-  being a formal dependency.
+math-net is not a duplicate of `computable-analysis`. When a relevant result
+already exists there, math-net should import or cite its Lean declaration and
+record the dependency boundary. The local Fermat development is for concrete
+applications, proof-route comparisons, and missing formalizations. For example,
+an arctangent benchmark may use a checked mathlib identity even if that
+identity's deeper analytic implementation passes through `exp`; the transitive
+route belongs in the dependency data.
 
 For the two-square theorem, an exploratory path might begin with
 `29 = 5² + 2²`, move to the prime existence theorem, compare the involution

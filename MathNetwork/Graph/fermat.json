@@ -2,7 +2,7 @@
   "$schema": "./schema.json",
   "schemaVersion": "1.0",
   "graphId": "fermat-two-squares",
-  "label": "Fermat's two-square theorem: propositions and proof families",
+  "label": "Fermat's two-square theorem: strict proof dependencies",
   "nodes": [
     {
       "id": "fermat-two-squares",
@@ -11,7 +11,14 @@
       "role": "theorem",
       "statement": "For every prime p with p ≡ 1 (mod 4), there exist natural numbers a and b such that a² + b² = p.",
       "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.fermatPrimeTwoSquares", "file": "MathNetwork/Fermat/Registry.lean" }],
-      "tags": ["number-theory", "sum-of-two-squares"]
+      "tags": ["number-theory", "sum-of-two-squares"],
+      "verification": {
+        "state": "formalized",
+        "scope": "local",
+        "declaration": "MathNetwork.Fermat.fermatPrimeTwoSquares",
+        "closure": "not-applicable",
+        "note": "This node is the proposition type; its proof routes are represented separately."
+      }
     },
     {
       "id": "fermat-two-squares-involution",
@@ -19,14 +26,26 @@
       "label": "Fermat theorem via involutions",
       "role": "theorem",
       "statement": "The Fermat two-square theorem follows from parity of fixed points of two involutions on a finite set.",
-      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.fermat_two_squares_involution", "file": "MathNetwork/Fermat/Zagier.lean" }]
+      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.fermat_two_squares_involution", "file": "MathNetwork/Fermat/Zagier.lean" }],
+      "verification": {
+        "state": "checked",
+        "scope": "local-with-imports",
+        "declaration": "MathNetwork.Fermat.fermat_two_squares_involution",
+        "conditional": true,
+        "assumptions": ["p is prime", "p ≡ 1 (mod 4)"],
+        "axioms": [],
+        "closure": "closed",
+        "note": "Kernel-checked local theorem assembled from imported Zagier involution lemmas."
+      }
     },
     {
       "id": "prime-two-squares",
       "kind": "proposition",
       "label": "Prime sum-of-two-squares criterion",
       "role": "theorem",
-      "statement": "A prime p is a sum of two squares when p = 2 or p ≡ 1 (mod 4)."
+      "statement": "A prime p is a sum of two squares when p = 2 or p ≡ 1 (mod 4).",
+      "verification": { "state": "planned", "scope": "none", "closure": "open", "note": "General criterion is a planned comparison target."
+      }
     },
     {
       "id": "witness-29",
@@ -34,19 +53,54 @@
       "label": "The 29 witness",
       "role": "example",
       "statement": "5² + 2² = 29.",
-      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.witness29", "file": "MathNetwork/Fermat/Registry.lean" }]
+      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.witness29", "file": "MathNetwork/Fermat/Registry.lean" }],
+      "verification": {
+        "state": "formalized",
+        "scope": "local",
+        "declaration": "MathNetwork.Fermat.witness29",
+        "closure": "not-applicable",
+        "note": "The proposition is formalized; the explicit-witness proof route is checked separately."
+      }
     },
     {
       "id": "involution-parity",
       "kind": "concept",
       "label": "Parity of fixed points of involutions",
       "description": "Two involutions on the same finite set have fixed-point counts congruent modulo two."
+      ,"verification": { "state": "imported-checked", "scope": "imported", "closure": "closed", "note": "Provided by the imported Lean development." }
     },
     {
       "id": "gaussian-integers",
       "kind": "concept",
       "label": "Gaussian integers",
       "description": "Representing a + bi as an integer pair with multiplicative norm."
+      ,"verification": { "state": "imported-checked", "scope": "imported", "closure": "closed", "note": "Used as the conceptual Gaussian-integer foundation.\n" }
+    },
+    {
+      "id": "integer-lattice-circle",
+      "kind": "concept",
+      "label": "Integer lattice circle",
+      "description": "A lattice point (a,b) lies on the squared-radius n circle exactly when a² + b² = n.",
+      "verification": {
+        "state": "checked",
+        "scope": "local",
+        "declaration": "MathNetwork.Fermat.LatticePoint.normSq",
+        "closure": "closed",
+        "note": "The geometric encoding is defined and checked locally."
+      }
+    },
+    {
+      "id": "arctan-slope",
+      "kind": "concept",
+      "label": "Arctangent of a lattice slope",
+      "description": "The direction of a lattice vector is recorded by arctan(y/x), with tangent recovering the rational slope.",
+      "verification": {
+        "state": "checked",
+        "scope": "local-with-imports",
+        "declaration": "MathNetwork.Fermat.lattice_angle_tan",
+        "closure": "closed",
+        "note": "Uses mathlib's tangent/arctangent identity. The identity is a surface-level geometric dependency; its foundational mathlib route may transitively use exp, which should be recorded by extraction rather than duplicated here."
+      }
     },
     {
       "id": "zagier-two-squares",
@@ -54,15 +108,44 @@
       "label": "Zagier two-square development",
       "locator": "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Archive/ZagierTwoSquares.lean",
       "citation": "Mathlib Archive.ZagierTwoSquares"
+      ,"verification": { "state": "imported-checked", "scope": "imported", "closure": "closed", "note": "Public source imported by the checked local route." }
     },
     {
       "id": "involution-fixed-point-family",
       "kind": "proof-family",
       "label": "Involution/fixed-point parity",
       "method": "Build a finite set with two involutions, compare fixed-point parity, and extract a two-square witness.",
-      "proves": ["fermat-two-squares-involution"],
+      "proves": ["fermat-two-squares", "fermat-two-squares-involution"],
       "assumptions": ["p is prime", "p ≡ 1 (mod 4)"],
       "tags": ["finite-combinatorics", "involution"]
+      ,"verification": {
+        "state": "checked",
+        "scope": "local-with-imports",
+        "declaration": "MathNetwork.Fermat.zagierInvolutionRoute",
+        "conditional": true,
+        "assumptions": ["p is prime", "p ≡ 1 (mod 4)"],
+        "axioms": [],
+        "closure": "closed"
+      }
+    },
+    {
+      "id": "geometric-lattice-family",
+      "kind": "proof-family",
+      "label": "Geometric lattice point",
+      "method": "Represent 29 by the lattice point (5,2), identify its circle radius through the norm, and record its direction by an arctangent slope.",
+      "proves": ["witness-29"],
+      "assumptions": ["concrete benchmark p = 29"],
+      "tags": ["geometry", "lattice", "arctangent"],
+      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.geometricWitness29_proof", "file": "MathNetwork/Fermat/Geometry.lean" }],
+      "verification": {
+        "state": "checked",
+        "scope": "local-with-imports",
+        "conditional": false,
+        "assumptions": ["concrete benchmark p = 29"],
+        "axioms": [],
+        "closure": "closed",
+        "note": "A checked geometric/arctangent benchmark; it is not yet a proof of the general prime theorem."
+      }
     },
     {
       "id": "gaussian-euclidean-family",
@@ -72,74 +155,44 @@
       "proves": ["prime-two-squares"],
       "assumptions": ["work in the Gaussian integers"],
       "tags": ["algebraic-number-theory", "norm"]
+      ,"verification": { "state": "planned", "scope": "none", "closure": "open", "note": "Route is registered but not yet proved locally." }
     }
   ],
   "edges": [
     {
-      "id": "involution-proves-fermat-route",
-      "relation": "proves",
-      "source": { "id": "involution-fixed-point-family", "kind": "proof-family" },
-      "target": { "id": "fermat-two-squares-involution", "kind": "proposition" },
-      "description": "The family certifies the involution-form proposition."
-    },
-    {
-      "id": "involution-uses-parity",
-      "relation": "uses",
-      "source": { "id": "involution-fixed-point-family", "kind": "proof-family" },
-      "target": { "id": "involution-parity", "kind": "concept" }
-    },
-    {
-      "id": "involution-uses-zagier-source",
-      "relation": "uses",
-      "source": { "id": "involution-fixed-point-family", "kind": "proof-family" },
-      "target": { "id": "zagier-two-squares", "kind": "source" }
-    },
-    {
-      "id": "gaussian-uses-gaussian-integers",
-      "relation": "uses",
-      "source": { "id": "gaussian-euclidean-family", "kind": "proof-family" },
-      "target": { "id": "gaussian-integers", "kind": "concept" }
-    },
-    {
-      "id": "fermat-route-equivalent-general",
-      "relation": "equivalent",
-      "source": { "id": "fermat-two-squares-involution", "kind": "proposition" },
-      "target": { "id": "fermat-two-squares", "kind": "proposition" },
-      "symmetric": true,
-      "description": "Same theorem, with the proof route made explicit."
-    },
-    {
-      "id": "witness-specializes-fermat",
-      "relation": "specializes",
-      "source": { "id": "witness-29", "kind": "proposition" },
-      "target": { "id": "fermat-two-squares", "kind": "proposition" },
-      "description": "The example instantiates the theorem at p = 29."
-    },
-    {
-      "id": "fermat-generalizes-witness",
-      "relation": "generalizes",
-      "source": { "id": "fermat-two-squares", "kind": "proposition" },
-      "target": { "id": "witness-29", "kind": "proposition" }
-    },
-    {
-      "id": "gaussian-reinterprets-fermat",
-      "relation": "reinterprets",
-      "source": { "id": "prime-two-squares", "kind": "proposition" },
-      "target": { "id": "fermat-two-squares", "kind": "proposition" },
-      "description": "The criterion presents the theorem through the norm form and includes the exceptional prime 2."
-    },
-    {
-      "id": "parity-motivates-involution-family",
-      "relation": "motivates",
+      "id": "involution-parity-used-in-involution-proof",
+      "relation": "used-in-proof",
       "source": { "id": "involution-parity", "kind": "concept" },
-      "target": { "id": "involution-fixed-point-family", "kind": "proof-family" }
+      "target": { "id": "involution-fixed-point-family", "kind": "proof-family" },
+      "description": "The imported fixed-point parity result is invoked by this proof route."
     },
     {
-      "id": "witness-motivates-gaussian-family",
-      "relation": "motivates",
-      "source": { "id": "witness-29", "kind": "proposition" },
+      "id": "zagier-source-used-in-involution-proof",
+      "relation": "used-in-proof",
+      "source": { "id": "zagier-two-squares", "kind": "source" },
+      "target": { "id": "involution-fixed-point-family", "kind": "proof-family" },
+      "description": "The checked route imports declarations from this mathlib development."
+    },
+    {
+      "id": "gaussian-integers-used-in-gaussian-proof",
+      "relation": "used-in-proof",
+      "source": { "id": "gaussian-integers", "kind": "concept" },
       "target": { "id": "gaussian-euclidean-family", "kind": "proof-family" },
-      "description": "The concrete norm witness motivates the general norm-based proof family."
+      "description": "The Gaussian-integer norm is a prerequisite of the planned route."
+    },
+    {
+      "id": "lattice-circle-used-in-geometric-proof",
+      "relation": "used-in-proof",
+      "source": { "id": "integer-lattice-circle", "kind": "concept" },
+      "target": { "id": "geometric-lattice-family", "kind": "proof-family" },
+      "description": "The geometric route uses the lattice norm as squared distance."
+    },
+    {
+      "id": "arctan-slope-used-in-geometric-proof",
+      "relation": "used-in-proof",
+      "source": { "id": "arctan-slope", "kind": "concept" },
+      "target": { "id": "geometric-lattice-family", "kind": "proof-family" },
+      "description": "The geometric route uses arctangent to encode the vector direction."
     }
   ]
 }

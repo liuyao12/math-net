@@ -19,6 +19,9 @@ Each declaration record contains:
 
 - `direct_constants`: constants occurring immediately in the declaration type
   or value (proof term included), excluding the declaration itself;
+- `graph_direct_constants`: a compact graph-facing projection of direct
+  constants, retaining project declarations plus selected `Complex` and
+  `Real` declarations while omitting tactic implementation noise;
 - `transitive_constants`: the closure obtained by recursively following those
   constants, excluding the root declaration;
 - `axioms`: Lean's transitive axiom report, including imported declarations'
@@ -32,3 +35,19 @@ module does not imply that every declaration in that module occurs in a proof
 term. A direct constant is a kernel-level occurrence in the elaborated
 type/value, not automatically a mathematical lemma edge. JSON arrays are
 sorted by declaration name for reproducibility.
+
+## Project-wide graph
+
+`tools/BuildGraph.lean` uses the same elaborated environment to emit
+`MathNetwork/Graph/project.json`. It includes every non-internal
+`MathNetwork.*` declaration loaded by the project and every direct dependency
+defined in a `Mathlib.*` module. Theorems are proposition nodes, definitions
+are concept nodes, and imported mathlib declarations are source nodes. The
+only generated edge is `used-in-proof`, from a declaration used by a theorem
+to the theorem that contains it.
+
+Regenerate it after changing the imported project surface with:
+
+```sh
+lake env lean tools/BuildGraph.lean > MathNetwork/Graph/project.json
+```

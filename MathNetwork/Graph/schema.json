@@ -71,8 +71,24 @@
         "id": { "$ref": "#/$defs/id" },
         "kind": { "$ref": "#/$defs/nodeKind" },
         "label": { "$ref": "#/$defs/nonEmptyString" },
-        "description": { "type": "string" },
-        "tags": { "$ref": "#/$defs/stringList" }
+          "description": { "type": "string" },
+        "tags": { "$ref": "#/$defs/stringList" },
+        "verification": { "$ref": "#/$defs/verification" }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": {
+        "state": { "enum": ["checked", "imported-checked", "formalized", "planned", "informal"] },
+        "scope": { "enum": ["local", "imported", "local-with-imports", "none"] },
+        "declaration": { "$ref": "#/$defs/nonEmptyString" },
+        "conditional": { "type": "boolean" },
+        "assumptions": { "$ref": "#/$defs/stringList" },
+        "axioms": { "$ref": "#/$defs/stringList" },
+        "closure": { "enum": ["closed", "open", "not-applicable"] },
+        "note": { "type": "string" }
       }
     },
     "proposition": {
@@ -89,10 +105,31 @@
               "type": "array",
               "items": { "$ref": "#/$defs/formalization" },
               "uniqueItems": true
+            },
+            "proofs": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/proofRecord" },
+              "uniqueItems": true
             }
           }
         }
       ]
+    },
+    "proofRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "status"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "$ref": "#/$defs/nonEmptyString" },
+        "declaration": { "$ref": "#/$defs/nonEmptyString" },
+        "status": { "enum": ["kernel-checked", "imported-checked", "formalized", "planned", "informal"] },
+        "routeKind": { "enum": ["library-complete", "pedagogical-narrow", "foundation-comparison", "computational"] },
+        "scope": { "enum": ["local", "local-with-imports", "imported", "none"] },
+        "closure": { "enum": ["closed", "partial", "open", "not-applicable"] },
+        "blackBoxes": { "$ref": "#/$defs/stringList" },
+        "note": { "type": "string" }
+      }
     },
     "proofFamily": {
       "allOf": [
@@ -144,61 +181,62 @@
         "source": { "$ref": "#/$defs/nodeRef" },
         "target": { "$ref": "#/$defs/nodeRef" },
         "description": { "type": "string" },
+        "proof": { "$ref": "#/$defs/id" },
         "symmetric": { "type": "boolean", "default": false },
         "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
       }
     },
     "relation": {
-      "enum": ["uses", "proves", "equivalent", "specializes", "generalizes", "reinterprets", "motivates"]
+      "const": "used-in-proof"
     },
     "edge": {
-      "oneOf": [
-        { "$ref": "#/$defs/usesEdge" },
-        { "$ref": "#/$defs/provesEdge" },
-        { "$ref": "#/$defs/equivalentEdge" },
-        { "$ref": "#/$defs/specializesEdge" },
-        { "$ref": "#/$defs/generalizesEdge" },
-        { "$ref": "#/$defs/reinterpretsEdge" },
-        { "$ref": "#/$defs/motivatesEdge" }
+      "allOf": [
+        { "$ref": "#/$defs/edgeBase" },
+        {
+          "properties": {
+            "relation": { "const": "used-in-proof" },
+            "target": { "properties": { "kind": { "enum": ["proof-family", "proposition"] } } }
+          }
+        }
       ]
     },
-    "usesEdge": {
+    "legacyUsesEdge": {
       "allOf": [
         { "$ref": "#/$defs/edgeBase" },
         { "properties": { "relation": { "const": "uses" }, "source": { "properties": { "kind": { "const": "proof-family" } } }, "target": { "properties": { "kind": { "enum": ["proposition", "concept", "source", "proof-family"] } } } } }
       ]
     },
-    "provesEdge": {
+    "legacyProvesEdge": {
       "allOf": [
         { "$ref": "#/$defs/edgeBase" },
         { "properties": { "relation": { "const": "proves" }, "source": { "properties": { "kind": { "const": "proof-family" } } }, "target": { "properties": { "kind": { "const": "proposition" } } } } }
       ]
     },
-    "equivalentEdge": {
+    "legacyEquivalentEdge": {
       "allOf": [
         { "$ref": "#/$defs/edgeBase" },
         { "properties": { "relation": { "const": "equivalent" }, "source": { "properties": { "kind": { "const": "proposition" } } }, "target": { "properties": { "kind": { "const": "proposition" } } }, "symmetric": { "const": true } } }
       ]
     },
-    "specializesEdge": {
+    "legacySpecializesEdge": {
       "allOf": [
         { "$ref": "#/$defs/edgeBase" },
         { "properties": { "relation": { "const": "specializes" }, "source": { "properties": { "kind": { "const": "proposition" } } }, "target": { "properties": { "kind": { "const": "proposition" } } } } }
       ]
     },
-    "generalizesEdge": {
+    "legacyGeneralizesEdge": {
       "allOf": [
         { "$ref": "#/$defs/edgeBase" },
         { "properties": { "relation": { "const": "generalizes" }, "source": { "properties": { "kind": { "const": "proposition" } } }, "target": { "properties": { "kind": { "const": "proposition" } } } } }
       ]
     },
-    "reinterpretsEdge": {
+    "legacyReinterpretsEdge": {
       "allOf": [
         { "$ref": "#/$defs/edgeBase" },
         { "properties": { "relation": { "const": "reinterprets" }, "source": { "properties": { "kind": { "const": "proposition" } } }, "target": { "properties": { "kind": { "const": "proposition" } } } } }
       ]
     },
-    "motivatesEdge": {
+    "legacyMotivatesEdge": {
       "allOf": [
         { "$ref": "#/$defs/edgeBase" },
         { "properties": { "relation": { "const": "motivates" }, "source": { "properties": { "kind": { "enum": ["proposition", "concept", "source"] } } }, "target": { "properties": { "kind": { "enum": ["proposition", "proof-family"] } } } } }

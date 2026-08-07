@@ -1,13 +1,18 @@
 # math-net network explorer
 
-This is the first interactive view of the typed proposition graph. It reads
-the Fermat example from `../MathNetwork/Graph/fermat.json` and exposes:
+This is the first interactive view of the typed proposition graph. With no
+query parameter it reads the generated project-wide Lean declaration graph.
+It exposes:
 
-- node-kind and relationship filters;
+- node-kind filters and proof-family focus;
 - proof-family focus;
 - search across labels, statements, methods, descriptions, and tags;
 - drag, zoom, and click-to-inspect graph navigation;
-- typed relationship rows linking the selected node to nearby ramifications.
+- proof-dependency rows showing what is used in the selected proof.
+
+The graph has one edge relation only: `used-in-proof`. An arrow points from a
+declaration or source used by a proof to the proof-family node. Verification
+badges are node metadata and do not create graph edges.
 
 Serve the repository root so the browser can load the graph JSON:
 
@@ -15,4 +20,10 @@ Serve the repository root so the browser can load the graph JSON:
 python3 -m http.server 4173
 ```
 
-Then open <http://localhost:4173/web/>.
+Then open <http://localhost:4173/web/> for the project-wide network.
+
+To open the curated Fermat starting graph, use
+<http://localhost:4173/web/?graph=fermat>.
+
+To open the curated Euler application graph, use
+<http://localhost:4173/web/?graph=euler>.

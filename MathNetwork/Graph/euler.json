@@ -1,0 +1,161 @@
+{
+  "$schema": "./schema.json",
+  "schemaVersion": "1.0",
+  "graphId": "euler-applications",
+  "label": "Euler applications: paired proof routes",
+  "nodes": [
+    {
+      "id": "phasor-quarter-turn",
+      "kind": "proposition",
+      "role": "application",
+      "label": "AC phasor quarter-turn",
+      "statement": "exp(iπ/2) rotates 3 + 4i to −4 + 3i.",
+      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Euler.phasorQuarterTurn_mathlib", "file": "MathNetwork/Euler/Applications.lean" }],
+      "proofs": [
+        {
+          "id": "mathlib-baseline",
+          "label": "Mathlib complex-exponential proof",
+          "declaration": "MathNetwork.Euler.phasorQuarterTurn_mathlib",
+          "status": "kernel-checked",
+          "scope": "local-with-imports",
+          "closure": "partial",
+          "blackBoxes": ["Complex.exp_pi_div_two_mul_I"],
+          "note": "The application is locally checked; the imported exponential theorem is the selected black-box boundary."
+        },
+        {
+          "id": "geometric-rotation",
+          "label": "Geometric rotation proof",
+          "status": "planned",
+          "scope": "none",
+          "closure": "open",
+          "note": "Will connect the circle quarter-turn to an independently constructed exponential."
+        }
+      ],
+      "verification": { "state": "checked", "scope": "local-with-imports", "conditional": true, "closure": "partial", "note": "At least one proof is locally kernel-checked; its analytic dependency remains expandable." }
+    },
+    {
+      "id": "trig-addition",
+      "kind": "proposition",
+      "role": "application",
+      "label": "Trigonometric addition identities",
+      "statement": "Derive sine and cosine addition from a single complex exponential, or from real rotation.",
+      "formalizations": [
+        { "language": "Lean", "name": "MathNetwork.Euler.trig_addition_real_route", "file": "MathNetwork/Euler/Applications.lean" },
+        { "language": "Lean", "name": "MathNetwork.Euler.trig_addition_euler_route", "file": "MathNetwork/Euler/Applications.lean" }
+      ],
+      "proofs": [
+        {
+          "id": "real-rotation",
+          "label": "Real sine/cosine proof",
+          "declaration": "MathNetwork.Euler.trig_addition_real_route",
+          "status": "kernel-checked",
+          "scope": "local-with-imports",
+          "closure": "partial",
+          "blackBoxes": ["Real.cos_add", "Real.sin_add"]
+        },
+        {
+          "id": "euler-complex",
+          "label": "Euler/complex proof",
+          "declaration": "MathNetwork.Euler.trig_addition_euler_route",
+          "status": "kernel-checked",
+          "scope": "local-with-imports",
+          "closure": "partial",
+          "blackBoxes": ["Complex.exp_add", "Complex.exp_ofReal_mul_I_re", "Complex.exp_ofReal_mul_I_im"]
+        }
+      ],
+      "verification": { "state": "checked", "scope": "local-with-imports", "conditional": true, "closure": "partial", "note": "Both routes are locally checked; imported exponential identities remain expandable black-box boundaries." }
+    },
+    {
+      "id": "trig-integrals",
+      "kind": "proposition",
+      "role": "application",
+      "label": "Integrals of damped sinusoids",
+      "statement": "Integrate exp(ax) cos(bx) and exp(ax) sin(bx).",
+      "proofs": [
+        { "id": "complex-antiderivative", "label": "Complex antiderivative", "status": "planned", "routeKind": "library-complete", "scope": "none", "closure": "open", "note": "May use mathlib's general integral interface as the library baseline." },
+        { "id": "riemann-integral", "label": "Riemann integral proof", "status": "planned", "routeKind": "pedagogical-narrow", "scope": "none", "closure": "open", "note": "A deliberately narrower route using interval partitions and the Riemann integral, even if the corresponding mathlib result is already available through a more general integral." },
+        { "id": "real-undetermined-coefficients", "label": "Real undetermined coefficients", "status": "planned", "routeKind": "foundation-comparison", "scope": "none", "closure": "open" }
+      ],
+      "verification": { "state": "planned", "scope": "none", "closure": "open" }
+    },
+    {
+      "id": "constant-coefficient-ode",
+      "kind": "proposition",
+      "role": "application",
+      "label": "Constant-coefficient linear ODE",
+      "statement": "Solve a damped oscillator using complex roots or a real rotation-dilation system.",
+      "proofs": [
+        { "id": "characteristic-roots", "label": "Complex characteristic roots", "status": "planned", "scope": "none", "closure": "open" },
+        { "id": "real-system", "label": "Real two-dimensional system", "status": "planned", "scope": "none", "closure": "open" }
+      ],
+      "verification": { "state": "planned", "scope": "none", "closure": "open" }
+    },
+    {
+      "id": "fourier-complex-basis",
+      "kind": "proposition",
+      "role": "application",
+      "label": "Fourier complex basis",
+      "statement": "Replace paired sine/cosine coefficients by one complex coefficient family.",
+      "proofs": [
+        { "id": "complex-basis", "label": "Complex exponential basis", "status": "planned", "scope": "none", "closure": "open" },
+        { "id": "real-basis", "label": "Real sine/cosine basis", "status": "planned", "scope": "none", "closure": "open" }
+      ],
+      "verification": { "state": "planned", "scope": "none", "closure": "open" }
+    },
+    {
+      "id": "complex-exp-quarter-turn",
+      "kind": "source",
+      "label": "Complex exponential quarter-turn theorem",
+      "locator": "Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic",
+      "citation": "Complex.exp_pi_div_two_mul_I",
+      "verification": { "state": "imported-checked", "scope": "imported", "closure": "closed" }
+    },
+    {
+      "id": "complex-multiplication",
+      "kind": "concept",
+      "label": "Complex multiplication in coordinates",
+      "description": "Multiplying by i sends (x,y) to (−y,x).",
+      "verification": { "state": "imported-checked", "scope": "imported", "closure": "closed" }
+    },
+    {
+      "id": "real-cos-add",
+      "kind": "source",
+      "label": "Real cosine addition theorem",
+      "locator": "Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic",
+      "citation": "Real.cos_add",
+      "verification": { "state": "imported-checked", "scope": "imported", "closure": "closed" }
+    },
+    {
+      "id": "real-sin-add",
+      "kind": "source",
+      "label": "Real sine addition theorem",
+      "locator": "Mathlib.Analysis.SpecialFunctions.Trigonometric.Basic",
+      "citation": "Real.sin_add",
+      "verification": { "state": "imported-checked", "scope": "imported", "closure": "closed" }
+    },
+    {
+      "id": "complex-exp-add",
+      "kind": "source",
+      "label": "Complex exponential addition theorem",
+      "locator": "Mathlib.Analysis.Complex.Exponential",
+      "citation": "Complex.exp_add",
+      "verification": { "state": "imported-checked", "scope": "imported", "closure": "closed" }
+    },
+    {
+      "id": "complex-exp-of-real-I",
+      "kind": "source",
+      "label": "Euler formula for real arguments",
+      "locator": "Mathlib.Analysis.Complex.Trigonometric",
+      "citation": "Complex.exp_ofReal_mul_I_re / Complex.exp_ofReal_mul_I_im",
+      "verification": { "state": "imported-checked", "scope": "imported", "closure": "closed" }
+    }
+  ],
+  "edges": [
+    { "id": "exp-quarter-used-by-phasor", "relation": "used-in-proof", "proof": "mathlib-baseline", "source": { "id": "complex-exp-quarter-turn", "kind": "source" }, "target": { "id": "phasor-quarter-turn", "kind": "proposition" } },
+    { "id": "complex-mul-used-by-phasor", "relation": "used-in-proof", "proof": "mathlib-baseline", "source": { "id": "complex-multiplication", "kind": "concept" }, "target": { "id": "phasor-quarter-turn", "kind": "proposition" } },
+    { "id": "real-cos-used-by-addition", "relation": "used-in-proof", "proof": "real-rotation", "source": { "id": "real-cos-add", "kind": "source" }, "target": { "id": "trig-addition", "kind": "proposition" } },
+    { "id": "real-sin-used-by-addition", "relation": "used-in-proof", "proof": "real-rotation", "source": { "id": "real-sin-add", "kind": "source" }, "target": { "id": "trig-addition", "kind": "proposition" } },
+    { "id": "complex-exp-add-used-by-addition", "relation": "used-in-proof", "proof": "euler-complex", "source": { "id": "complex-exp-add", "kind": "source" }, "target": { "id": "trig-addition", "kind": "proposition" } },
+    { "id": "complex-exp-of-real-I-used-by-addition", "relation": "used-in-proof", "proof": "euler-complex", "source": { "id": "complex-exp-of-real-I", "kind": "source" }, "target": { "id": "trig-addition", "kind": "proposition" } }
+  ]
+}

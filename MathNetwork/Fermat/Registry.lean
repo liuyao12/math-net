@@ -1,4 +1,7 @@
 import MathNetwork.Fermat.Basic
+import MathNetwork.Fermat.ApplicationProblems
+import MathNetwork.Fermat.Benchmarks
+import MathNetwork.Fermat.Geometry
 import MathNetwork.Fermat.Zagier
 
 namespace MathNetwork.Fermat
@@ -29,6 +32,12 @@ def witness29Route : ProofRoute witness29 :=
       refine ⟨5, 2, ?_⟩
       norm_num }
 
+def geometricWitness29Route : ProofRoute geometricWitness29 :=
+  { name := "geometric-lattice"
+    description :=
+      "Locate (5, 2) on the integer lattice circle of squared radius 29 and record its arctangent slope."
+    proof := geometricWitness29_proof }
+
 def fermatPrimeTwoSquares : Prop :=
   ∀ {p : Nat}, Fact p.Prime → p % 4 = 1 →
     ∃ a b : Nat, a ^ 2 + b ^ 2 = p
@@ -42,7 +51,7 @@ def zagierInvolutionRoute : ProofRoute fermatPrimeTwoSquares :=
       exact @fermat_two_squares_involution p hp hmod }
 
 def availableRoutes : List String :=
-  [pairAlgebraRoute.name, witness29Route.name, "involution-fixed-point",
-   zagierInvolutionRoute.name, "geometric-lattice", "gaussian-euclidean"]
+  [pairAlgebraRoute.name, witness29Route.name, geometricWitness29Route.name,
+   "involution-fixed-point", zagierInvolutionRoute.name, "gaussian-euclidean"]
 
 end MathNetwork.Fermat

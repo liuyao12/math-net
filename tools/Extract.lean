@@ -1,5 +1,6 @@
 import Lean
 import MathNetwork.Fermat.Registry
+import MathNetwork.Euler.Applications
 
 /-! A small, environment-based declaration dependency extractor. -/
 
@@ -11,6 +12,16 @@ private def namesToJson (xs : Array Name) : Json :=
 
 private def directConstants (ci : ConstantInfo) : Array Name :=
   ci.getUsedConstantsAsSet.toArray.qsort Name.lt
+
+private def graphRelevant (name : Name) : Bool :=
+  let text := name.toString
+  text.startsWith "MathNetwork." ||
+    text.startsWith "ComputableAnalysis." ||
+    text.startsWith "Complex." ||
+    text.startsWith "Real."
+
+private def graphConstants (ci : ConstantInfo) : Array Name :=
+  (directConstants ci).filter graphRelevant
 
 private partial def transitiveConstants (env : Environment) (roots : Array Name) : Array Name :=
   let rec visit (todo : Array Name) (seen : NameSet) : NameSet :=
@@ -55,6 +66,7 @@ private def routeMetadata (ci : ConstantInfo) : Json :=
 private def declarationJson (env : Environment) (name : Name) : CommandElabM Json := do
   let some ci := env.find? name | throwError s!"declaration not found: {name}"
   let direct := (directConstants ci).filter (· != name)
+  let graphDirect := (graphConstants ci).filter (· != name)
   let transitive := (transitiveConstants env #[name]).filter (· != name)
   let axioms ← Lean.collectAxioms name
   return Json.mkObj [
@@ -63,6 +75,7 @@ private def declarationJson (env : Environment) (name : Name) : CommandElabM Jso
       | some (i : ModuleIdx) => env.header.moduleNames[i.toNat]!.toString
       | none => env.mainModule.toString),
     ("direct_constants", namesToJson direct),
+    ("graph_direct_constants", namesToJson graphDirect),
     ("transitive_constants", namesToJson transitive),
     ("axioms", namesToJson axioms),
     ("proof_route", routeMetadata ci)
