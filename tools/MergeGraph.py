@@ -2,9 +2,9 @@
 """Merge identical checked proposition declarations in a Lean graph.
 
 Lean supplies the declaration-level dependency edges. This pass preserves that
-information while identifying proposition nodes by exact elaborated statement
-and module (the source file/import context). Definitions remain declaration
-nodes. When proposition nodes merge, their declaration names become proof
+information while identifying theorem declarations by exact elaborated
+statement, including imported theorem declarations from mathlib. Definitions
+remain declaration nodes. When proposition nodes merge, their declaration names become proof
 records and every dependency edge retains the proof record that produced it.
 """
 
@@ -49,7 +49,10 @@ def merge(graph: dict) -> dict:
     passthrough: list[dict] = []
 
     for node in nodes:
-        if node.get("kind") == "proposition":
+        # Imported mathlib theorem declarations remain visually marked as
+        # sources, but participate in proposition merging by their checked
+        # statement. This is the boundary where independent proof graphs join.
+        if node.get("kind") == "proposition" or node.get("declarationKind") == "proposition":
             # A proposition is the mathematical statement, not the source
             # file that happens to contain one of its proofs. This lets a
             # Mathlib theorem and a local alternative proof share one node.
@@ -73,6 +76,13 @@ def merge(graph: dict) -> dict:
             record = proof_record(node)
             proof_for_old[node["id"]] = record["id"]
             merged["proofs"].append(record)
+            if node.get("kind") == "source" and node.get("namespace"):
+                merged.setdefault("formalizations", []).append({
+                    "repository": "mathlib4" if node.get("locator", "").startswith("mathlib/") else "imported",
+                    "language": "Lean",
+                    "name": node["namespace"],
+                    "locator": node.get("locator"),
+                })
             for item in node.get("formalizations", []):
                 identity = tuple(sorted(item.items()))
                 if identity not in seen_formalizations:
@@ -91,6 +101,7 @@ def merge(graph: dict) -> dict:
     for node in passthrough:
         old_to_new[node["id"]] = node["id"]
 
+    merged_node_by_id = {node["id"]: node for node in merged_nodes}
     edges = []
     for index, edge in enumerate(graph["edges"]):
         source_old = edge["source"]["id"]
@@ -101,10 +112,10 @@ def merge(graph: dict) -> dict:
         rewritten["id"] = f"{edge['id']}-{index}"
         rewritten["source"] = dict(edge["source"])
         rewritten["source"]["id"] = source_new
-        rewritten["source"]["kind"] = node_by_id[source_old].get("kind", rewritten["source"].get("kind"))
+        rewritten["source"]["kind"] = merged_node_by_id[source_new].get("kind", rewritten["source"].get("kind"))
         rewritten["target"] = dict(edge["target"])
         rewritten["target"]["id"] = target_new
-        rewritten["target"]["kind"] = node_by_id[target_old].get("kind", rewritten["target"].get("kind"))
+        rewritten["target"]["kind"] = merged_node_by_id[target_new].get("kind", rewritten["target"].get("kind"))
         if edge.get("proof") in proof_for_old:
             rewritten["proof"] = proof_for_old[edge["proof"]]
         edges.append(rewritten)
@@ -113,7 +124,7 @@ def merge(graph: dict) -> dict:
     result["nodes"] = merged_nodes
     result["edges"] = edges
     result["merge"] = {
-        "key": "exact elaborated proposition statement",
+        "key": "exact elaborated proposition statement across local and imported declarations",
         "definitions": "one node per declaration",
         "proofProvenance": "edge proof field and proposition proofs records",
     }

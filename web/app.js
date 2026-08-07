@@ -123,8 +123,10 @@ function sourceUrlFor(node) {
 function githubUrlFor(node, item = null) {
   const file = item?.file || sourceFileFor(node);
   if (file?.startsWith("MathNetwork/")) return `${GITHUB_REPO}/blob/main/${file}`;
-  if (node.locator?.startsWith("mathlib/")) {
-    return `https://github.com/leanprover-community/mathlib4/blob/master/${sourceFileFor(node)}`;
+  const locator = item?.locator || node.locator;
+  if (locator?.startsWith("mathlib/")) {
+    const file = `${locator.slice("mathlib/".length).replaceAll(".", "/")}.lean`;
+    return `https://github.com/leanprover-community/mathlib4/blob/master/${file}`;
   }
   return null;
 }
@@ -414,6 +416,12 @@ function renderInspector() {
   }).join("");
   const tags = (node.tags || []).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
   const routes = node.assumptions ? node.assumptions.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("") : "";
+  const mergeNote = node.declarationCount > 1
+    ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations. Each formalization below remains available as a separate proof/source route.</p></div>`
+    : "";
+  const depthNote = Number.isInteger(node.dependencyDepth)
+    ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported mathlib declaration · layer ${node.dependencyDepth} of the bounded closure.</p></div>`
+    : "";
   const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}">${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
@@ -425,6 +433,8 @@ function renderInspector() {
     <span class="node-kind ${escapeHtml(node.kind)}">${escapeHtml(KIND_LABELS[node.kind])}</span>
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(node.label)}</h2>
+    ${mergeNote}
+    ${depthNote}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
@@ -464,6 +474,13 @@ function updateHighlight() {
   svg.selectAll(".node-dot").classed("selected", (node) => node.id === state.selectedId).classed("dimmed", (node) => state.selectedId && !neighborhood.has(node.id));
   svg.selectAll(".node-label").classed("dimmed", (node) => state.selectedId && !neighborhood.has(node.id));
   svg.selectAll(".graph-link").classed("dimmed", (edge) => state.selectedId && (!neighborhood.has(edge.source.id) || !neighborhood.has(edge.target.id)));
+  const focusStatus = $("#focus-status");
+  if (focusStatus) {
+    const selected = state.selectedId ? nodeMap().get(state.selectedId) : null;
+    focusStatus.textContent = selected
+      ? `${neighborhood.size} nodes in 3-level focus · ${selected.label}`
+      : "all theorem nodes shown · select a theorem to focus";
+  }
 }
 
 function dependencyRanks(nodes, edges) {
