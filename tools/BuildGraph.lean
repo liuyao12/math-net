@@ -113,11 +113,17 @@ private def projectNode (env : Environment) (ci : ConstantInfo) (name : Name) (i
     ])
   ]
 
-private def dependencyNode (name : Name) (index : Nat) (module : String) (depth : Nat) : Json :=
+private def dependencyNode (env : Environment) (name : Name) (index : Nat) (module : String) (depth : Nat) : Json :=
+  let (kind, role, statement) := match env.find? name with
+    | some ci => let (kind, role) := declarationKind ci; (kind, role, toString ci.type)
+    | none => ("concept", "definition", s!"Lean declaration {name}")
   Json.mkObj [
     ("id", s!"const-{index}"),
     ("kind", "source"),
+    ("declarationKind", kind),
+    ("role", role),
     ("label", shortName name),
+    ("statement", statement),
     ("namespace", name.toString),
     ("locator", s!"mathlib/{module}"),
     ("citation", name.toString),
@@ -171,7 +177,7 @@ elab_rules : command
       | none => Json.mkObj [("id", s!"decl-{i}"), ("kind", "proposition"),
           ("role", "theorem"), ("label", shortName name),
           ("statement", s!"Lean declaration {name}")]) ++
-      dependencies.mapIdx (fun i name => dependencyNode name i (moduleOf env name)
+      dependencies.mapIdx (fun i name => dependencyNode env name i (moduleOf env name)
         (depths.find? (·.1 == name) |>.map (·.2) |>.getD 1))
     let edges := dependencyEdges env targets dependencies
     let report := Json.mkObj [

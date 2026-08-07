@@ -59,3 +59,10 @@ Regenerate it after changing the imported project surface with:
 lake env lean tools/BuildGraph.lean \
   | python3 tools/MergeGraph.py > MathNetwork/Graph/project.json
 ```
+
+Build the theorem-centred index over that graph with:
+
+```sh
+python3 tools/BuildCatalogue.py < MathNetwork/Graph/project.json \
+  > MathNetwork/Graph/theorem-catalogue.json
+```
