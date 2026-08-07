@@ -1,7 +1,10 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
-const requestedGraph = new URLSearchParams(window.location.search).get("graph");
+const query = new URLSearchParams(window.location.search);
+const requestedGraph = query.get("graph");
+const requestedTheorem = query.get("theorem");
 const REPO_ROOT = window.location.pathname.includes("/web/") ? "../" : "./";
+const THEOREMS_URL = "./theorems.json";
 const DATA_URLS = requestedGraph === "euler"
   ? [`${REPO_ROOT}MathNetwork/Graph/euler.json`]
   : requestedGraph === "fermat"
@@ -37,6 +40,8 @@ const GITHUB_REPO = "https://github.com/liuyao12/math-net";
 
 const state = {
   graph: null,
+  theorems: [],
+  theoremNumber: requestedTheorem || null,
   selectedId: null,
   selectedProofId: null,
   search: "",
@@ -244,6 +249,56 @@ function routeControls() {
   select.addEventListener("change", (event) => { state.route = event.target.value; draw(); });
 }
 
+function theoremForGraph() {
+  if (requestedGraph === "fermat") return "20";
+  if (requestedGraph === "euler") return "17";
+  return null;
+}
+
+function populateTheoremSelect() {
+  const select = $("#theorem-select");
+  state.theorems.forEach((theorem) => {
+    const option = document.createElement("option");
+    option.value = String(theorem.number);
+    option.textContent = `${String(theorem.number).padStart(2, "0")} · ${theorem.title}`;
+    select.append(option);
+  });
+  state.theoremNumber = state.theoremNumber || theoremForGraph();
+  if (state.theoremNumber) select.value = String(state.theoremNumber);
+  updateTheoremNote();
+  select.addEventListener("change", (event) => {
+    const number = event.target.value;
+    if (!number) {
+      const next = new URL(window.location.href);
+      next.searchParams.delete("theorem");
+      history.replaceState(null, "", next);
+      state.theoremNumber = null;
+      updateTheoremNote();
+      return;
+    }
+    const theorem = state.theorems.find((item) => String(item.number) === number);
+    const next = new URL(window.location.href);
+    next.searchParams.set("theorem", number);
+    if (theorem?.graph) next.searchParams.set("graph", theorem.graph);
+    history.pushState(null, "", next);
+    state.theoremNumber = number;
+    updateTheoremNote();
+    if (theorem?.graph && theorem.graph !== requestedGraph) window.location.reload();
+  });
+}
+
+function updateTheoremNote() {
+  const note = $("#theorem-note");
+  const theorem = state.theorems.find((item) => String(item.number) === String(state.theoremNumber));
+  if (!theorem) {
+    note.textContent = "Official catalogue · choose a theorem to inspect its status.";
+    return;
+  }
+  note.innerHTML = theorem.graph
+    ? `<span class="theorem-ready">✓ graph available</span> · ${escapeHtml(theorem.graph)} view`
+    : "catalogued · dependency graph not imported yet";
+}
+
 function legend() {
   const container = $("#legend");
   Object.entries(KIND_LABELS).forEach(([key, label]) => {
@@ -444,10 +499,14 @@ function draw() {
 
 async function load() {
   try {
-    const responses = await Promise.all(DATA_URLS.map((url) => fetch(url)));
+    const [responses, theoremResponse] = await Promise.all([
+      Promise.all(DATA_URLS.map((url) => fetch(url))),
+      fetch(THEOREMS_URL),
+    ]);
     const failed = responses.find((response) => !response.ok);
     if (failed) throw new Error(`Could not load ${DATA_URLS.join(", ")}`);
     const graphs = await Promise.all(responses.map((response) => response.json()));
+    if (theoremResponse.ok) state.theorems = await theoremResponse.json();
     state.graph = graphs.length === 1 ? graphs[0] : {
       schemaVersion: graphs[0].schemaVersion,
       graphId: "math-net-project",
@@ -459,6 +518,7 @@ async function load() {
     $("#network-title").textContent = state.graph.label;
     $(".data-source code").textContent = DATA_URLS.map((url) => url.split("/").pop()).join(" + ");
     $("#loading-state").remove();
+    populateTheoremSelect();
     kindControls();
     routeControls();
     legend();

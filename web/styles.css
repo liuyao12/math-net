@@ -98,6 +98,8 @@ input[type="search"], select {
 input[type="search"] { padding: 9px 10px 9px 30px; }
 select { padding: 9px 10px; }
 input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(54, 107, 128, 0.12); }
+.theorem-note { margin-top: 8px; color: var(--faint); font-size: 11px; line-height: 1.4; }
+.theorem-ready { color: var(--teal); }
 
 .check-grid { display: grid; gap: 9px; }
 .check-grid.compact { grid-template-columns: 1fr 1fr; gap: 7px 10px; }
