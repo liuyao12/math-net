@@ -105,15 +105,26 @@ function sourceFileFor(node) {
   const local = (node.formalizations || []).find((item) => item.file)?.file;
   if (local) return local;
   if (node.module?.startsWith("MathNetwork.")) return `${node.module.replaceAll(".", "/")}.lean`;
+  if (node.locator?.startsWith("mathlib/")) {
+    return `${node.locator.slice("mathlib/".length).replaceAll(".", "/")}.lean`;
+  }
   return null;
+}
+
+function sourceUrlFor(node) {
+  const file = sourceFileFor(node);
+  if (!file) return null;
+  if (node.locator?.startsWith("mathlib/")) {
+    return `https://raw.githubusercontent.com/leanprover-community/mathlib4/master/${file}`;
+  }
+  return `${REPO_ROOT}${file}`;
 }
 
 function githubUrlFor(node, item = null) {
   const file = item?.file || sourceFileFor(node);
   if (file?.startsWith("MathNetwork/")) return `${GITHUB_REPO}/blob/main/${file}`;
   if (node.locator?.startsWith("mathlib/")) {
-    const file = node.locator.slice("mathlib/".length);
-    return `https://github.com/leanprover-community/mathlib4/blob/master/${file}.lean`;
+    return `https://github.com/leanprover-community/mathlib4/blob/master/${sourceFileFor(node)}`;
   }
   return null;
 }
@@ -121,7 +132,7 @@ function githubUrlFor(node, item = null) {
 function declarationSource(text, name) {
   const short = name.split(".").pop();
   const escaped = short.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const declaration = new RegExp(`^\\s*(theorem|lemma|def|noncomputable def|example|axiom)\\s+${escaped}\\b`, "m");
+  const declaration = new RegExp(`^\\s*(theorem|lemma|def|noncomputable def|example|axiom|instance|class|structure|inductive)\\s+${escaped}\\b`, "m");
   const match = declaration.exec(text);
   if (!match) return null;
   const start = text.lastIndexOf("\n", match.index) + 1;
@@ -134,18 +145,19 @@ async function loadProofSource(node, container, request) {
   const file = sourceFileFor(node);
   const formalization = (node.formalizations || []).find((item) => item.file);
   if (!file) {
-    container.textContent = "Lean source is not embedded for this declaration. The statement above is the checked declaration type.";
+    container.textContent = "No source locator is available for this generated declaration. The statement above is the checked declaration type.";
     container.classList.remove("pending");
     return;
   }
-  const path = `${REPO_ROOT}${file}`;
+  const path = sourceUrlFor(node);
   try {
     const response = await fetch(path);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
     if (request !== state.sourceRequest) return;
     const source = declarationSource(text, formalization?.name || node.namespace || node.label);
-    container.innerHTML = `<code>${highlightLean(source || `Could not locate the declaration in ${file}.`)}</code>`;
+    const code = source || `-- Source file: ${file}\n-- The declaration is elaborated or generated in this module.\n\n${text}`;
+    container.innerHTML = `<code>${highlightLean(code)}</code>`;
     container.classList.remove("pending");
   } catch (error) {
     if (request !== state.sourceRequest) return;
