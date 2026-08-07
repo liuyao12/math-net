@@ -1,7 +1,10 @@
 # math-net
 
-`math-net` is a research and engineering project for comparing formalized
-mathematics by its theorem dependencies.
+`math-net` is an interactive observatory for navigating formalized mathematics
+by its theorem dependencies. It is not intended to become another repository
+of major theorem proofs. Those proofs should remain in mathlib,
+`computable-analysis`, and other specialist repositories; math-net imports and
+cross-references them.
 
 The intended release name, local folder, and GitHub repository name are all
 `math-net`.
@@ -9,10 +12,12 @@ The intended release name, local folder, and GitHub repository name are all
 ## Interactive explorer
 
 The first network browser is in [`web/`](web/). By default it reads the
-generated project-wide Lean declaration graph, currently centered on 194 local
-declarations and 332 imported mathlib dependencies. It supports proposition
-search, strict proof-dependency edges, and click-to-inspect verification
-status. Run `python3 -m http.server 4173` from the repository root and open
+generated project-wide Lean declaration graph, currently containing 1,072
+nodes and 8,051 checked dependency edges. It supports theorem selection,
+multi-level neighborhood fading, proposition search, strict proof-dependency
+edges, and click-to-inspect Lean source. The theorem-centred index is
+[`theorem-catalogue.json`](MathNetwork/Graph/theorem-catalogue.json). Run
+`python3 -m http.server 4173` from the repository root and open
 <http://localhost:4173/web/>.
 
 The first comparison is between:
@@ -28,18 +33,17 @@ dependency landscapes inspectable: which definitions are needed, which
 assumptions enter a theorem, which proof paths are reusable, and where a
 foundational choice changes the downstream cost of calculus.
 
-## Benchmark philosophy
+## Comparison propositions
 
-The primary benchmarks are concrete functions, constants, and calculations,
-not isolated abstract theorem statements. Abstract theorem matching can be
-unfair: one library may already have a highly packaged result, while the
-other must expose the representation and construction that make the result
-meaningful.
+The primary comparison units are small, application-facing propositions, not
+new formalizations of major theorems. A math-net benchmark imports an existing
+result, specializes it to a useful common case, and supplies only the minimal
+Lean adapter needed to compare it with a result from another repository.
 
-Each benchmark must require both developments to define or identify the
-concrete objects, state the application-level result, prove it through an
-auditable route, and provide an executable or effective calculation where the
-foundation supports one.
+Each benchmark records the common target, the representation of important
+objects, the imported declarations used by each route, and any checked bridge
+between the two representations. The substantial proof remains in its source
+repository.
 
 For constants such as \(\pi\), the benchmark must record what the constant
 means in each development. `Real.pi`, a circumference-derived raw real, an
@@ -60,13 +64,13 @@ treated as interchangeable. Their equivalence is part of the benchmark.
 
 ## Network model
 
-The primary graph will be a typed, directed multigraph.
+The primary graph is a typed, directed graph.
 
 - **Nodes:** definitions, theorem declarations, structures/interfaces,
   typeclasses, axioms, and source modules.
-- **Edges:** declaration dependency, imported-module dependency,
-  typeclass/instance dependency, representation bridge, and theorem
-  translation or correspondence.
+- **Edges:** currently only the kernel-derived `used-in-proof` relation.
+  Correspondence and equivalence evidence are stored as catalogue metadata
+  until they have their own checked representation.
 - **Annotations:** source, namespace, statement hash, assumptions,
   computational content, axiom profile, proof size/cost, and domain tags.
 
@@ -92,9 +96,10 @@ role:
 The route is still conditional when it treats imported lemmas as black boxes.
 Its status means that the local Lean term checks; its `closure` and
 `blackBoxes` fields say how much of the surrounding library has been opened.
-Thus “mathlib already proves it” and “math-net has explored this route” are
-separate facts. The Euler integral benchmarks are the first place where the
-Riemann-versus-general-integral distinction is recorded explicitly.
+Thus “mathlib already proves it” and “math-net has indexed this route” are
+separate facts. A future computable-analysis comparison should normally add a
+bridge proposition such as “this certified interval function induces a
+mathlib-continuous function,” rather than reproduce the whole calculus proof.
 
 ## First benchmark suite
 
@@ -166,9 +171,17 @@ the executable core, while angle/arc-length or circle-geometry instances add
 the analytic layer where the definitions of \(\pi\) and completeness become
 visible.
 
-## Proposed first deliverable
+## Data and visualization layers
 
-Build a reproducible extractor that emits normalized JSON for each declaration:
+The small Lean layer builds a reproducible declaration graph and minimal
+comparison propositions. The catalogue layer organizes each theorem as a
+statement with formalizations, imported proof records, reverse dependencies,
+and reserved cross-repository/equivalence fields. The visualization layer is
+the main product: it lets a reader move through the resulting landscape,
+select a theorem, fade unrelated regions, inspect checked Lean source, and
+follow dependencies upward and outward.
+
+The extractor emits normalized JSON for each declaration:
 
 ```text
 declaration -> direct constants -> transitive constants
@@ -177,9 +190,9 @@ declaration -> direct constants -> transitive constants
              -> statement fingerprints and domain tags
 ```
 
-Then add a hand-reviewed correspondence table for the first benchmark. The
-network visualization and cost metrics should come after this corpus is stable;
-otherwise graph size will obscure the mathematical comparison.
+Then add hand-reviewed correspondence records only where a specialized common
+proposition has been checked. The graph remains useful while the catalogue is
+growing; it is not postponed until a complete corpus exists.
 
 ## Scope discipline
 
@@ -190,9 +203,11 @@ bridge. We should preserve those distinctions in the data model.
 
 ## Proof families
 
-The graph should preserve alternative proofs of the same concrete target.
-They are not redundant copies: their shared core and divergent obligations are
-part of the mathematical landscape.
+The graph should preserve alternative proofs of the same target when those
+proofs are imported from their source repositories. They are not redundant
+copies: their shared core and divergent obligations are part of the
+mathematical landscape. math-net supplies the organization and navigation,
+not a second home for the proof bodies.
 
 Fermat's two-square theorem is a model case. A benchmark can begin with
 concrete instances such as \(29=5^2+2^2\), then compare routes toward the
