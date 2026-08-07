@@ -55,6 +55,34 @@ function escapeHtml(value) {
   }[character]));
 }
 
+const LEAN_KEYWORDS = new Set([
+  "theorem", "lemma", "def", "abbrev", "example", "axiom", "opaque", "structure", "class",
+  "inductive", "namespace", "end", "section", "variable", "universe", "open", "where",
+  "let", "in", "if", "then", "else", "match", "with", "fun", "by", "do", "have", "show", "from",
+  "forall", "exists", "include", "omit", "return", "termination_by", "decreasing_by", "deriving",
+]);
+const LEAN_TACTICS = new Set([
+  "simp", "simpa", "rw", "rfl", "exact", "apply", "refine", "constructor", "intro", "intros", "cases",
+  "induction", "rcases", "obtain", "norm_num", "ring", "ring_nf", "linarith", "nlinarith", "omega",
+  "aesop", "positivity", "field_simp", "norm_cast", "push_cast", "decide", "assumption", "contradiction",
+]);
+
+function highlightLean(source) {
+  const tokenPattern = /--[^\n]*|\/-[\s\S]*?-\/|"(?:\\.|[^"\\])*"|`[^`]*`|\b\d+(?:\.\d+)?\b|[A-Za-z_][A-Za-z0-9_'.]*|./gs;
+  const tokens = String(source).match(tokenPattern) || [];
+  return tokens.map((token) => {
+    const escaped = escapeHtml(token);
+    if (token.startsWith("--") || token.startsWith("/-")) return `<span class="lean-comment">${escaped}</span>`;
+    if (token.startsWith('"') || token.startsWith("`") ) return `<span class="lean-string">${escaped}</span>`;
+    if (/^\d/.test(token)) return `<span class="lean-number">${escaped}</span>`;
+    const word = token;
+    if (LEAN_TACTICS.has(word)) return `<span class="lean-tactic">${escaped}</span>`;
+    if (LEAN_KEYWORDS.has(word) || /^(theorem|lemma|def|example|structure|class|inductive|namespace|section)$/.test(word)) return `<span class="lean-keyword">${escaped}</span>`;
+    if (/^[A-Z][A-Za-z0-9_'.]*$/.test(word)) return `<span class="lean-type">${escaped}</span>`;
+    return escaped;
+  }).join("") || "";
+}
+
 function sourceFileFor(node) {
   const local = (node.formalizations || []).find((item) => item.file)?.file;
   if (local) return local;
@@ -99,7 +127,7 @@ async function loadProofSource(node, container, request) {
     const text = await response.text();
     if (request !== state.sourceRequest) return;
     const source = declarationSource(text, formalization?.name || node.namespace || node.label);
-    container.textContent = source || `Could not locate the declaration in ${file}.`;
+    container.innerHTML = highlightLean(source || `Could not locate the declaration in ${file}.`);
     container.classList.remove("pending");
   } catch (error) {
     if (request !== state.sourceRequest) return;
