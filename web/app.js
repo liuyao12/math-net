@@ -5,11 +5,7 @@ const requestedGraph = query.get("graph");
 const requestedTheorem = query.get("theorem");
 const REPO_ROOT = window.location.pathname.includes("/web/") ? "../" : "./";
 const THEOREMS_URL = "./theorems.json";
-const DATA_URLS = requestedGraph === "euler"
-  ? [`${REPO_ROOT}MathNetwork/Graph/euler.json`]
-  : requestedGraph === "fermat"
-    ? [`${REPO_ROOT}MathNetwork/Graph/fermat.json`]
-    : [`${REPO_ROOT}MathNetwork/Graph/project.json`];
+const DATA_URLS = [`${REPO_ROOT}MathNetwork/Graph/project.json`];
 const KIND_LABELS = {
   proposition: "Propositions",
   "proof-family": "Proof families",
@@ -263,7 +259,7 @@ function populateTheoremSelect() {
     option.textContent = `${String(theorem.number).padStart(2, "0")} · ${theorem.title}`;
     select.append(option);
   });
-  state.theoremNumber = state.theoremNumber || theoremForGraph();
+  state.theoremNumber = state.theoremNumber || null;
   if (state.theoremNumber) select.value = String(state.theoremNumber);
   updateTheoremNote();
   select.addEventListener("change", (event) => {
@@ -279,12 +275,11 @@ function populateTheoremSelect() {
     const theorem = state.theorems.find((item) => String(item.number) === number);
     const next = new URL(window.location.href);
     next.searchParams.set("theorem", number);
-    if (theorem?.graph) next.searchParams.set("graph", theorem.graph);
+    next.searchParams.delete("graph");
     history.pushState(null, "", next);
     state.theoremNumber = number;
     updateTheoremNote();
-    if (theorem?.graph && theorem.graph !== requestedGraph) window.location.reload();
-    else selectTheoremNode();
+    selectTheoremNode();
   });
 }
 
@@ -296,13 +291,15 @@ function updateTheoremNote() {
     return;
   }
   note.innerHTML = theorem.graph
-    ? `<span class="theorem-ready">✓ graph available</span> · ${escapeHtml(theorem.graph)} view`
+    ? `<span class="theorem-ready">✓ included in project graph</span> · focus available`
     : "catalogued · dependency graph not imported yet";
 }
 
 function selectTheoremNode() {
   const theorem = state.theorems.find((item) => String(item.number) === String(state.theoremNumber));
-  if (theorem?.node && nodeMap().has(theorem.node)) selectNode(theorem.node);
+  const node = state.graph?.nodes.find((item) => theorem?.namespace === item.namespace ||
+    (theorem?.namespace && (item.formalizations || []).some((formalization) => formalization.name === theorem.namespace)));
+  if (node) selectNode(node.id);
 }
 
 function legend() {
@@ -432,10 +429,29 @@ function renderInspector() {
 }
 
 function updateHighlight() {
-  const neighborhood = new Set(state.selectedId ? [state.selectedId, ...nodeNeighbors(state.selectedId).map((item) => item.node.id)] : []);
+  const neighborhood = new Set(state.selectedId ? [state.selectedId] : []);
+  if (state.selectedId) {
+    const adjacency = new Map();
+    state.graph.edges.forEach((edge) => {
+      const source = edge.source.id;
+      const target = edge.target.id;
+      if (!adjacency.has(source)) adjacency.set(source, []);
+      if (!adjacency.has(target)) adjacency.set(target, []);
+      adjacency.get(source).push(target);
+      adjacency.get(target).push(source);
+    });
+    let frontier = [state.selectedId];
+    for (let depth = 0; depth < 3; depth += 1) {
+      const next = [];
+      frontier.forEach((nodeId) => (adjacency.get(nodeId) || []).forEach((neighbor) => {
+        if (!neighborhood.has(neighbor)) { neighborhood.add(neighbor); next.push(neighbor); }
+      }));
+      frontier = next;
+    }
+  }
   svg.selectAll(".node-dot").classed("selected", (node) => node.id === state.selectedId).classed("dimmed", (node) => state.selectedId && !neighborhood.has(node.id));
   svg.selectAll(".node-label").classed("dimmed", (node) => state.selectedId && !neighborhood.has(node.id));
-  svg.selectAll(".graph-link").classed("dimmed", (edge) => state.selectedId && edge.source.id !== state.selectedId && edge.target.id !== state.selectedId);
+  svg.selectAll(".graph-link").classed("dimmed", (edge) => state.selectedId && (!neighborhood.has(edge.source.id) || !neighborhood.has(edge.target.id)));
 }
 
 function dependencyRanks(nodes, edges) {
