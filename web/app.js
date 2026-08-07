@@ -287,6 +287,10 @@ function verificationText(node) {
 }
 
 function proofColor(proofId = "") {
+  for (const node of state.graph?.nodes || []) {
+    const proof = (node.proofs || []).find((item) => item.id === proofId);
+    if (proof?.color) return proof.color;
+  }
   let hash = 0;
   for (const character of proofId) hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0;
   return PROOF_COLORS[Math.abs(hash) % PROOF_COLORS.length];

@@ -15,13 +15,17 @@ def fermatPrimeTwoSquares : Prop :=
   ∀ {p : Nat}, Fact p.Prime → p % 4 = 1 →
     ∃ a b : Nat, a ^ 2 + b ^ 2 = p
 
+theorem fermat_two_squares_gaussian {p : Nat} (h : Fact p.Prime)
+    (hp : p % 4 = 1) : ∃ a b : Nat, a ^ 2 + b ^ 2 = p := by
+  letI := h
+  exact Nat.Prime.sq_add_sq (by omega)
+
 def gaussianEuclideanRoute : ProofRoute fermatPrimeTwoSquares :=
   { name := "gaussian-euclidean"
     description := "Mathlib's maintained route through the Euclidean domain of Gaussian integers."
     proof := by
       intro p hp hmod
-      apply Nat.Prime.sq_add_sq (p := p)
-      omega }
+      exact @fermat_two_squares_gaussian p hp hmod }
 
 def zagierInvolutionRoute : ProofRoute fermatPrimeTwoSquares :=
   { name := "zagier-involution"

@@ -13,8 +13,9 @@ development. The final assembly is written locally so this proposition has a
 distinct proof-route node in Math Network rather than being a synonym for the
 finished mathlib theorem.
 -/
-theorem fermat_two_squares_involution {p : ℕ} [h : Fact p.Prime]
+theorem fermat_two_squares_involution {p : ℕ} (h : Fact p.Prime)
     (hp : p % 4 = 1) : ∃ a b : ℕ, a ^ 2 + b ^ 2 = p := by
+  letI := h
   rw [← Nat.div_add_mod p 4, hp] at h ⊢
   let k := p / 4
   apply sq_add_sq_of_nonempty_fixedPoints

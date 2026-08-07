@@ -17,10 +17,24 @@ from collections import defaultdict
 
 def proof_record(node: dict) -> dict:
     declaration = node.get("namespace", node["label"])
+    if "gaussian" in declaration.lower():
+        label = "Mathlib · Gaussian-Euclidean"
+        route_kind = "mathlib"
+        color = "#3f7f8f"
+    elif "zagier" in declaration.lower() or "involution" in declaration.lower():
+        label = "Zagier · involution"
+        route_kind = "zagier"
+        color = "#b27a2d"
+    else:
+        label = declaration
+        route_kind = "local"
+        color = "#7a6397"
     return {
         "id": f"proof-{node['id']}",
-        "label": declaration,
+        "label": label,
         "declaration": declaration,
+        "routeKind": route_kind,
+        "color": color,
         "status": "kernel-checked",
         "scope": "local-with-imports",
         "closure": "partial",
@@ -36,7 +50,10 @@ def merge(graph: dict) -> dict:
 
     for node in nodes:
         if node.get("kind") == "proposition":
-            key = (node.get("statement", ""), node.get("module", ""))
+            # A proposition is the mathematical statement, not the source
+            # file that happens to contain one of its proofs. This lets a
+            # Mathlib theorem and a local alternative proof share one node.
+            key = (node.get("statement", ""),)
             groups[key].append(node)
         else:
             passthrough.append(node)
@@ -96,7 +113,7 @@ def merge(graph: dict) -> dict:
     result["nodes"] = merged_nodes
     result["edges"] = edges
     result["merge"] = {
-        "key": "exact proposition statement + Lean module",
+        "key": "exact elaborated proposition statement",
         "definitions": "one node per declaration",
         "proofProvenance": "edge proof field and proposition proofs records",
     }
