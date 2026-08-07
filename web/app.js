@@ -71,16 +71,32 @@ const LEAN_TACTICS = new Set([
 function highlightLean(source) {
   const tokenPattern = /--[^\n]*|\/-[\s\S]*?-\/|"(?:\\.|[^"\\])*"|`[^`]*`|\b\d+(?:\.\d+)?\b|[A-Za-z_][A-Za-z0-9_'.]*|./gs;
   const tokens = String(source).match(tokenPattern) || [];
+  let previousWord = "";
+  let declarationName = false;
+  let namespaceName = false;
   return tokens.map((token) => {
     const escaped = escapeHtml(token);
     if (token.startsWith("--") || token.startsWith("/-")) return `<span class="lean-comment">${escaped}</span>`;
     if (token.startsWith('"') || token.startsWith("`") ) return `<span class="lean-string">${escaped}</span>`;
     if (/^\d/.test(token)) return `<span class="lean-number">${escaped}</span>`;
     const word = token;
-    if (LEAN_TACTICS.has(word)) return `<span class="lean-tactic">${escaped}</span>`;
-    if (LEAN_KEYWORDS.has(word) || /^(theorem|lemma|def|example|structure|class|inductive|namespace|section)$/.test(word)) return `<span class="lean-keyword">${escaped}</span>`;
-    if (/^[A-Z][A-Za-z0-9_'.]*$/.test(word)) return `<span class="lean-type">${escaped}</span>`;
-    return escaped;
+    let highlighted = escaped;
+    if (LEAN_TACTICS.has(word)) highlighted = `<span class="lean-tactic">${escaped}</span>`;
+    else if (LEAN_KEYWORDS.has(word)) {
+      highlighted = `<span class="lean-keyword">${escaped}</span>`;
+      declarationName = ["theorem", "lemma", "def", "abbrev", "example", "axiom", "opaque", "structure", "class", "inductive"].includes(word);
+      namespaceName = ["namespace", "open"].includes(word);
+    } else if (declarationName) {
+      highlighted = `<span class="lean-declaration">${escaped}</span>`;
+      declarationName = false;
+    } else if (namespaceName) {
+      highlighted = `<span class="lean-namespace">${escaped}</span>`;
+      namespaceName = false;
+    } else if (/^[A-Z][A-Za-z0-9_'.]*$/.test(word)) highlighted = `<span class="lean-type">${escaped}</span>`;
+    else if (/^[a-z_][A-Za-z0-9_']*$/.test(word) && ["(", "{", ":"].includes(previousWord)) highlighted = `<span class="lean-variable">${escaped}</span>`;
+    if (/^[A-Za-z_][A-Za-z0-9_'.]*$/.test(word)) previousWord = word;
+    else if (!/^\s+$/.test(word)) previousWord = word;
+    return highlighted;
   }).join("") || "";
 }
 
@@ -128,7 +144,7 @@ async function loadProofSource(node, container, request) {
     const text = await response.text();
     if (request !== state.sourceRequest) return;
     const source = declarationSource(text, formalization?.name || node.namespace || node.label);
-    container.innerHTML = highlightLean(source || `Could not locate the declaration in ${file}.`);
+    container.innerHTML = `<code>${highlightLean(source || `Could not locate the declaration in ${file}.`)}</code>`;
     container.classList.remove("pending");
   } catch (error) {
     if (request !== state.sourceRequest) return;
@@ -342,7 +358,7 @@ function renderInspector() {
     ${node.verification?.note ? `<div class="detail-block"><div class="detail-label">Verification note</div><p>${escapeHtml(node.verification.note)}</p></div>` : ""}
     ${formalizations ? `<div class="detail-block"><div class="detail-label">Formalization</div>${formalizations}</div>` : ""}
     ${github && !formalizations ? `<div class="detail-block"><div class="detail-label">Source</div><div class="formalization"><a href="${escapeHtml(github)}" target="_blank" rel="noreferrer">Open declaration on GitHub ↗</a></div></div>` : ""}
-    <div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source">Loading declaration…</pre></div>
+    <div class="detail-block"><div class="detail-label">Lean proof source</div><blockquote class="proof-source pending" id="proof-source"><code>Loading declaration…</code></blockquote></div>
     ${proofs ? `<div class="detail-block"><div class="detail-label">Proofs · select one to filter dependencies</div><div class="proof-list">${proofs}</div></div>` : ""}
     ${neighborRows ? `<div class="detail-block"><div class="neighbor-list">${neighborRows}</div></div>` : ""}
   `;
