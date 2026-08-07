@@ -1,8 +1,6 @@
 import MathNetwork.Fermat.Basic
-import MathNetwork.Fermat.ApplicationProblems
-import MathNetwork.Fermat.Benchmarks
-import MathNetwork.Fermat.Geometry
 import MathNetwork.Fermat.Zagier
+import Mathlib.NumberTheory.SumTwoSquares
 
 namespace MathNetwork.Fermat
 
@@ -13,34 +11,17 @@ structure ProofRoute (P : Prop) where
   description : String
   proof : P
 
-def normComposition : Prop :=
-  ∀ z w : GaussianPair, (z.mul w).normSq = z.normSq * w.normSq
-
-def pairAlgebraRoute : ProofRoute normComposition :=
-  { name := "pair-algebra"
-    description := "Direct integer algebra on Gaussian pairs; no completeness."
-    proof := normSq_mul }
-
-/-- The concrete Fermat witness is kept as a separate target from the general
-two-square theorem, so computations do not disappear into a large theorem. -/
-def witness29 : Prop := ∃ a b : Int, a * a + b * b = 29
-
-def witness29Route : ProofRoute witness29 :=
-  { name := "explicit-witness"
-    description := "A certified finite witness for 29 = 5^2 + 2^2."
-    proof := by
-      refine ⟨5, 2, ?_⟩
-      norm_num }
-
-def geometricWitness29Route : ProofRoute geometricWitness29 :=
-  { name := "geometric-lattice"
-    description :=
-      "Locate (5, 2) on the integer lattice circle of squared radius 29 and record its arctangent slope."
-    proof := geometricWitness29_proof }
-
 def fermatPrimeTwoSquares : Prop :=
   ∀ {p : Nat}, Fact p.Prime → p % 4 = 1 →
     ∃ a b : Nat, a ^ 2 + b ^ 2 = p
+
+def gaussianEuclideanRoute : ProofRoute fermatPrimeTwoSquares :=
+  { name := "gaussian-euclidean"
+    description := "Mathlib's maintained route through the Euclidean domain of Gaussian integers."
+    proof := by
+      intro p hp hmod
+      apply Nat.Prime.sq_add_sq (p := p)
+      omega }
 
 def zagierInvolutionRoute : ProofRoute fermatPrimeTwoSquares :=
   { name := "zagier-involution"
@@ -51,7 +32,6 @@ def zagierInvolutionRoute : ProofRoute fermatPrimeTwoSquares :=
       exact @fermat_two_squares_involution p hp hmod }
 
 def availableRoutes : List String :=
-  [pairAlgebraRoute.name, witness29Route.name, geometricWitness29Route.name,
-   "involution-fixed-point", zagierInvolutionRoute.name, "gaussian-euclidean"]
+  [gaussianEuclideanRoute.name, zagierInvolutionRoute.name]
 
 end MathNetwork.Fermat

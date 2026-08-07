@@ -7,7 +7,7 @@ inspected after elaboration rather than inferred from source text.
 Run it with one or more fully qualified declarations:
 
 ```sh
-tools/extract.sh MathNetwork.Fermat.witness29Route \
+tools/extract.sh MathNetwork.Fermat.gaussianEuclideanRoute \
   MathNetwork.Fermat.zagierInvolutionRoute
 ```
 

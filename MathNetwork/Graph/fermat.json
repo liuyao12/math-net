@@ -1,198 +1,2752 @@
 {
-  "$schema": "./schema.json",
-  "schemaVersion": "1.0",
-  "graphId": "fermat-two-squares",
-  "label": "Fermat's two-square theorem: strict proof dependencies",
-  "nodes": [
-    {
-      "id": "fermat-two-squares",
-      "kind": "proposition",
-      "label": "Fermat's two-square theorem",
-      "role": "theorem",
-      "statement": "For every prime p with p ≡ 1 (mod 4), there exist natural numbers a and b such that a² + b² = p.",
-      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.fermatPrimeTwoSquares", "file": "MathNetwork/Fermat/Registry.lean" }],
-      "tags": ["number-theory", "sum-of-two-squares"],
-      "verification": {
-        "state": "formalized",
-        "scope": "local",
-        "declaration": "MathNetwork.Fermat.fermatPrimeTwoSquares",
-        "closure": "not-applicable",
-        "note": "This node is the proposition type; its proof routes are represented separately."
-      }
-    },
-    {
-      "id": "fermat-two-squares-involution",
-      "kind": "proposition",
-      "label": "Fermat theorem via involutions",
-      "role": "theorem",
-      "statement": "The Fermat two-square theorem follows from parity of fixed points of two involutions on a finite set.",
-      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.fermat_two_squares_involution", "file": "MathNetwork/Fermat/Zagier.lean" }],
-      "verification": {
-        "state": "checked",
-        "scope": "local-with-imports",
-        "declaration": "MathNetwork.Fermat.fermat_two_squares_involution",
-        "conditional": true,
-        "assumptions": ["p is prime", "p ≡ 1 (mod 4)"],
-        "axioms": [],
-        "closure": "closed",
-        "note": "Kernel-checked local theorem assembled from imported Zagier involution lemmas."
-      }
-    },
-    {
-      "id": "prime-two-squares",
-      "kind": "proposition",
-      "label": "Prime sum-of-two-squares criterion",
-      "role": "theorem",
-      "statement": "A prime p is a sum of two squares when p = 2 or p ≡ 1 (mod 4).",
-      "verification": { "state": "planned", "scope": "none", "closure": "open", "note": "General criterion is a planned comparison target."
-      }
-    },
-    {
-      "id": "witness-29",
-      "kind": "proposition",
-      "label": "The 29 witness",
-      "role": "example",
-      "statement": "5² + 2² = 29.",
-      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.witness29", "file": "MathNetwork/Fermat/Registry.lean" }],
-      "verification": {
-        "state": "formalized",
-        "scope": "local",
-        "declaration": "MathNetwork.Fermat.witness29",
-        "closure": "not-applicable",
-        "note": "The proposition is formalized; the explicit-witness proof route is checked separately."
-      }
-    },
-    {
-      "id": "involution-parity",
-      "kind": "concept",
-      "label": "Parity of fixed points of involutions",
-      "description": "Two involutions on the same finite set have fixed-point counts congruent modulo two."
-      ,"verification": { "state": "imported-checked", "scope": "imported", "closure": "closed", "note": "Provided by the imported Lean development." }
-    },
-    {
-      "id": "gaussian-integers",
-      "kind": "concept",
-      "label": "Gaussian integers",
-      "description": "Representing a + bi as an integer pair with multiplicative norm."
-      ,"verification": { "state": "imported-checked", "scope": "imported", "closure": "closed", "note": "Used as the conceptual Gaussian-integer foundation.\n" }
-    },
-    {
-      "id": "integer-lattice-circle",
-      "kind": "concept",
-      "label": "Integer lattice circle",
-      "description": "A lattice point (a,b) lies on the squared-radius n circle exactly when a² + b² = n.",
-      "verification": {
-        "state": "checked",
-        "scope": "local",
-        "declaration": "MathNetwork.Fermat.LatticePoint.normSq",
-        "closure": "closed",
-        "note": "The geometric encoding is defined and checked locally."
-      }
-    },
-    {
-      "id": "arctan-slope",
-      "kind": "concept",
-      "label": "Arctangent of a lattice slope",
-      "description": "The direction of a lattice vector is recorded by arctan(y/x), with tangent recovering the rational slope.",
-      "verification": {
-        "state": "checked",
-        "scope": "local-with-imports",
-        "declaration": "MathNetwork.Fermat.lattice_angle_tan",
-        "closure": "closed",
-        "note": "Uses mathlib's tangent/arctangent identity. The identity is a surface-level geometric dependency; its foundational mathlib route may transitively use exp, which should be recorded by extraction rather than duplicated here."
-      }
-    },
-    {
-      "id": "zagier-two-squares",
-      "kind": "source",
-      "label": "Zagier two-square development",
-      "locator": "https://github.com/leanprover-community/mathlib4/blob/master/Mathlib/Archive/ZagierTwoSquares.lean",
-      "citation": "Mathlib Archive.ZagierTwoSquares"
-      ,"verification": { "state": "imported-checked", "scope": "imported", "closure": "closed", "note": "Public source imported by the checked local route." }
-    },
-    {
-      "id": "involution-fixed-point-family",
-      "kind": "proof-family",
-      "label": "Involution/fixed-point parity",
-      "method": "Build a finite set with two involutions, compare fixed-point parity, and extract a two-square witness.",
-      "proves": ["fermat-two-squares", "fermat-two-squares-involution"],
-      "assumptions": ["p is prime", "p ≡ 1 (mod 4)"],
-      "tags": ["finite-combinatorics", "involution"]
-      ,"verification": {
-        "state": "checked",
-        "scope": "local-with-imports",
-        "declaration": "MathNetwork.Fermat.zagierInvolutionRoute",
-        "conditional": true,
-        "assumptions": ["p is prime", "p ≡ 1 (mod 4)"],
-        "axioms": [],
-        "closure": "closed"
-      }
-    },
-    {
-      "id": "geometric-lattice-family",
-      "kind": "proof-family",
-      "label": "Geometric lattice point",
-      "method": "Represent 29 by the lattice point (5,2), identify its circle radius through the norm, and record its direction by an arctangent slope.",
-      "proves": ["witness-29"],
-      "assumptions": ["concrete benchmark p = 29"],
-      "tags": ["geometry", "lattice", "arctangent"],
-      "formalizations": [{ "language": "Lean", "name": "MathNetwork.Fermat.geometricWitness29_proof", "file": "MathNetwork/Fermat/Geometry.lean" }],
-      "verification": {
-        "state": "checked",
-        "scope": "local-with-imports",
-        "conditional": false,
-        "assumptions": ["concrete benchmark p = 29"],
-        "axioms": [],
-        "closure": "closed",
-        "note": "A checked geometric/arctangent benchmark; it is not yet a proof of the general prime theorem."
-      }
-    },
-    {
-      "id": "gaussian-euclidean-family",
-      "kind": "proof-family",
-      "label": "Gaussian integer Euclidean descent",
-      "method": "Use unique factorization or Euclidean descent in ℤ[i] to force a representation by the norm form.",
-      "proves": ["prime-two-squares"],
-      "assumptions": ["work in the Gaussian integers"],
-      "tags": ["algebraic-number-theory", "norm"]
-      ,"verification": { "state": "planned", "scope": "none", "closure": "open", "note": "Route is registered but not yet proved locally." }
-    }
-  ],
   "edges": [
     {
-      "id": "involution-parity-used-in-involution-proof",
+      "description": "Fact is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-1-64",
+      "proof": "proof-decl-1",
       "relation": "used-in-proof",
-      "source": { "id": "involution-parity", "kind": "concept" },
-      "target": { "id": "involution-fixed-point-family", "kind": "proof-family" },
-      "description": "The imported fixed-point parity result is invoked by this proof route."
+      "source": {
+        "id": "const-1",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
     },
     {
-      "id": "zagier-source-used-in-involution-proof",
+      "description": "Set is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-4-65",
+      "proof": "proof-decl-1",
       "relation": "used-in-proof",
-      "source": { "id": "zagier-two-squares", "kind": "source" },
-      "target": { "id": "involution-fixed-point-family", "kind": "proof-family" },
-      "description": "The checked route imports declarations from this mathlib development."
+      "source": {
+        "id": "const-4",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
     },
     {
-      "id": "gaussian-integers-used-in-gaussian-proof",
+      "description": "Fintype.card is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-38-66",
+      "proof": "proof-decl-1",
       "relation": "used-in-proof",
-      "source": { "id": "gaussian-integers", "kind": "concept" },
-      "target": { "id": "gaussian-euclidean-family", "kind": "proof-family" },
-      "description": "The Gaussian-integer norm is a prerequisite of the planned route."
+      "source": {
+        "id": "const-38",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
     },
     {
-      "id": "lattice-circle-used-in-geometric-proof",
+      "description": "Fintype.card_congr' is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-39-67",
+      "proof": "proof-decl-1",
       "relation": "used-in-proof",
-      "source": { "id": "integer-lattice-circle", "kind": "concept" },
-      "target": { "id": "geometric-lattice-family", "kind": "proof-family" },
-      "description": "The geometric route uses the lattice norm as squared distance."
+      "source": {
+        "id": "const-39",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
     },
     {
-      "id": "arctan-slope-used-in-geometric-proof",
+      "description": "Fintype.card_eq_zero is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-40-68",
+      "proof": "proof-decl-1",
       "relation": "used-in-proof",
-      "source": { "id": "arctan-slope", "kind": "concept" },
-      "target": { "id": "geometric-lattice-family", "kind": "proof-family" },
-      "description": "The geometric route uses arctangent to encode the vector direction."
+      "source": {
+        "id": "const-40",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Function.fixedPoints is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-41-69",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-41",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Monoid.toNPow is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-43-70",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-43",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "NPow.toPow is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-45-71",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-45",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Nat.ModEq is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-46-72",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-46",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Nat.Prime is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-47-73",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-47",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Nat.fact_prime_two is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-49-74",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-49",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Set.Elem is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-62-75",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-62",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Set.Nonempty is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-63-76",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-63",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Set.fintypeEmpty is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-64-77",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-64",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Set.not_nonempty_iff_eq_empty is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-65-78",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-65",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Subtype.fintype is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-69-79",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-69",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Equiv.Perm.card_fixedPoints_modEq is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-70-80",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-70",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Function.fixedPoints.decidable is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-71-81",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-71",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Nat.ModEq.symm is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-72-82",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-72",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Nat.ModEq.trans is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-73-83",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-73",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Contrapose.contrapose\u2081 is a direct Lean dependency of MathNetwork.Fermat.fermat_two_squares_involution.",
+      "id": "use-1-81-84",
+      "proof": "proof-decl-1",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-81",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-1",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "MathNetwork.Fermat.ProofRoute is a direct Lean dependency of MathNetwork.Fermat.ProofRoute.proof.",
+      "id": "local-use-15-35-89",
+      "proof": "proof-decl-15",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "decl-35",
+        "kind": "concept"
+      },
+      "target": {
+        "id": "decl-15",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Nat.Prime is a direct Lean dependency of MathNetwork.Fermat.euclid_lemma.",
+      "id": "use-17-47-90",
+      "proof": "proof-decl-17",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-47",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-17",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Nat.Prime.dvd_mul is a direct Lean dependency of MathNetwork.Fermat.euclid_lemma.",
+      "id": "use-17-74-91",
+      "proof": "proof-decl-17",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-74",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-17",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Ring is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-3-139",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-3",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "instDistribOfSemiring is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-6-140",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-6",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "instMulZeroClassOfSemiring is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-7-141",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-7",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "AddCommGroup.toDivisionAddCommMonoid is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-10-142",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-10",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "AddCommMonoidWithOne.toAddMonoidWithOne is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-12-143",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-12",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "CommRing.toRing is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-16-144",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-16",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "CommSemiring.toSemiring is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-17-145",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-17",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Distrib.toAdd is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-35-146",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-35",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Distrib.toMul is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-36-147",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-36",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Int.rawCast is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-42-148",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-42",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Monoid.toNPow is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-43-149",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-43",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "MulZeroClass.toZero is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-44-150",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-44",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "NPow.toPow is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-45-151",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-45",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Nat.rawCast is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-50-152",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-50",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "NegZeroClass.toNeg is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-51-153",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-51",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "NonAssocSemiring.toAddCommMonoidWithOne is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-52-154",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-52",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Ring.toAddCommGroup is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-58-155",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-58",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Ring.toSemiring is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-59-156",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-59",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Semiring.toMonoid is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-60-157",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-60",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Semiring.toNonAssocSemiring is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-61-158",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-61",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "SubNegZeroMonoid.toNegZeroClass is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-66-159",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-66",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "SubtractionCommMonoid.toSubtractionMonoid is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-67-160",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-67",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "SubtractionMonoid.toSubNegZeroMonoid is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-68-161",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-68",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "MathNetwork.Fermat.GaussianPair is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "local-use-22-5-162",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "decl-5",
+        "kind": "concept"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "MathNetwork.Fermat.GaussianPair.im is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "local-use-22-18-163",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "decl-18",
+        "kind": "concept"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "MathNetwork.Fermat.GaussianPair.mul is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "local-use-22-20-164",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "decl-20",
+        "kind": "concept"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "MathNetwork.Fermat.GaussianPair.normSq is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "local-use-22-37-165",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "decl-37",
+        "kind": "concept"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "MathNetwork.Fermat.GaussianPair.re is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "local-use-22-4-166",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "decl-4",
+        "kind": "concept"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.isInt_add is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-75-167",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-75",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.isInt_mul is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-76-168",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-76",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.isInt_neg is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-77-169",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-77",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.isNat_add is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-78-170",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-78",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.isNat_mul is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-79-171",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-79",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.of_eq is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-83-172",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-83",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.IsInt.of_raw is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-84-173",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-84",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.IsInt.to_isNat is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-85-174",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-85",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.IsInt.to_raw_eq is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-86-175",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-86",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.IsNat.of_raw is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-87-176",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-87",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.IsNat.to_isInt is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-88-177",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-88",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Meta.NormNum.IsNat.to_raw_eq is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-89-178",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-89",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.add_congr is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-90-179",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-90",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.add_mul is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-91-180",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-91",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.add_overlap_pf is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-92-181",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-92",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.add_overlap_pf_zero is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-93-182",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-93",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.add_pf_add_gt is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-94-183",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-94",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.add_pf_add_lt is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-95-184",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-95",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.add_pf_add_overlap is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-96-185",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-96",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.add_pf_add_overlap_zero is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-97-186",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-97",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.add_pf_add_zero is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-98-187",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-98",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.add_pf_zero_add is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-99-188",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-99",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.atom_pf is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-100-189",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-100",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.mul_add is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-101-190",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-101",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.mul_congr is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-102-191",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-102",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.mul_pf_left is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-103-192",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-103",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.mul_pf_right is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-104-193",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-104",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.mul_pp_pf_overlap is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-105-194",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-105",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.mul_zero is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-106-195",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-106",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.neg_add is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-107-196",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-107",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.neg_mul is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-109-197",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-109",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.neg_zero is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-110-198",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-110",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.sub_congr is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-111-199",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-111",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.sub_pf is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-112-200",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-112",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
+    },
+    {
+      "description": "Mathlib.Tactic.Ring.Common.zero_mul is a direct Lean dependency of MathNetwork.Fermat.normSq_mul.",
+      "id": "use-22-113-201",
+      "proof": "proof-decl-22",
+      "relation": "used-in-proof",
+      "source": {
+        "id": "const-113",
+        "kind": "source"
+      },
+      "target": {
+        "id": "decl-22",
+        "kind": "proposition"
+      }
     }
-  ]
+  ],
+  "graphId": "math-net-fermat-declarations",
+  "label": "math-net: Fermat theorem dependencies",
+  "merge": {
+    "definitions": "one node per declaration",
+    "key": "exact proposition statement + Lean module",
+    "proofProvenance": "edge proof field and proposition proofs records"
+  },
+  "nodes": [
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.fermat_two_squares_involution"
+        }
+      ],
+      "id": "decl-1",
+      "kind": "proposition",
+      "label": "fermat_two_squares_involution",
+      "module": "MathNetwork.Fermat.Zagier",
+      "namespace": "MathNetwork.Fermat.fermat_two_squares_involution",
+      "proofs": [
+        {
+          "closure": "partial",
+          "declaration": "MathNetwork.Fermat.fermat_two_squares_involution",
+          "id": "proof-decl-1",
+          "label": "MathNetwork.Fermat.fermat_two_squares_involution",
+          "note": "Proof provenance retained from the elaborated Lean declaration.",
+          "scope": "local-with-imports",
+          "status": "kernel-checked"
+        }
+      ],
+      "role": "theorem",
+      "statement": "forall {p : Nat} [h : Fact (Nat.Prime p)], (Eq.{1} Nat (HMod.hMod.{0, 0, 0} Nat Nat Nat (instHMod.{0} Nat Nat.instMod) p (OfNat.ofNat.{0} Nat 4 (instOfNatNat 4))) (OfNat.ofNat.{0} Nat 1 (instOfNatNat 1))) -> (Exists.{1} Nat (fun (a : Nat) => Exists.{1} Nat (fun (b : Nat) => Eq.{1} Nat (HAdd.hAdd.{0, 0, 0} Nat Nat Nat (instHAdd.{0} Nat instAddNat) (HPow.hPow.{0, 0, 0} Nat Nat Nat (instHPow.{0, 0} Nat Nat (NPow.toPow.{0} Nat (Monoid.toNPow.{0} Nat Nat.instMonoid))) a (OfNat.ofNat.{0} Nat 2 (instOfNatNat 2))) (HPow.hPow.{0, 0, 0} Nat Nat Nat (instHPow.{0, 0} Nat Nat (NPow.toPow.{0} Nat (Monoid.toNPow.{0} Nat Nat.instMonoid))) b (OfNat.ofNat.{0} Nat 2 (instOfNatNat 2)))) p)))",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.ProofRoute.proof"
+        }
+      ],
+      "id": "decl-15",
+      "kind": "proposition",
+      "label": "proof",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.ProofRoute.proof",
+      "proofs": [
+        {
+          "closure": "partial",
+          "declaration": "MathNetwork.Fermat.ProofRoute.proof",
+          "id": "proof-decl-15",
+          "label": "MathNetwork.Fermat.ProofRoute.proof",
+          "note": "Proof provenance retained from the elaborated Lean declaration.",
+          "scope": "local-with-imports",
+          "status": "kernel-checked"
+        }
+      ],
+      "role": "theorem",
+      "statement": "forall {P : Prop}, (MathNetwork.Fermat.ProofRoute P) -> P",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.euclid_lemma"
+        }
+      ],
+      "id": "decl-17",
+      "kind": "proposition",
+      "label": "euclid_lemma",
+      "module": "MathNetwork.Fermat.Basic",
+      "namespace": "MathNetwork.Fermat.euclid_lemma",
+      "proofs": [
+        {
+          "closure": "partial",
+          "declaration": "MathNetwork.Fermat.euclid_lemma",
+          "id": "proof-decl-17",
+          "label": "MathNetwork.Fermat.euclid_lemma",
+          "note": "Proof provenance retained from the elaborated Lean declaration.",
+          "scope": "local-with-imports",
+          "status": "kernel-checked"
+        }
+      ],
+      "role": "theorem",
+      "statement": "forall {p : Nat} {a : Nat} {b : Nat}, (Nat.Prime p) -> (Dvd.dvd.{0} Nat Nat.instDvd p (HMul.hMul.{0, 0, 0} Nat Nat Nat (instHMul.{0} Nat instMulNat) a b)) -> (Or (Dvd.dvd.{0} Nat Nat.instDvd p a) (Dvd.dvd.{0} Nat Nat.instDvd p b))",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.normSq_mul"
+        }
+      ],
+      "id": "decl-22",
+      "kind": "proposition",
+      "label": "normSq_mul",
+      "module": "MathNetwork.Fermat.Basic",
+      "namespace": "MathNetwork.Fermat.normSq_mul",
+      "proofs": [
+        {
+          "closure": "partial",
+          "declaration": "MathNetwork.Fermat.normSq_mul",
+          "id": "proof-decl-22",
+          "label": "MathNetwork.Fermat.normSq_mul",
+          "note": "Proof provenance retained from the elaborated Lean declaration.",
+          "scope": "local-with-imports",
+          "status": "kernel-checked"
+        }
+      ],
+      "role": "theorem",
+      "statement": "forall (z : MathNetwork.Fermat.GaussianPair) (w : MathNetwork.Fermat.GaussianPair), Eq.{1} Int (MathNetwork.Fermat.GaussianPair.normSq (MathNetwork.Fermat.GaussianPair.mul z w)) (HMul.hMul.{0, 0, 0} Int Int Int (instHMul.{0} Int Int.instMul) (MathNetwork.Fermat.GaussianPair.normSq z) (MathNetwork.Fermat.GaussianPair.normSq w))",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.ProofRoute.name"
+        }
+      ],
+      "id": "decl-3",
+      "kind": "concept",
+      "label": "name",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.ProofRoute.name",
+      "role": "definition",
+      "statement": "forall {P : Prop}, (MathNetwork.Fermat.ProofRoute P) -> String",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.GaussianPair.re"
+        }
+      ],
+      "id": "decl-4",
+      "kind": "concept",
+      "label": "re",
+      "module": "MathNetwork.Fermat.Basic",
+      "namespace": "MathNetwork.Fermat.GaussianPair.re",
+      "role": "definition",
+      "statement": "MathNetwork.Fermat.GaussianPair -> Int",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.GaussianPair"
+        }
+      ],
+      "id": "decl-5",
+      "kind": "concept",
+      "label": "GaussianPair",
+      "module": "MathNetwork.Fermat.Basic",
+      "namespace": "MathNetwork.Fermat.GaussianPair",
+      "role": "definition",
+      "statement": "Type",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.availableRoutes"
+        }
+      ],
+      "id": "decl-7",
+      "kind": "concept",
+      "label": "availableRoutes",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.availableRoutes",
+      "role": "definition",
+      "statement": "List.{0} String",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.ProofRoute.description"
+        }
+      ],
+      "id": "decl-8",
+      "kind": "concept",
+      "label": "description",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.ProofRoute.description",
+      "role": "definition",
+      "statement": "forall {P : Prop}, (MathNetwork.Fermat.ProofRoute P) -> String",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.fermatPrimeTwoSquares"
+        }
+      ],
+      "id": "decl-10",
+      "kind": "concept",
+      "label": "fermatPrimeTwoSquares",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.fermatPrimeTwoSquares",
+      "role": "definition",
+      "statement": "Prop",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.GaussianPair.im"
+        }
+      ],
+      "id": "decl-18",
+      "kind": "concept",
+      "label": "im",
+      "module": "MathNetwork.Fermat.Basic",
+      "namespace": "MathNetwork.Fermat.GaussianPair.im",
+      "role": "definition",
+      "statement": "MathNetwork.Fermat.GaussianPair -> Int",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.GaussianPair.casesOn"
+        }
+      ],
+      "id": "decl-19",
+      "kind": "concept",
+      "label": "casesOn",
+      "module": "MathNetwork.Fermat.Basic",
+      "namespace": "MathNetwork.Fermat.GaussianPair.casesOn",
+      "role": "definition",
+      "statement": "forall {motive : MathNetwork.Fermat.GaussianPair -> Sort.{u}} (t : MathNetwork.Fermat.GaussianPair), (forall (re : Int) (im : Int), motive (MathNetwork.Fermat.GaussianPair.mk re im)) -> (motive t)",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.GaussianPair.mul"
+        }
+      ],
+      "id": "decl-20",
+      "kind": "concept",
+      "label": "mul",
+      "module": "MathNetwork.Fermat.Basic",
+      "namespace": "MathNetwork.Fermat.GaussianPair.mul",
+      "role": "definition",
+      "statement": "MathNetwork.Fermat.GaussianPair -> MathNetwork.Fermat.GaussianPair -> MathNetwork.Fermat.GaussianPair",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.gaussianEuclideanRoute"
+        }
+      ],
+      "id": "decl-26",
+      "kind": "concept",
+      "label": "gaussianEuclideanRoute",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.gaussianEuclideanRoute",
+      "role": "definition",
+      "statement": "MathNetwork.Fermat.ProofRoute MathNetwork.Fermat.fermatPrimeTwoSquares",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.zagierInvolutionRoute"
+        }
+      ],
+      "id": "decl-27",
+      "kind": "concept",
+      "label": "zagierInvolutionRoute",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.zagierInvolutionRoute",
+      "role": "definition",
+      "statement": "MathNetwork.Fermat.ProofRoute MathNetwork.Fermat.fermatPrimeTwoSquares",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.GaussianPair.rec"
+        }
+      ],
+      "id": "decl-29",
+      "kind": "concept",
+      "label": "rec",
+      "module": "MathNetwork.Fermat.Basic",
+      "namespace": "MathNetwork.Fermat.GaussianPair.rec",
+      "role": "definition",
+      "statement": "forall {motive : MathNetwork.Fermat.GaussianPair -> Sort.{u}}, (forall (re : Int) (im : Int), motive (MathNetwork.Fermat.GaussianPair.mk re im)) -> (forall (t : MathNetwork.Fermat.GaussianPair), motive t)",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.ProofRoute.rec"
+        }
+      ],
+      "id": "decl-32",
+      "kind": "concept",
+      "label": "rec",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.ProofRoute.rec",
+      "role": "definition",
+      "statement": "forall {P : Prop} {motive : (MathNetwork.Fermat.ProofRoute P) -> Sort.{u}}, (forall (name : String) (description : String) (proof : P), motive (MathNetwork.Fermat.ProofRoute.mk P name description proof)) -> (forall (t : MathNetwork.Fermat.ProofRoute P), motive t)",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.ProofRoute.mk"
+        }
+      ],
+      "id": "decl-34",
+      "kind": "concept",
+      "label": "mk",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.ProofRoute.mk",
+      "role": "definition",
+      "statement": "forall {P : Prop}, String -> String -> P -> (MathNetwork.Fermat.ProofRoute P)",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.ProofRoute"
+        }
+      ],
+      "id": "decl-35",
+      "kind": "concept",
+      "label": "ProofRoute",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.ProofRoute",
+      "role": "definition",
+      "statement": "Prop -> Type",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.GaussianPair.mk"
+        }
+      ],
+      "id": "decl-36",
+      "kind": "concept",
+      "label": "mk",
+      "module": "MathNetwork.Fermat.Basic",
+      "namespace": "MathNetwork.Fermat.GaussianPair.mk",
+      "role": "definition",
+      "statement": "Int -> Int -> MathNetwork.Fermat.GaussianPair",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.GaussianPair.normSq"
+        }
+      ],
+      "id": "decl-37",
+      "kind": "concept",
+      "label": "normSq",
+      "module": "MathNetwork.Fermat.Basic",
+      "namespace": "MathNetwork.Fermat.GaussianPair.normSq",
+      "role": "definition",
+      "statement": "MathNetwork.Fermat.GaussianPair -> Int",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "formalizations": [
+        {
+          "language": "Lean",
+          "name": "MathNetwork.Fermat.ProofRoute.casesOn"
+        }
+      ],
+      "id": "decl-39",
+      "kind": "concept",
+      "label": "casesOn",
+      "module": "MathNetwork.Fermat.Registry",
+      "namespace": "MathNetwork.Fermat.ProofRoute.casesOn",
+      "role": "definition",
+      "statement": "forall {P : Prop} {motive : (MathNetwork.Fermat.ProofRoute P) -> Sort.{u}} (t : MathNetwork.Fermat.ProofRoute P), (forall (name : String) (description : String) (proof : P), motive (MathNetwork.Fermat.ProofRoute.mk P name description proof)) -> (motive t)",
+      "verification": {
+        "closure": "partial",
+        "note": "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.",
+        "scope": "local-with-imports",
+        "state": "checked"
+      }
+    },
+    {
+      "citation": "Fact",
+      "id": "const-1",
+      "kind": "source",
+      "label": "Fact",
+      "locator": "mathlib/Mathlib.Logic.Basic",
+      "namespace": "Fact",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Ring",
+      "id": "const-3",
+      "kind": "source",
+      "label": "Ring",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "Ring",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Set",
+      "id": "const-4",
+      "kind": "source",
+      "label": "Set",
+      "locator": "mathlib/Mathlib.Data.Set.Defs",
+      "namespace": "Set",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "instDistribOfSemiring",
+      "id": "const-6",
+      "kind": "source",
+      "label": "instDistribOfSemiring",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "instDistribOfSemiring",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "instMulZeroClassOfSemiring",
+      "id": "const-7",
+      "kind": "source",
+      "label": "instMulZeroClassOfSemiring",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "instMulZeroClassOfSemiring",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "AddCommGroup.toDivisionAddCommMonoid",
+      "id": "const-10",
+      "kind": "source",
+      "label": "toDivisionAddCommMonoid",
+      "locator": "mathlib/Mathlib.Algebra.Group.Defs",
+      "namespace": "AddCommGroup.toDivisionAddCommMonoid",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "AddCommMonoidWithOne.toAddMonoidWithOne",
+      "id": "const-12",
+      "kind": "source",
+      "label": "toAddMonoidWithOne",
+      "locator": "mathlib/Mathlib.Data.Nat.Cast.Defs",
+      "namespace": "AddCommMonoidWithOne.toAddMonoidWithOne",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "CommRing.toRing",
+      "id": "const-16",
+      "kind": "source",
+      "label": "toRing",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "CommRing.toRing",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "CommSemiring.toSemiring",
+      "id": "const-17",
+      "kind": "source",
+      "label": "toSemiring",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "CommSemiring.toSemiring",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Distrib.toAdd",
+      "id": "const-35",
+      "kind": "source",
+      "label": "toAdd",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "Distrib.toAdd",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Distrib.toMul",
+      "id": "const-36",
+      "kind": "source",
+      "label": "toMul",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "Distrib.toMul",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Fintype.card",
+      "id": "const-38",
+      "kind": "source",
+      "label": "card",
+      "locator": "mathlib/Mathlib.Data.Fintype.Card",
+      "namespace": "Fintype.card",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Fintype.card_congr'",
+      "id": "const-39",
+      "kind": "source",
+      "label": "card_congr'",
+      "locator": "mathlib/Mathlib.Data.Fintype.Card",
+      "namespace": "Fintype.card_congr'",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Fintype.card_eq_zero",
+      "id": "const-40",
+      "kind": "source",
+      "label": "card_eq_zero",
+      "locator": "mathlib/Mathlib.Data.Fintype.Card",
+      "namespace": "Fintype.card_eq_zero",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Function.fixedPoints",
+      "id": "const-41",
+      "kind": "source",
+      "label": "fixedPoints",
+      "locator": "mathlib/Mathlib.Dynamics.FixedPoints.Defs",
+      "namespace": "Function.fixedPoints",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Int.rawCast",
+      "id": "const-42",
+      "kind": "source",
+      "label": "rawCast",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Result",
+      "namespace": "Int.rawCast",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Monoid.toNPow",
+      "id": "const-43",
+      "kind": "source",
+      "label": "toNPow",
+      "locator": "mathlib/Mathlib.Algebra.Group.Defs",
+      "namespace": "Monoid.toNPow",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "MulZeroClass.toZero",
+      "id": "const-44",
+      "kind": "source",
+      "label": "toZero",
+      "locator": "mathlib/Mathlib.Algebra.GroupWithZero.Defs",
+      "namespace": "MulZeroClass.toZero",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "NPow.toPow",
+      "id": "const-45",
+      "kind": "source",
+      "label": "toPow",
+      "locator": "mathlib/Mathlib.Algebra.Group.Defs",
+      "namespace": "NPow.toPow",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Nat.ModEq",
+      "id": "const-46",
+      "kind": "source",
+      "label": "ModEq",
+      "locator": "mathlib/Mathlib.Data.Nat.ModEq",
+      "namespace": "Nat.ModEq",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Nat.Prime",
+      "id": "const-47",
+      "kind": "source",
+      "label": "Prime",
+      "locator": "mathlib/Mathlib.Data.Nat.Prime.Defs",
+      "namespace": "Nat.Prime",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Nat.fact_prime_two",
+      "id": "const-49",
+      "kind": "source",
+      "label": "fact_prime_two",
+      "locator": "mathlib/Mathlib.Data.Nat.Prime.Defs",
+      "namespace": "Nat.fact_prime_two",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Nat.rawCast",
+      "id": "const-50",
+      "kind": "source",
+      "label": "rawCast",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Result",
+      "namespace": "Nat.rawCast",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "NegZeroClass.toNeg",
+      "id": "const-51",
+      "kind": "source",
+      "label": "toNeg",
+      "locator": "mathlib/Mathlib.Algebra.Group.Defs",
+      "namespace": "NegZeroClass.toNeg",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "NonAssocSemiring.toAddCommMonoidWithOne",
+      "id": "const-52",
+      "kind": "source",
+      "label": "toAddCommMonoidWithOne",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "NonAssocSemiring.toAddCommMonoidWithOne",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Ring.toAddCommGroup",
+      "id": "const-58",
+      "kind": "source",
+      "label": "toAddCommGroup",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "Ring.toAddCommGroup",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Ring.toSemiring",
+      "id": "const-59",
+      "kind": "source",
+      "label": "toSemiring",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "Ring.toSemiring",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Semiring.toMonoid",
+      "id": "const-60",
+      "kind": "source",
+      "label": "toMonoid",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "Semiring.toMonoid",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Semiring.toNonAssocSemiring",
+      "id": "const-61",
+      "kind": "source",
+      "label": "toNonAssocSemiring",
+      "locator": "mathlib/Mathlib.Algebra.Ring.Defs",
+      "namespace": "Semiring.toNonAssocSemiring",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Set.Elem",
+      "id": "const-62",
+      "kind": "source",
+      "label": "Elem",
+      "locator": "mathlib/Mathlib.Data.Set.CoeSort",
+      "namespace": "Set.Elem",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Set.Nonempty",
+      "id": "const-63",
+      "kind": "source",
+      "label": "Nonempty",
+      "locator": "mathlib/Mathlib.Data.Set.Defs",
+      "namespace": "Set.Nonempty",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Set.fintypeEmpty",
+      "id": "const-64",
+      "kind": "source",
+      "label": "fintypeEmpty",
+      "locator": "mathlib/Mathlib.Data.Set.Finite.Basic",
+      "namespace": "Set.fintypeEmpty",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Set.not_nonempty_iff_eq_empty",
+      "id": "const-65",
+      "kind": "source",
+      "label": "not_nonempty_iff_eq_empty",
+      "locator": "mathlib/Mathlib.Data.Set.Basic",
+      "namespace": "Set.not_nonempty_iff_eq_empty",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "SubNegZeroMonoid.toNegZeroClass",
+      "id": "const-66",
+      "kind": "source",
+      "label": "toNegZeroClass",
+      "locator": "mathlib/Mathlib.Algebra.Group.Defs",
+      "namespace": "SubNegZeroMonoid.toNegZeroClass",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "SubtractionCommMonoid.toSubtractionMonoid",
+      "id": "const-67",
+      "kind": "source",
+      "label": "toSubtractionMonoid",
+      "locator": "mathlib/Mathlib.Algebra.Group.Defs",
+      "namespace": "SubtractionCommMonoid.toSubtractionMonoid",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "SubtractionMonoid.toSubNegZeroMonoid",
+      "id": "const-68",
+      "kind": "source",
+      "label": "toSubNegZeroMonoid",
+      "locator": "mathlib/Mathlib.Algebra.Group.Basic",
+      "namespace": "SubtractionMonoid.toSubNegZeroMonoid",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Subtype.fintype",
+      "id": "const-69",
+      "kind": "source",
+      "label": "fintype",
+      "locator": "mathlib/Mathlib.Data.Fintype.Sets",
+      "namespace": "Subtype.fintype",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Equiv.Perm.card_fixedPoints_modEq",
+      "id": "const-70",
+      "kind": "source",
+      "label": "card_fixedPoints_modEq",
+      "locator": "mathlib/Mathlib.GroupTheory.Perm.Cycle.Type",
+      "namespace": "Equiv.Perm.card_fixedPoints_modEq",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Function.fixedPoints.decidable",
+      "id": "const-71",
+      "kind": "source",
+      "label": "decidable",
+      "locator": "mathlib/Mathlib.Dynamics.FixedPoints.Defs",
+      "namespace": "Function.fixedPoints.decidable",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Nat.ModEq.symm",
+      "id": "const-72",
+      "kind": "source",
+      "label": "symm",
+      "locator": "mathlib/Mathlib.Data.Nat.ModEq",
+      "namespace": "Nat.ModEq.symm",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Nat.ModEq.trans",
+      "id": "const-73",
+      "kind": "source",
+      "label": "trans",
+      "locator": "mathlib/Mathlib.Data.Nat.ModEq",
+      "namespace": "Nat.ModEq.trans",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Nat.Prime.dvd_mul",
+      "id": "const-74",
+      "kind": "source",
+      "label": "dvd_mul",
+      "locator": "mathlib/Mathlib.Data.Nat.Prime.Defs",
+      "namespace": "Nat.Prime.dvd_mul",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.isInt_add",
+      "id": "const-75",
+      "kind": "source",
+      "label": "isInt_add",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Basic",
+      "namespace": "Mathlib.Meta.NormNum.isInt_add",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.isInt_mul",
+      "id": "const-76",
+      "kind": "source",
+      "label": "isInt_mul",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Basic",
+      "namespace": "Mathlib.Meta.NormNum.isInt_mul",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.isInt_neg",
+      "id": "const-77",
+      "kind": "source",
+      "label": "isInt_neg",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Basic",
+      "namespace": "Mathlib.Meta.NormNum.isInt_neg",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.isNat_add",
+      "id": "const-78",
+      "kind": "source",
+      "label": "isNat_add",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Basic",
+      "namespace": "Mathlib.Meta.NormNum.isNat_add",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.isNat_mul",
+      "id": "const-79",
+      "kind": "source",
+      "label": "isNat_mul",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Basic",
+      "namespace": "Mathlib.Meta.NormNum.isNat_mul",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Contrapose.contrapose\u2081",
+      "id": "const-81",
+      "kind": "source",
+      "label": "contrapose\u2081",
+      "locator": "mathlib/Mathlib.Tactic.Contrapose",
+      "namespace": "Mathlib.Tactic.Contrapose.contrapose\u2081",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.of_eq",
+      "id": "const-83",
+      "kind": "source",
+      "label": "of_eq",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Basic",
+      "namespace": "Mathlib.Tactic.Ring.of_eq",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.IsInt.of_raw",
+      "id": "const-84",
+      "kind": "source",
+      "label": "of_raw",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Result",
+      "namespace": "Mathlib.Meta.NormNum.IsInt.of_raw",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.IsInt.to_isNat",
+      "id": "const-85",
+      "kind": "source",
+      "label": "to_isNat",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Result",
+      "namespace": "Mathlib.Meta.NormNum.IsInt.to_isNat",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.IsInt.to_raw_eq",
+      "id": "const-86",
+      "kind": "source",
+      "label": "to_raw_eq",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Result",
+      "namespace": "Mathlib.Meta.NormNum.IsInt.to_raw_eq",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.IsNat.of_raw",
+      "id": "const-87",
+      "kind": "source",
+      "label": "of_raw",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Result",
+      "namespace": "Mathlib.Meta.NormNum.IsNat.of_raw",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.IsNat.to_isInt",
+      "id": "const-88",
+      "kind": "source",
+      "label": "to_isInt",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Result",
+      "namespace": "Mathlib.Meta.NormNum.IsNat.to_isInt",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Meta.NormNum.IsNat.to_raw_eq",
+      "id": "const-89",
+      "kind": "source",
+      "label": "to_raw_eq",
+      "locator": "mathlib/Mathlib.Tactic.NormNum.Result",
+      "namespace": "Mathlib.Meta.NormNum.IsNat.to_raw_eq",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.add_congr",
+      "id": "const-90",
+      "kind": "source",
+      "label": "add_congr",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.add_congr",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.add_mul",
+      "id": "const-91",
+      "kind": "source",
+      "label": "add_mul",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.add_mul",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.add_overlap_pf",
+      "id": "const-92",
+      "kind": "source",
+      "label": "add_overlap_pf",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.add_overlap_pf",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.add_overlap_pf_zero",
+      "id": "const-93",
+      "kind": "source",
+      "label": "add_overlap_pf_zero",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.add_overlap_pf_zero",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.add_pf_add_gt",
+      "id": "const-94",
+      "kind": "source",
+      "label": "add_pf_add_gt",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.add_pf_add_gt",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.add_pf_add_lt",
+      "id": "const-95",
+      "kind": "source",
+      "label": "add_pf_add_lt",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.add_pf_add_lt",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.add_pf_add_overlap",
+      "id": "const-96",
+      "kind": "source",
+      "label": "add_pf_add_overlap",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.add_pf_add_overlap",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.add_pf_add_overlap_zero",
+      "id": "const-97",
+      "kind": "source",
+      "label": "add_pf_add_overlap_zero",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.add_pf_add_overlap_zero",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.add_pf_add_zero",
+      "id": "const-98",
+      "kind": "source",
+      "label": "add_pf_add_zero",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.add_pf_add_zero",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.add_pf_zero_add",
+      "id": "const-99",
+      "kind": "source",
+      "label": "add_pf_zero_add",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.add_pf_zero_add",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.atom_pf",
+      "id": "const-100",
+      "kind": "source",
+      "label": "atom_pf",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.atom_pf",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.mul_add",
+      "id": "const-101",
+      "kind": "source",
+      "label": "mul_add",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.mul_add",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.mul_congr",
+      "id": "const-102",
+      "kind": "source",
+      "label": "mul_congr",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.mul_congr",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.mul_pf_left",
+      "id": "const-103",
+      "kind": "source",
+      "label": "mul_pf_left",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.mul_pf_left",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.mul_pf_right",
+      "id": "const-104",
+      "kind": "source",
+      "label": "mul_pf_right",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.mul_pf_right",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.mul_pp_pf_overlap",
+      "id": "const-105",
+      "kind": "source",
+      "label": "mul_pp_pf_overlap",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.mul_pp_pf_overlap",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.mul_zero",
+      "id": "const-106",
+      "kind": "source",
+      "label": "mul_zero",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.mul_zero",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.neg_add",
+      "id": "const-107",
+      "kind": "source",
+      "label": "neg_add",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.neg_add",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.neg_mul",
+      "id": "const-109",
+      "kind": "source",
+      "label": "neg_mul",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.neg_mul",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.neg_zero",
+      "id": "const-110",
+      "kind": "source",
+      "label": "neg_zero",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.neg_zero",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.sub_congr",
+      "id": "const-111",
+      "kind": "source",
+      "label": "sub_congr",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.sub_congr",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.sub_pf",
+      "id": "const-112",
+      "kind": "source",
+      "label": "sub_pf",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.sub_pf",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    },
+    {
+      "citation": "Mathlib.Tactic.Ring.Common.zero_mul",
+      "id": "const-113",
+      "kind": "source",
+      "label": "zero_mul",
+      "locator": "mathlib/Mathlib.Tactic.Ring.Common",
+      "namespace": "Mathlib.Tactic.Ring.Common.zero_mul",
+      "verification": {
+        "closure": "closed",
+        "scope": "imported",
+        "state": "imported-checked"
+      }
+    }
+  ],
+  "schemaVersion": "1.0"
 }

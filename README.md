@@ -244,18 +244,17 @@ The initial external comparison target is the local `ComputableAnalysis`
 checkout at `/Users/liuyao/Documents/Codex/projects/computable-analysis` and a
 pinned mathlib revision recorded by this repository.
 
-The first application catalog is documented in
-[`docs/fermat-application-catalog.md`](docs/fermat-application-catalog.md).
+The first application is documented in
+[`docs/fermat-application.md`](docs/fermat-application.md).
 Twenty further calculus and computable-analysis applications are proposed in
 [`docs/application-catalog-twenty-more.md`](docs/application-catalog-twenty-more.md).
 The revised outside-computable-analysis catalog is in
 [`docs/application-catalog-outside-computable-analysis.md`](docs/application-catalog-outside-computable-analysis.md).
 The analysis-facing starting tranche from Wiedijk's 100 Theorems list is in
 [`docs/100-theorems-calculus-corpus.md`](docs/100-theorems-calculus-corpus.md).
-The checked theorem-shaped entries live in
-`MathNetwork/Fermat/ApplicationProblems.lean`; the small arithmetic examples
-are deliberately separated from the larger factorization, representation-count,
-geometry, and transcendental-function problems.
+The checked Fermat application and its proof routes live in
+`MathNetwork/Fermat/Registry.lean`; the supporting declaration graph is
+generated from the elaborated Lean environment.
 
 ## Pedagogical mode
 

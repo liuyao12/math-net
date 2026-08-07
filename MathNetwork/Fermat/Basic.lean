@@ -23,14 +23,6 @@ def GaussianPair.normSq (z : GaussianPair) : Int :=
   simp [GaussianPair.mul, GaussianPair.normSq]
   ring
 
-theorem concrete_29 :
-    (GaussianPair.normSq ⟨5, 2⟩ : Int) = 29 := by
-  norm_num [GaussianPair.normSq]
-
-theorem concrete_composition :
-    GaussianPair.mul ⟨3, 4⟩ ⟨5, 12⟩ = ⟨-33, 56⟩ := by
-  rfl
-
 theorem euclid_lemma {p a b : Nat} (hp : Nat.Prime p)
     (h : p ∣ a * b) : p ∣ a ∨ p ∣ b := by
   exact hp.dvd_mul.mp h
