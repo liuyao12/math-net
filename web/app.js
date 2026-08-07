@@ -351,7 +351,6 @@ function renderInspector() {
     <span class="node-kind ${escapeHtml(node.kind)}">${escapeHtml(KIND_LABELS[node.kind])}</span>
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(node.label)}</h2>
-    ${node.statement || node.description || node.method ? `<p class="statement">${escapeHtml(node.statement || node.description || node.method)}</p>` : ""}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
