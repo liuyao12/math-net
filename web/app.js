@@ -284,6 +284,7 @@ function populateTheoremSelect() {
     state.theoremNumber = number;
     updateTheoremNote();
     if (theorem?.graph && theorem.graph !== requestedGraph) window.location.reload();
+    else selectTheoremNode();
   });
 }
 
@@ -297,6 +298,11 @@ function updateTheoremNote() {
   note.innerHTML = theorem.graph
     ? `<span class="theorem-ready">✓ graph available</span> · ${escapeHtml(theorem.graph)} view`
     : "catalogued · dependency graph not imported yet";
+}
+
+function selectTheoremNode() {
+  const theorem = state.theorems.find((item) => String(item.number) === String(state.theoremNumber));
+  if (theorem?.node && nodeMap().has(theorem.node)) selectNode(theorem.node);
 }
 
 function legend() {
@@ -522,6 +528,7 @@ async function load() {
     kindControls();
     routeControls();
     legend();
+    selectTheoremNode();
     draw();
   } catch (error) {
     const loading = $("#loading-state");
