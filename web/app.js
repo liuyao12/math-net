@@ -488,7 +488,8 @@ function dependencyRanks(nodes, edges) {
   // Edges point from a used declaration to the proof that uses it. Repeated
   // relaxation gives a readable top-to-bottom layering while remaining robust
   // if an imported graph contains a small cycle.
-  for (let pass = 0; pass < nodes.length; pass += 1) {
+  const maxPasses = nodes.length > 400 ? 12 : nodes.length;
+  for (let pass = 0; pass < maxPasses; pass += 1) {
     let changed = false;
     edges.forEach((edge) => {
       const next = Math.min(nodes.length - 1, (ranks.get(edge.source.id) || 0) + 1);
@@ -527,23 +528,31 @@ function draw() {
   const ranks = dependencyRanks(nodes, edges);
   const maxRank = Math.max(0, ...Array.from(ranks.values()));
   const layerGap = Math.max(38, Math.min(105, (height - 90) / Math.max(1, maxRank)));
-  nodes.forEach((item, index) => {
-    item.x = item.x || width / 2 + ((index % 7) - 3) * 42;
-    item.y = (ranks.get(item.id) || 0) * layerGap + 45;
-  });
+  const largeGraph = nodes.length > 400;
+  const nodesByRank = d3.group(nodes, (item) => ranks.get(item.id) || 0);
+  nodesByRank.forEach((layer, rank) => layer.forEach((item, index) => {
+    item.x = width * (index + 1) / (layer.length + 1);
+    item.y = rank * layerGap + 45;
+  }));
   const link = root.append("g").attr("aria-hidden", "true").selectAll("path").data(edges, (edge) => edge.id).join("path")
     .attr("class", "graph-link used-in-proof")
     .attr("stroke", (edge) => proofColor(edge.proof))
     .attr("marker-end", "url(#arrow-used-in-proof)");
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
   node.append("circle").attr("class", "node-dot").attr("r", (item) => item.kind === "proof-family" ? 10 : item.kind === "proposition" ? 8 : 6).attr("fill", (item) => KIND_COLORS[item.kind]);
   node.append("text").attr("class", "node-label").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => item.label.length > 31 && nodes.length > 12);
   state.simulation?.stop();
-  state.simulation = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id((item) => item.id).distance(105).strength(0.3)).force("y", d3.forceY((item) => (ranks.get(item.id) || 0) * layerGap + 45).strength(0.9)).force("x", d3.forceX(width / 2).strength(0.08)).force("charge", d3.forceManyBody().strength(-260)).force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 30 : 25)).on("tick", () => {
+  state.simulation = null;
+  if (largeGraph) {
     link.attr("d", straightLinkPath);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
-  });
+  } else {
+    state.simulation = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id((item) => item.id).distance(105).strength(0.3)).force("y", d3.forceY((item) => (ranks.get(item.id) || 0) * layerGap + 45).strength(0.9)).force("x", d3.forceX(width / 2).strength(0.08)).force("charge", d3.forceManyBody().strength(-260)).force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 30 : 25)).on("tick", () => {
+      link.attr("d", straightLinkPath);
+      node.attr("transform", (item) => `translate(${item.x},${item.y})`);
+    });
+  }
   updateHighlight();
 }
 
