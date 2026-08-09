@@ -201,6 +201,8 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-dot.selected { stroke: var(--ink); stroke-width: 3; }
 .node-dot.dimmed { opacity: 0.16; }
 .node-label.dimmed { opacity: 0.16; }
+.node-dot[data-focus-distance="2"], .node-label[data-focus-distance="2"] { opacity: 0.62; }
+.node-dot[data-focus-distance="3"], .node-label[data-focus-distance="3"] { opacity: 0.3; }
 .graph-link { fill: none; stroke-width: 1.6; opacity: 0.58; stroke-linecap: round; }
 .graph-link.dimmed { opacity: 0.08; }
 .graph-link.proves { stroke: var(--gold); }

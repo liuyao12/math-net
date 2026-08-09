@@ -45,6 +45,7 @@ const state = {
   route: "all",
   simulation: null,
   sourceRequest: 0,
+  focusDistances: new Map(),
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -206,6 +207,26 @@ function routeMatch(node, edges) {
   return edges.some((edge) => edge.source.id === state.route && edge.target.id === node.id);
 }
 
+function focusDistances(nodeId, edges, maxDepth = 3) {
+  const distances = new Map([[nodeId, 0]]);
+  const adjacency = new Map();
+  edges.forEach((edge) => {
+    if (!adjacency.has(edge.source.id)) adjacency.set(edge.source.id, []);
+    if (!adjacency.has(edge.target.id)) adjacency.set(edge.target.id, []);
+    adjacency.get(edge.source.id).push(edge.target.id);
+    adjacency.get(edge.target.id).push(edge.source.id);
+  });
+  let frontier = [nodeId];
+  for (let depth = 1; depth <= maxDepth; depth += 1) {
+    const next = [];
+    frontier.forEach((current) => (adjacency.get(current) || []).forEach((neighbor) => {
+      if (!distances.has(neighbor)) { distances.set(neighbor, depth); next.push(neighbor); }
+    }));
+    frontier = next;
+  }
+  return distances;
+}
+
 function visibleGraph() {
   const nodesById = nodeMap();
   const edgeData = state.graph.edges
@@ -214,8 +235,10 @@ function visibleGraph() {
     .map((edge) => ({ ...edge, source: nodesById.get(edge.source.id), target: nodesById.get(edge.target.id) }))
     .filter((edge) => edge.source && edge.target);
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(node.kind));
+  state.focusDistances = state.selectedId ? focusDistances(state.selectedId, edgeData, 3) : new Map();
   const focus = searchFocus(candidateNodes, edgeData);
   const visibleNodes = candidateNodes.filter((node) => {
+    if (state.selectedId && !state.focusDistances.has(node.id)) return false;
     if (state.search && !focus.has(node.id)) return false;
     if (node.kind === "proof-family" && state.route !== "all" && node.id !== state.route) return false;
     return true;
@@ -525,7 +548,9 @@ function draw() {
   const root = svg.append("g");
   svg.call(d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => root.attr("transform", event.transform)));
   const labels = proofLabels();
-  const ranks = dependencyRanks(nodes, edges);
+  const ranks = state.selectedId
+    ? new Map(nodes.map((item) => [item.id, Math.max(...nodes.map((node) => state.focusDistances.get(node.id) || 0) - (state.focusDistances.get(item.id) || 0), 0)]))
+    : dependencyRanks(nodes, edges);
   const maxRank = Math.max(0, ...Array.from(ranks.values()));
   const layerGap = Math.max(38, Math.min(105, (height - 90) / Math.max(1, maxRank)));
   const largeGraph = nodes.length > 400;
@@ -540,8 +565,8 @@ function draw() {
     .attr("marker-end", "url(#arrow-used-in-proof)");
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
   const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
-  node.append("circle").attr("class", "node-dot").attr("r", (item) => item.kind === "proof-family" ? 10 : item.kind === "proposition" ? 8 : 6).attr("fill", (item) => KIND_COLORS[item.kind]);
-  node.append("text").attr("class", "node-label").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => item.label.length > 31 && nodes.length > 12);
+  node.append("circle").attr("class", "node-dot").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : item.kind === "proposition" ? 8 : 6).attr("fill", (item) => KIND_COLORS[item.kind]);
+  node.append("text").attr("class", "node-label").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => item.label.length > 31 && nodes.length > 12);
   state.simulation?.stop();
   state.simulation = null;
   if (largeGraph) {
