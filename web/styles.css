@@ -105,6 +105,7 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb
 .check-grid.compact { grid-template-columns: 1fr 1fr; gap: 7px 10px; }
 .filter-option { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
 .filter-option input { accent-color: var(--blue); }
+.implementation-toggle { margin-top: 10px; color: var(--faint); }
 .filter-dot, .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .filter-dot.proposition, .legend-dot.proposition { background: var(--blue); }
 .filter-dot.proof-family, .legend-dot.proof-family { background: var(--gold); }
@@ -201,10 +202,13 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-dot.selected { stroke: var(--ink); stroke-width: 3; }
 .node-dot.dimmed { opacity: 0.16; }
 .node-label.dimmed { opacity: 0.16; }
+.node-dot.implementation { opacity: 0.28; }
+.node-label.implementation { color: var(--faint); font-size: 10px; }
 .node-dot[data-focus-distance="2"], .node-label[data-focus-distance="2"] { opacity: 0.62; }
 .node-dot[data-focus-distance="3"], .node-label[data-focus-distance="3"] { opacity: 0.3; }
 .graph-link { fill: none; stroke-width: 1.6; opacity: 0.58; stroke-linecap: round; }
 .graph-link.dimmed { opacity: 0.08; }
+.graph-link.implementation-link { opacity: 0.2; }
 .graph-link.proves { stroke: var(--gold); }
 .graph-link.uses { stroke: var(--blue); }
 .graph-link.equivalent { stroke: var(--teal); stroke-dasharray: 4 4; }

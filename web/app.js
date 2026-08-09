@@ -46,6 +46,7 @@ const state = {
   simulation: null,
   sourceRequest: 0,
   focusDistances: new Map(),
+  showImplementation: false,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -381,6 +382,10 @@ function verificationText(node) {
   return `${status.glyph} ${status.label}${condition}${scope}`;
 }
 
+function isMajorNode(node) {
+  return node.kind !== "source" || node.declarationKind === "proposition";
+}
+
 function proofColor(proofId = "") {
   for (const node of state.graph?.nodes || []) {
     const proof = (node.proofs || []).find((item) => item.id === proofId);
@@ -561,12 +566,13 @@ function draw() {
   }));
   const link = root.append("g").attr("aria-hidden", "true").selectAll("path").data(edges, (edge) => edge.id).join("path")
     .attr("class", "graph-link used-in-proof")
+    .classed("implementation-link", (edge) => !isMajorNode(edge.source) && !isMajorNode(edge.target))
     .attr("stroke", (edge) => proofColor(edge.proof))
     .attr("marker-end", "url(#arrow-used-in-proof)");
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
-  node.append("circle").attr("class", "node-dot").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : item.kind === "proposition" ? 8 : 6).attr("fill", (item) => KIND_COLORS[item.kind]);
-  node.append("text").attr("class", "node-label").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => item.label.length > 31 && nodes.length > 12);
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
+  node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && item.kind === "proposition" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", (item) => KIND_COLORS[item.kind]);
+  node.append("text").attr("class", "node-label").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (!state.showImplementation && !isMajorNode(item)) || (item.label.length > 31 && nodes.length > 12));
   state.simulation?.stop();
   state.simulation = null;
   if (largeGraph) {
@@ -624,11 +630,14 @@ $("#reset").addEventListener("click", () => {
   state.route = "all";
   $("#search").value = "";
   $("#route-filter").value = "all";
-  document.querySelectorAll("input[type=checkbox]").forEach((input) => { input.checked = true; });
+  document.querySelectorAll("#kind-filters input[type=checkbox]").forEach((input) => { input.checked = true; });
+  state.showImplementation = false;
+  $("#show-implementation").checked = false;
   state.kinds = new Set(Object.keys(KIND_LABELS));
   renderInspector();
   draw();
 });
 $("#clear-selection").addEventListener("click", () => { state.selectedId = null; state.selectedProofId = null; renderInspector(); updateHighlight(); });
+$("#show-implementation").addEventListener("change", (event) => { state.showImplementation = event.target.checked; draw(); });
 window.addEventListener("resize", () => draw());
 load();
