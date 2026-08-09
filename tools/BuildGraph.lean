@@ -1,6 +1,7 @@
 import Lean
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
+import MathNetwork.Comparisons.List100
 
 /-!
 # Build the project-wide declaration graph
