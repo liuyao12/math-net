@@ -251,6 +251,11 @@ function declarationClassFor(node) {
   return declarationKindFor(node).replace(/[^a-z0-9-]/gi, "-");
 }
 
+function isImplementationNode(node) {
+  if (node?.kind !== "source") return false;
+  return ["definition", "quotient", "constructor", "recursor"].includes(declarationKindFor(node));
+}
+
 function availableDeclarationKinds() {
   return [...new Set((state.graph?.nodes || []).map(declarationKindFor))].sort((left, right) => {
     const order = ["theorem", "opaque", "conjecture", "definition", "quotient", "inductive", "constructor", "recursor"];
@@ -562,7 +567,7 @@ function verificationText(node) {
 }
 
 function isMajorNode(node) {
-  return node.kind !== "source" || ["theorem", "opaque", "conjecture"].includes(declarationKindFor(node));
+  return !isImplementationNode(node);
 }
 
 function proofColor(proofId = "") {
@@ -692,7 +697,9 @@ function updateHighlight() {
   const neighborhood = state.focusId ? new Set(state.focusDistances.keys()) : new Set();
   svg.selectAll(".node-dot").classed("selected", (node) => node.id === state.selectedId).classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
   svg.selectAll(".node-label").classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
-  svg.selectAll(".graph-link").classed("dimmed", (edge) => state.focusId && (!neighborhood.has(edge.source.id) || !neighborhood.has(edge.target.id)));
+  svg.selectAll(".graph-link")
+    .classed("dimmed", (edge) => state.focusId && (!neighborhood.has(edge.source.id) || !neighborhood.has(edge.target.id)))
+    .classed("selected-edge", (edge) => Boolean(state.selectedId) && (edge.source.id === state.selectedId || edge.target.id === state.selectedId));
   const focusStatus = $("#focus-status");
   if (focusStatus) {
     const focus = state.focusId ? nodeMap().get(state.focusId) : null;
