@@ -258,6 +258,10 @@ function isImplementationNode(node) {
   return ["definition", "quotient", "constructor", "recursor"].includes(declarationKindFor(node));
 }
 
+function isExpansionBoundary(node) {
+  return declarationKindFor(node) === "inductive";
+}
+
 function availableDeclarationKinds() {
   return [...new Set((state.graph?.nodes || []).map(declarationKindFor))].sort((left, right) => {
     const order = ["theorem", "opaque", "conjecture", "definition", "quotient", "inductive", "constructor", "recursor"];
@@ -475,7 +479,8 @@ function beginProgressiveReveal() {
     state.revealCapped = false;
     while (queue.length) {
       const parent = queue.shift();
-      if (parent.depth >= 3) continue;
+      const parentNode = nodeIds.has(parent.id) ? nodeMap().get(parent.id) : null;
+      if (isExpansionBoundary(parentNode)) continue;
       const children = [];
       const existing = [];
       (adjacency.get(parent.id) || []).slice().sort().forEach((neighbor) => {
@@ -639,7 +644,7 @@ function selectProof(proofId) {
 
 function expandNodeDependencies(nodeId) {
   const node = nodeMap().get(nodeId);
-  if (!node) return;
+  if (!node || isExpansionBoundary(node)) return;
   if (Number.isFinite(node.x) && Number.isFinite(node.y)) {
     state.inspectionAnchor = { id: nodeId, x: node.x, y: node.y };
   }
@@ -663,6 +668,7 @@ function expandNodeDependencies(nodeId) {
 }
 
 function hasHiddenDependencies(nodeId, visibleNodes) {
+  if (isExpansionBoundary(nodeMap().get(nodeId))) return false;
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
   return state.graph.edges.some((edge) => edge.relation === "used-in-proof" && edge.target.id === nodeId &&
     !visibleIds.has(edge.source.id) && state.kinds.has(declarationKindFor(nodeMap().get(edge.source.id))));
@@ -691,7 +697,7 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations. Each formalization below remains available as a separate proof/source route.</p></div>`
     : "";
   const depthNote = Number.isInteger(node.dependencyDepth)
-    ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported declaration · layer ${node.dependencyDepth} of the indexed closure.${node.dependencyBoundary ? " Direct dependencies beyond this boundary are not yet indexed in this graph." : ""}</p></div>`
+    ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported declaration · layer ${node.dependencyDepth}.${node.dependencyBoundary ? " Expansion stops here at a Lean structure boundary; click the node’s marker to inspect any indexed dependencies." : ""}</p></div>`
     : "";
   const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(proof.color || proofColor(proof.id))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
