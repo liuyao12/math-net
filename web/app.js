@@ -708,6 +708,43 @@ function enforceTopDown(nodes, edges, ranks, focusId, gap = 26) {
   }
 }
 
+function labelCollisionForce(nodes) {
+  const active = nodes.filter((node) => isMajorNode(node));
+  const widthOf = (node) => Math.max(30, labelFor(node).length * 6.2 + 20);
+  const force = () => {
+    active.forEach((left, i) => {
+      const leftWidth = widthOf(left);
+      const leftBox = { left: left.x + 10, right: left.x + 10 + leftWidth, top: left.y - 9, bottom: left.y + 9 };
+      active.slice(i + 1).forEach((right) => {
+        const rightWidth = widthOf(right);
+        const rightBox = { left: right.x + 10, right: right.x + 10 + rightWidth, top: right.y - 9, bottom: right.y + 9 };
+        if (leftBox.right < rightBox.left || rightBox.right < leftBox.left || leftBox.bottom < rightBox.top || rightBox.bottom < leftBox.top) return;
+        const horizontal = Math.min(leftBox.right, rightBox.right) - Math.max(leftBox.left, rightBox.left);
+        const vertical = Math.min(leftBox.bottom, rightBox.bottom) - Math.max(leftBox.top, rightBox.top);
+        if (horizontal < vertical) {
+          const direction = left.x <= right.x ? -1 : 1;
+          left.x += direction * horizontal * 0.35;
+          right.x -= direction * horizontal * 0.35;
+        } else {
+          const direction = left.y <= right.y ? -1 : 1;
+          left.y += direction * vertical * 0.35;
+          right.y -= direction * vertical * 0.35;
+        }
+      });
+      nodes.forEach((right) => {
+        if (right === left) return;
+        const dx = right.x - (leftBox.left + leftWidth / 2);
+        const dy = right.y - left.y;
+        if (Math.abs(dx) <= leftWidth / 2 + 10 && Math.abs(dy) < 18) {
+          const direction = dy >= 0 ? -1 : 1;
+          left.y += direction * (18 - Math.abs(dy)) * 0.3;
+        }
+      });
+    });
+  };
+  return force;
+}
+
 function draw() {
   if (!state.graph) return;
   const { nodes, edges } = visibleGraph();
@@ -815,6 +852,7 @@ function draw() {
       .force("x", d3.forceX((item) => item.id === state.focusId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId ? 0.76 : 0.12))
       .force("charge", d3.forceManyBody().strength(state.focusId ? -230 : -180))
       .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
+      .force("labels", labelCollisionForce(nodes))
       .force("top-down", topDownForce(edges))
       .on("tick", () => {
       enforceTopDown(nodes, edges, ranks, state.focusId);
