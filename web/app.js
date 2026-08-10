@@ -753,38 +753,43 @@ function enforceTopDown(nodes, edges, ranks, focusId, gap = 26) {
 }
 
 function labelCollisionForce(nodes) {
-  const active = nodes.filter((node) => isMajorNode(node));
+  const active = nodes.filter((node) => isMajorNode(node) && (nodes.length <= 12 || node.label.length <= 31));
   const widthOf = (node) => Math.max(30, labelFor(node).length * 6.2 + 20);
+  const boxOf = (node) => {
+    const width = widthOf(node);
+    return { left: node.x + 10, right: node.x + 10 + width, top: node.y - 10, bottom: node.y + 10, width };
+  };
   const force = () => {
-    active.forEach((left, i) => {
-      const leftWidth = widthOf(left);
-      const leftBox = { left: left.x + 10, right: left.x + 10 + leftWidth, top: left.y - 9, bottom: left.y + 9 };
-      active.slice(i + 1).forEach((right) => {
-        const rightWidth = widthOf(right);
-        const rightBox = { left: right.x + 10, right: right.x + 10 + rightWidth, top: right.y - 9, bottom: right.y + 9 };
-        if (leftBox.right < rightBox.left || rightBox.right < leftBox.left || leftBox.bottom < rightBox.top || rightBox.bottom < leftBox.top) return;
-        const horizontal = Math.min(leftBox.right, rightBox.right) - Math.max(leftBox.left, rightBox.left);
-        const vertical = Math.min(leftBox.bottom, rightBox.bottom) - Math.max(leftBox.top, rightBox.top);
-        if (horizontal < vertical) {
-          const direction = left.x <= right.x ? -1 : 1;
-          left.x += direction * horizontal * 0.35;
-          right.x -= direction * horizontal * 0.35;
-        } else {
-          const direction = left.y <= right.y ? -1 : 1;
-          left.y += direction * vertical * 0.35;
-          right.y -= direction * vertical * 0.35;
-        }
+    for (let pass = 0; pass < 3; pass += 1) {
+      active.forEach((left, i) => {
+        const leftBox = boxOf(left);
+        active.slice(i + 1).forEach((right) => {
+          const rightBox = boxOf(right);
+          if (leftBox.right < rightBox.left || rightBox.right < leftBox.left || leftBox.bottom < rightBox.top || rightBox.bottom < leftBox.top) return;
+          const horizontal = Math.min(leftBox.right, rightBox.right) - Math.max(leftBox.left, rightBox.left) + 4;
+          const vertical = Math.min(leftBox.bottom, rightBox.bottom) - Math.max(leftBox.top, rightBox.top) + 4;
+          if (horizontal < vertical) {
+            const direction = left.x <= right.x ? -1 : 1;
+            left.x += direction * horizontal * 0.55;
+            right.x -= direction * horizontal * 0.55;
+          } else {
+            const direction = left.y <= right.y ? -1 : 1;
+            left.y += direction * vertical * 0.55;
+            right.y -= direction * vertical * 0.55;
+          }
+        });
+        nodes.forEach((right) => {
+          if (right === left) return;
+          const box = boxOf(left);
+          const radius = right.kind === "proof-family" ? 10 : isMajorNode(right) ? 8 : 5;
+          const inside = right.x + radius > box.left && right.x - radius < box.right && right.y + radius > box.top && right.y - radius < box.bottom;
+          if (inside) {
+            const direction = right.y >= left.y ? -1 : 1;
+            left.y += direction * (Math.min(box.bottom, right.y + radius) - Math.max(box.top, right.y - radius) + 6) * 0.55;
+          }
+        });
       });
-      nodes.forEach((right) => {
-        if (right === left) return;
-        const dx = right.x - (leftBox.left + leftWidth / 2);
-        const dy = right.y - left.y;
-        if (Math.abs(dx) <= leftWidth / 2 + 10 && Math.abs(dy) < 18) {
-          const direction = dy >= 0 ? -1 : 1;
-          left.y += direction * (18 - Math.abs(dy)) * 0.3;
-        }
-      });
-    });
+    }
   };
   return force;
 }
