@@ -827,6 +827,40 @@ function dependencyRanks(nodes, edges) {
   return ranks;
 }
 
+function proofRouteSides(nodes, edges, focusId) {
+  const sides = new Map();
+  const focus = nodes.find((node) => node.id === focusId);
+  if (!focus || !(focus.proofs || []).length) return sides;
+  const groupForProof = new Map();
+  const groups = [];
+  (focus.proofs || []).forEach((proof) => {
+    const key = proof.routeKind === "local" ? "local" : proof.routeKind || proof.id;
+    if (!groups.includes(key)) groups.push(key);
+    groupForProof.set(proof.id, key);
+  });
+  const groupSide = new Map(groups.map((group, index) => [group, groups.length < 2 ? 0 : index === 0 ? -1 : index === groups.length - 1 ? 1 : 0]));
+  const incoming = new Map();
+  edges.forEach((edge) => {
+    if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
+    incoming.get(edge.target.id).push(edge);
+  });
+  const queue = [focusId];
+  sides.set(focusId, 0);
+  while (queue.length) {
+    const targetId = queue.shift();
+    (incoming.get(targetId) || []).forEach((edge) => {
+      const edgeSide = targetId === focusId ? groupSide.get(groupForProof.get(edge.proof)) ?? 0 : sides.get(targetId) ?? 0;
+      if (!sides.has(edge.source.id)) {
+        sides.set(edge.source.id, edgeSide);
+        queue.push(edge.source.id);
+      } else if (sides.get(edge.source.id) !== edgeSide) {
+        sides.set(edge.source.id, 0);
+      }
+    });
+  }
+  return sides;
+}
+
 function straightLinkPath(edge) {
   const x1 = edge.source.x;
   const y1 = edge.source.y;
@@ -950,6 +984,7 @@ function draw() {
   // from the focus is still used for fading, but no longer flattens peers
   // into one horizontal band.
   const topologyRanks = dependencyRanks(nodes, edges);
+  const routeSides = proofRouteSides(nodes, edges, state.focusId);
   const maxFocusDistance = Math.max(0, ...nodes.map((node) => state.focusDistances.get(node.id) || 0));
   const rawRanks = new Map(nodes.map((item) => {
     // Distance supplies the main top-to-bottom dependency hierarchy. The
@@ -971,10 +1006,16 @@ function draw() {
   const nodesByRank = d3.group(nodes, (item) => ranks.get(item.id) || 0);
   const maxLayerSize = Math.max(1, ...Array.from(nodesByRank.values()).map((layer) => layer.length));
   const columnGap = Math.min(112, Math.max(72, (width - 80) / Math.max(1, maxLayerSize)));
-  nodesByRank.forEach((layer, rank) => layer.forEach((item, index) => {
+  const lanePositions = new Map();
+  nodesByRank.forEach((layer) => d3.group(layer, (item) => routeSides.get(item.id) || 0).forEach((lane, side) => {
+    lane.forEach((item, index) => lanePositions.set(item.id, { side: Number(side), index, size: lane.length }));
+  }));
+  const laneOffset = Math.min(150, Math.max(78, width * 0.16));
+  nodesByRank.forEach((layer, rank) => layer.forEach((item) => {
+    const lane = lanePositions.get(item.id) || { side: 0, index: 0, size: 1 };
     const targetX = item.id === state.focusId
       ? width / 2
-      : width / 2 + (index - (layer.length - 1) / 2) * columnGap;
+      : width / 2 + lane.side * laneOffset + (lane.index - (lane.size - 1) / 2) * columnGap * 0.72;
     const targetY = item.id === state.focusId
       ? height * 0.74
       : graphTop + rank * layerGap;
@@ -1060,7 +1101,7 @@ function draw() {
     state.simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(edges).id((item) => item.id).distance(state.focusId ? 104 : 82).strength(state.focusId ? 0.34 : 0.22))
       .force("y", d3.forceY((item) => item.id === state.focusId ? height * 0.74 : graphTop + (ranks.get(item.id) || 0) * layerGap).strength((item) => item.id === state.focusId ? 0.92 : state.focusId ? 0.08 : 1.2))
-      .force("x", d3.forceX((item) => item.id === state.focusId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId ? 0.76 : 0.12))
+      .force("x", d3.forceX((item) => item.id === state.focusId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId ? 0.76 : routeSides.has(item.id) && routeSides.get(item.id) !== 0 ? 0.22 : 0.12))
       .force("charge", d3.forceManyBody().strength(state.focusId ? -230 : -180))
       .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
       .force("labels", labelCollisionForce(nodes))
