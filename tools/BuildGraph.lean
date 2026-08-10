@@ -137,6 +137,7 @@ private def dependencyNode (env : Environment) (name : Name) (index : Nat) (modu
     ("locator", if module.startsWith "Mathlib." then s!"mathlib/{module}" else s!"computable-analysis/{module}"),
     ("citation", name.toString),
     ("dependencyDepth", toJson depth),
+    ("dependencyBoundary", if depth >= maxDependencyDepth then Json.bool true else Json.bool false),
     ("verification", Json.mkObj [
       ("state", "imported-checked"),
       ("scope", "imported"),

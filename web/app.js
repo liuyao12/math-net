@@ -641,7 +641,7 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations. Each formalization below remains available as a separate proof/source route.</p></div>`
     : "";
   const depthNote = Number.isInteger(node.dependencyDepth)
-    ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported mathlib declaration · layer ${node.dependencyDepth} of the bounded closure.</p></div>`
+    ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported declaration · layer ${node.dependencyDepth} of the indexed closure.${node.dependencyBoundary ? " Direct dependencies beyond this boundary are not yet indexed in this graph." : ""}</p></div>`
     : "";
   const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(proof.color || proofColor(proof.id))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
