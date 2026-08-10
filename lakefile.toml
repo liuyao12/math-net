@@ -7,6 +7,11 @@ name = "mathlib"
 git = "https://github.com/leanprover-community/mathlib4.git"
 rev = "f4a20a0e0d8a29d2421fd9d042efe34d920f50c0"
 
+[[require]]
+name = "ComputableAnalysis"
+git = "https://github.com/liuyao12/computable-analysis.git"
+rev = "c58c5e1"
+
 [[lean_lib]]
 name = "MathNetwork"
 

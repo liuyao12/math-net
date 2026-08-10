@@ -3,6 +3,7 @@ import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 import MathNetwork.Comparisons.List100
 import MathNetwork.Comparisons.IrrationalSqrtTwo
+import MathNetwork.Comparisons.IrrationalSqrtTwoDescent
 
 /-!
 # Build the project-wide declaration graph
@@ -47,8 +48,9 @@ private def moduleOf (env : Environment) (name : Name) : String :=
   | some (i : ModuleIdx) => env.header.moduleNames[i.toNat]!.toString
   | none => ""
 
-private def isMathlibDependency (env : Environment) (name : Name) : Bool :=
-  (moduleOf env name).startsWith "Mathlib."
+private def isTrackedDependency (env : Environment) (name : Name) : Bool :=
+  let module := moduleOf env name
+  module.startsWith "Mathlib." || module.startsWith "ComputableAnalysis."
 
 private def maxDependencyDepth : Nat := 3
 
@@ -77,13 +79,13 @@ private def dependencyDepths (env : Environment) (targets : Array Name) : Array 
         if seen.contains name then visit fuel rest.toArray seen out
         else
           let seen := seen.insert name
-          let out := if isMathlibDependency env name && !isInternal name then out.push (name, depth) else out
+          let out := if isTrackedDependency env name && !isInternal name then out.push (name, depth) else out
           if depth >= maxDependencyDepth then visit fuel rest.toArray seen out
           else
             match env.find? name with
             | some ci =>
               let next := (directConstants ci).foldl (init := rest.toArray) fun next dependency =>
-                if isMathlibDependency env dependency && !isInternal dependency then
+                if isTrackedDependency env dependency && !isInternal dependency then
                   next.push (dependency, depth + 1)
                 else next
               visit fuel next seen out
@@ -111,7 +113,7 @@ private def projectNode (env : Environment) (ci : ConstantInfo) (name : Name) (i
       ("state", "checked"),
       ("scope", "local-with-imports"),
       ("closure", "partial"),
-      ("note", "Generated from the elaborated project environment; direct mathlib dependencies are shown as imported source nodes.")
+      ("note", "Generated from the elaborated project environment; direct mathlib and computable-analysis dependencies are shown as imported source nodes.")
     ])
   ]
 
@@ -127,7 +129,7 @@ private def dependencyNode (env : Environment) (name : Name) (index : Nat) (modu
     ("label", shortName name),
     ("statement", statement),
     ("namespace", name.toString),
-    ("locator", s!"mathlib/{module}"),
+    ("locator", if module.startsWith "Mathlib." then s!"mathlib/{module}" else s!"computable-analysis/{module}"),
     ("citation", name.toString),
     ("dependencyDepth", toJson depth),
     ("verification", Json.mkObj [

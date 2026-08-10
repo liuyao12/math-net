@@ -21,6 +21,10 @@ def proof_record(node: dict) -> dict:
         label = "Mathlib · library proof"
         route_kind = "library-complete"
         color = "#3f7f8f"
+    elif node.get("locator", "").startswith("computable-analysis/"):
+        label = "computable-analysis · imported proof"
+        route_kind = "computable-analysis"
+        color = "#a45b38"
     elif "gaussian" in declaration.lower():
         label = "Mathlib · Gaussian-Euclidean"
         route_kind = "mathlib"
@@ -82,7 +86,11 @@ def merge(graph: dict) -> dict:
             merged["proofs"].append(record)
             if node.get("kind") == "source" and node.get("namespace"):
                 merged.setdefault("formalizations", []).append({
-                    "repository": "mathlib4" if node.get("locator", "").startswith("mathlib/") else "imported",
+                    "repository": (
+                        "mathlib4" if node.get("locator", "").startswith("mathlib/")
+                        else "computable-analysis" if node.get("locator", "").startswith("computable-analysis/")
+                        else "imported"
+                    ),
                     "language": "Lean",
                     "name": node["namespace"],
                     "locator": node.get("locator"),

@@ -31,8 +31,10 @@ const ROUTE_KIND_LABELS = {
   "pedagogical-narrow": "narrow pedagogical route",
   "foundation-comparison": "foundation comparison",
   computational: "computational route",
+  "computable-analysis": "computable-analysis route",
 };
 const GITHUB_REPO = "https://github.com/liuyao12/math-net";
+const COMPUTABLE_ANALYSIS_REPO = "https://github.com/liuyao12/computable-analysis";
 
 const state = {
   graph: null,
@@ -110,6 +112,9 @@ function sourceFileFor(node) {
   if (node.locator?.startsWith("mathlib/")) {
     return `${node.locator.slice("mathlib/".length).replaceAll(".", "/")}.lean`;
   }
+  if (node.locator?.startsWith("computable-analysis/")) {
+    return `${node.locator.slice("computable-analysis/".length).replaceAll(".", "/")}.lean`;
+  }
   return null;
 }
 
@@ -118,6 +123,9 @@ function sourceUrlFor(node) {
   if (!file) return null;
   if (node.locator?.startsWith("mathlib/")) {
     return `https://raw.githubusercontent.com/leanprover-community/mathlib4/master/${file}`;
+  }
+  if (node.locator?.startsWith("computable-analysis/")) {
+    return `https://raw.githubusercontent.com/liuyao12/computable-analysis/main/${file}`;
   }
   return `${REPO_ROOT}${file}`;
 }
@@ -129,6 +137,10 @@ function githubUrlFor(node, item = null) {
   if (locator?.startsWith("mathlib/")) {
     const file = `${locator.slice("mathlib/".length).replaceAll(".", "/")}.lean`;
     return `https://github.com/leanprover-community/mathlib4/blob/master/${file}`;
+  }
+  if (locator?.startsWith("computable-analysis/")) {
+    const file = `${locator.slice("computable-analysis/".length).replaceAll(".", "/")}.lean`;
+    return `${COMPUTABLE_ANALYSIS_REPO}/blob/main/${file}`;
   }
   return null;
 }
