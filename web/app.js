@@ -86,6 +86,7 @@ const state = {
   revealedIds: new Set(),
   layoutPositions: new Map(),
   layoutVelocities: new Map(),
+  expandedDistances: new Map(),
   revealPaused: false,
   revealPauseReason: null,
   inspectionPaused: false,
@@ -321,6 +322,9 @@ function visibleGraph() {
     .filter((edge) => edge.source && edge.target);
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(declarationKindFor(node)));
   state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData, 3) : new Map();
+  state.expandedDistances.forEach((distance, id) => {
+    if (!state.focusDistances.has(id) || distance < state.focusDistances.get(id)) state.focusDistances.set(id, distance);
+  });
   const focus = searchFocus(candidateNodes, edgeData);
   const visibleNodes = candidateNodes.filter((node) => {
     if (state.focusId && !state.focusDistances.has(node.id)) return false;
@@ -381,6 +385,7 @@ function populateTheoremSelect() {
       state.selectedId = null;
       state.layoutPositions.clear();
       state.layoutVelocities.clear();
+      state.expandedDistances.clear();
       state.revealedIds.clear();
       updateTheoremNote();
       updateWorkspaceContext();
@@ -398,6 +403,7 @@ function populateTheoremSelect() {
     state.selectedProofId = null;
     state.layoutPositions.clear();
     state.layoutVelocities.clear();
+    state.expandedDistances.clear();
     state.revealedIds.clear();
     if (state.revealTimer) window.clearTimeout(state.revealTimer);
     state.revealTimer = null;
@@ -627,6 +633,28 @@ function selectProof(proofId) {
   draw();
 }
 
+function expandNodeDependencies(nodeId) {
+  const node = nodeMap().get(nodeId);
+  if (!node) return;
+  const dependencies = state.graph.edges
+    .filter((edge) => edge.relation === "used-in-proof" && edge.target.id === nodeId)
+    .map((edge) => edge.source.id);
+  const parentDistance = state.focusDistances.get(nodeId) ?? 0;
+  dependencies.forEach((id) => {
+    state.revealedIds.add(id);
+    const distance = parentDistance + 1;
+    if (!state.expandedDistances.has(id) || distance < state.expandedDistances.get(id)) state.expandedDistances.set(id, distance);
+  });
+  if (!dependencies.length) return;
+  state.revealPaused = true;
+  state.revealPauseReason = "inspection";
+  if (state.revealTimer) {
+    window.clearTimeout(state.revealTimer);
+    state.revealTimer = null;
+  }
+  draw();
+}
+
 function renderInspector() {
   const content = $("#inspector-content");
   const node = nodeMap().get(state.selectedId);
@@ -637,6 +665,7 @@ function renderInspector() {
   }
   const sourceRequest = ++state.sourceRequest;
   const neighbors = nodeNeighbors(node.id);
+  const directDependencies = state.graph.edges.filter((edge) => edge.relation === "used-in-proof" && edge.target.id === node.id);
   const github = githubUrlFor(node);
   const formalizations = (node.formalizations || []).map((item) => {
     const file = item.file ? `<br><span>${escapeHtml(item.file)}${item.anchor ? ` · ${escapeHtml(item.anchor)}` : ""}</span>` : "";
@@ -665,6 +694,7 @@ function renderInspector() {
     <h2>${escapeHtml(node.label)}</h2>
     ${mergeNote}
     ${depthNote}
+    ${directDependencies.length ? `<div class="detail-block"><button class="expand-button" data-expand-node="${escapeHtml(node.id)}">＋ Expand ${directDependencies.length} direct dependencies</button></div>` : ""}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
@@ -677,6 +707,7 @@ function renderInspector() {
   `;
   content.querySelectorAll("[data-neighbor]").forEach((button) => button.addEventListener("click", () => selectNode(button.dataset.neighbor)));
   content.querySelectorAll("[data-proof]").forEach((button) => button.addEventListener("click", () => selectProof(button.dataset.proof)));
+  content.querySelectorAll("[data-expand-node]").forEach((button) => button.addEventListener("click", () => expandNodeDependencies(button.dataset.expandNode)));
   loadProofSource(node, content.querySelector("#proof-source"), sourceRequest);
 }
 
@@ -1054,6 +1085,7 @@ $("#reset").addEventListener("click", () => {
   state.selectedProofId = null;
   state.layoutPositions.clear();
   state.layoutVelocities.clear();
+  state.expandedDistances.clear();
   state.revealedIds.clear();
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
@@ -1086,6 +1118,7 @@ $("#clear-selection").addEventListener("click", () => {
   state.selectedProofId = null;
   state.layoutPositions.clear();
   state.layoutVelocities.clear();
+  state.expandedDistances.clear();
   state.revealedIds.clear();
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
