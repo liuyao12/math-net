@@ -1099,7 +1099,6 @@ async function load() {
       edges: graphs.flatMap((graph) => graph.edges),
     };
     $("#graph-badge").textContent = `${state.graph.nodes.length} nodes · ${state.graph.edges.length} links`;
-    $("#network-title").textContent = "Mathematical landscape";
     state.kinds = new Set(availableDeclarationKinds());
     $(".data-source code").textContent = DATA_URLS.map((url) => url.split("/").pop()).join(" + ");
     $("#loading-state").remove();

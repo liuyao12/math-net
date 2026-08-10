@@ -21,15 +21,6 @@
   <main class="workspace">
     <section class="network-panel" aria-label="Interactive network graph">
       <div class="network-toolbar">
-        <div class="toolbar-copy">
-          <span class="eyebrow">Strict proof-dependency view</span>
-          <span class="toolbar-title" id="network-title">Mathematical landscape</span>
-        </div>
-        <div class="network-stats" aria-live="polite">
-          <span><strong id="visible-node-count">—</strong> nodes</span>
-          <span><strong id="visible-edge-count">—</strong> links</span>
-          <span class="focus-status" id="focus-status">select a theorem to focus its dependency neighborhood</span>
-        </div>
         <div class="graph-controls" aria-label="Graph controls">
           <label class="graph-control">
             <span class="field-label">List of 100</span>
@@ -44,6 +35,11 @@
               <input id="search" type="search" placeholder="Search declarations…" autocomplete="off" />
             </div>
           </label>
+        </div>
+        <div class="network-stats" aria-live="polite">
+          <span><strong id="visible-node-count">—</strong> nodes</span>
+          <span><strong id="visible-edge-count">—</strong> links</span>
+          <span class="focus-status" id="focus-status">select a theorem to focus its dependency neighborhood</span>
         </div>
         <div class="theorem-note graph-control-note" id="theorem-note">Official catalogue · choose a theorem to inspect its status.</div>
       </div>
