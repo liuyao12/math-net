@@ -75,6 +75,7 @@ const state = {
   search: "",
   kinds: new Set(),
   simulation: null,
+  settleTimer: null,
   sourceRequest: 0,
   focusDistances: new Map(),
   showImplementation: false,
@@ -667,6 +668,15 @@ function expandNodeDependencies(nodeId) {
   draw();
 }
 
+function scheduleSimulationStop(delay = 900) {
+  if (state.settleTimer) window.clearTimeout(state.settleTimer);
+  if (!state.simulation) return;
+  state.settleTimer = window.setTimeout(() => {
+    state.simulation?.stop();
+    state.settleTimer = null;
+  }, delay);
+}
+
 function hasHiddenDependencies(nodeId, visibleNodes) {
   if (isExpansionBoundary(nodeMap().get(nodeId))) return false;
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
@@ -1013,7 +1023,7 @@ function draw() {
     // not turn into a field of tiny overlapping triangles.
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; resumeRevealIfVisible(); }));
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; scheduleSimulationStop(); resumeRevealIfVisible(); }));
   node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", declarationColorFor);
   node.append("text").attr("class", "node-label").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (!state.showImplementation && !isMajorNode(item)) || (item.label.length > 31 && nodes.length > 12));
   const expanders = node.append("g").attr("class", "node-expand").attr("transform", "translate(0,-18)")
@@ -1024,6 +1034,8 @@ function draw() {
   expanders.append("circle").attr("r", 7);
   expanders.append("text").text("+");
   state.simulation?.stop();
+  if (state.settleTimer) window.clearTimeout(state.settleTimer);
+  state.settleTimer = null;
   state.simulation = null;
   // Focused neighborhoods should settle organically.  The rank calculation
   // supplies only a soft vertical preference; it must not turn the graph into
@@ -1076,7 +1088,8 @@ function draw() {
       link.attr("d", curvedLinkPath)
         .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
       node.attr("transform", (item) => `translate(${item.x},${item.y})`);
-    });
+      });
+    scheduleSimulationStop();
   }
   updateHighlight();
 }
