@@ -214,7 +214,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .graph-link { animation: graph-link-enter 220ms ease-out both; }
 .graph-link.dimmed { opacity: 0.08; }
 .graph-link.implementation-link { opacity: 0.16; }
-.graph-link.cycle-link { opacity: 0.12; stroke-dasharray: 2 4; }
+.graph-link.cycle-link { opacity: 0.22; }
 .graph-link.proves { stroke: var(--gold); }
 .graph-link.uses { stroke: var(--blue); }
 .graph-link.equivalent { stroke: var(--teal); stroke-dasharray: 4 4; }
