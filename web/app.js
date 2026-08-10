@@ -52,8 +52,7 @@ const state = {
   revealDepth: Infinity,
   revealLimit: Infinity,
   revealTimer: null,
-  revealOrder: [],
-  revealLayers: [],
+  revealSteps: [],
   revealCursor: 0,
   revealedIds: new Set(),
   layoutPositions: new Map(),
@@ -383,32 +382,28 @@ function beginProgressiveReveal() {
         if (!adjacency.has(edge.target.id)) adjacency.set(edge.target.id, []);
         adjacency.get(edge.target.id).push(edge.source.id);
       });
-    const layers = [[state.focusId]];
-    const order = [state.focusId];
-    const seen = new Set(order);
-    let frontier = [state.focusId];
-    while (frontier.length && layers.length <= 3) {
-      const next = [];
-      frontier.forEach((current) => (adjacency.get(current) || [])
-        .slice().sort()
-        .forEach((neighbor) => {
-          if (nodeIds.has(neighbor) && !seen.has(neighbor)) {
-            seen.add(neighbor);
-            order.push(neighbor);
-            next.push(neighbor);
-          }
-      }));
-      if (next.length) layers.push(next);
-      frontier = next;
+    const steps = [];
+    const seen = new Set([state.focusId]);
+    const queue = [{ id: state.focusId, depth: 0 }];
+    while (queue.length) {
+      const parent = queue.shift();
+      if (parent.depth >= 3) continue;
+      const children = (adjacency.get(parent.id) || []).slice().sort().filter((neighbor) => {
+        if (!nodeIds.has(neighbor) || seen.has(neighbor)) return false;
+        seen.add(neighbor);
+        return true;
+      });
+      if (children.length) {
+        steps.push({ parentId: parent.id, nodeIds: children });
+        children.forEach((id) => queue.push({ id, depth: parent.depth + 1 }));
+      }
     }
-    state.revealOrder = order;
-    state.revealLayers = layers;
-    state.revealCursor = 1;
+    state.revealSteps = steps;
+    state.revealCursor = 0;
   } else {
     state.revealDepth = Infinity;
     state.revealLimit = state.graph.nodes.length > 250 ? 220 : Infinity;
-    state.revealOrder = [];
-    state.revealLayers = [];
+    state.revealSteps = [];
     state.revealCursor = 0;
   }
   draw();
@@ -420,21 +415,21 @@ function beginProgressiveReveal() {
         updateHighlight();
         return;
       }
-      if (state.revealCursor >= state.revealLayers.length) {
+      if (state.revealCursor >= state.revealSteps.length) {
         state.revealTimer = null;
         return;
       }
-      state.revealLayers[state.revealCursor].forEach((id) => state.revealedIds.add(id));
+      state.revealSteps[state.revealCursor].nodeIds.forEach((id) => state.revealedIds.add(id));
       state.revealCursor += 1;
     } else {
       if (state.revealLimit >= state.graph.nodes.length) { state.revealTimer = null; return; }
       state.revealLimit = Math.min(state.graph.nodes.length, state.revealLimit + 220);
     }
     draw();
-    state.revealTimer = window.setTimeout(advance, focused ? 360 : 280);
+    state.revealTimer = window.setTimeout(advance, focused ? 500 : 280);
   };
   state.resumeReveal = () => {
-    if (!state.revealPaused || state.revealCursor >= state.revealLayers.length) return;
+    if (!state.revealPaused || state.revealCursor >= state.revealSteps.length) return;
     state.revealPaused = false;
     state.revealTimer = window.setTimeout(advance, 80);
     updateHighlight();
@@ -604,11 +599,13 @@ function updateHighlight() {
     const visibleCount = state.focusId && state.revealDepth !== Infinity
       ? state.revealedIds.size
       : neighborhood.size;
+    const nextStep = state.revealSteps[state.revealCursor];
+    const parent = nextStep ? nodeMap().get(nextStep.parentId) : null;
     const revealText = state.revealPaused
       ? "paused at viewport edge · click to continue"
-      : state.revealCursor < state.revealLayers.length
-      ? `BFS loading · frontier ${state.revealCursor + 1}/${state.revealLayers.length}`
-      : "BFS loaded";
+      : nextStep
+        ? `expanding ${parent?.label || "node"} · ${state.revealCursor + 1}/${state.revealSteps.length}`
+        : "BFS loaded";
     focusStatus.textContent = focus
       ? `${visibleCount}/${neighborhood.size} nodes · ${revealText} · ${focus.label}`
       : state.revealLimit !== Infinity
