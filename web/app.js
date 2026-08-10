@@ -320,7 +320,7 @@ function selectTheoremNode() {
     (theorem?.namespace && (item.formalizations || []).some((formalization) => formalization.name === theorem.namespace)));
   if (node) {
     state.focusId = node.id;
-    selectNode(node.id);
+    selectNode(node.id, true);
   } else {
     renderInspector();
     updateWorkspaceContext();
@@ -374,13 +374,15 @@ function nodeNeighbors(nodeId) {
   }).filter((item) => item.node);
 }
 
-function selectNode(nodeId) {
-  if (!state.focusId) state.focusId = nodeId;
+function selectNode(nodeId, redraw = false) {
+  const hadFocus = Boolean(state.focusId);
+  if (!hadFocus) state.focusId = nodeId;
   state.selectedId = nodeId;
   state.selectedProofId = null;
   renderInspector();
   updateWorkspaceContext();
-  draw();
+  if (redraw || !hadFocus) draw();
+  else updateHighlight();
 }
 
 function selectProof(proofId) {
