@@ -125,8 +125,6 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb
 .rail-footer { margin-top: auto; padding: 18px 20px; }
 .quiet-button { padding: 8px 11px; border: 1px solid var(--line-strong); border-radius: 7px; color: var(--muted); background: transparent; }
 .quiet-button:hover { color: var(--ink); background: var(--paper); }
-.expand-button { padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 6px; color: var(--blue); background: var(--blue-soft); font-size: 11px; }
-.expand-button:hover { color: var(--ink); border-color: var(--blue); }
 .data-source { margin-top: 14px; color: var(--faint); text-transform: none; letter-spacing: 0; }
 code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 

@@ -621,6 +621,7 @@ function selectNode(nodeId, redraw = false) {
   if (!hadFocus) state.focusId = nodeId;
   state.selectedId = nodeId;
   state.selectedProofId = null;
+  expandNodeDependencies(nodeId);
   renderInspector();
   updateWorkspaceContext();
   if (redraw || !hadFocus) draw();
@@ -665,7 +666,6 @@ function renderInspector() {
   }
   const sourceRequest = ++state.sourceRequest;
   const neighbors = nodeNeighbors(node.id);
-  const directDependencies = state.graph.edges.filter((edge) => edge.relation === "used-in-proof" && edge.target.id === node.id);
   const github = githubUrlFor(node);
   const formalizations = (node.formalizations || []).map((item) => {
     const file = item.file ? `<br><span>${escapeHtml(item.file)}${item.anchor ? ` · ${escapeHtml(item.anchor)}` : ""}</span>` : "";
@@ -694,7 +694,6 @@ function renderInspector() {
     <h2>${escapeHtml(node.label)}</h2>
     ${mergeNote}
     ${depthNote}
-    ${directDependencies.length ? `<div class="detail-block"><button class="expand-button" data-expand-node="${escapeHtml(node.id)}">＋ Expand ${directDependencies.length} direct dependencies</button></div>` : ""}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
@@ -707,7 +706,6 @@ function renderInspector() {
   `;
   content.querySelectorAll("[data-neighbor]").forEach((button) => button.addEventListener("click", () => selectNode(button.dataset.neighbor)));
   content.querySelectorAll("[data-proof]").forEach((button) => button.addEventListener("click", () => selectProof(button.dataset.proof)));
-  content.querySelectorAll("[data-expand-node]").forEach((button) => button.addEventListener("click", () => expandNodeDependencies(button.dataset.expandNode)));
   loadProofSource(node, content.querySelector("#proof-source"), sourceRequest);
 }
 
