@@ -656,6 +656,12 @@ function expandNodeDependencies(nodeId) {
   draw();
 }
 
+function hasHiddenDependencies(nodeId, visibleNodes) {
+  const visibleIds = new Set(visibleNodes.map((node) => node.id));
+  return state.graph.edges.some((edge) => edge.relation === "used-in-proof" && edge.target.id === nodeId &&
+    !visibleIds.has(edge.source.id) && state.kinds.has(declarationKindFor(nodeMap().get(edge.source.id))));
+}
+
 function renderInspector() {
   const content = $("#inspector-content");
   const node = nodeMap().get(state.selectedId);
@@ -988,6 +994,13 @@ function draw() {
   const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; resumeRevealIfVisible(); }));
   node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", declarationColorFor);
   node.append("text").attr("class", "node-label").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (!state.showImplementation && !isMajorNode(item)) || (item.label.length > 31 && nodes.length > 12));
+  const expanders = node.append("g").attr("class", "node-expand").attr("transform", "translate(0,-18)")
+    .classed("hidden", (item) => !hasHiddenDependencies(item.id, nodes))
+    .attr("role", "button")
+    .attr("aria-label", (item) => `Expand dependencies of ${item.label}`)
+    .on("click", (event, item) => { event.stopPropagation(); expandNodeDependencies(item.id); });
+  expanders.append("circle").attr("r", 7);
+  expanders.append("text").text("+");
   state.simulation?.stop();
   state.simulation = null;
   // Focused neighborhoods should settle organically.  The rank calculation
