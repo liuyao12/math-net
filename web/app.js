@@ -475,20 +475,39 @@ function updateHighlight() {
 
 function dependencyRanks(nodes, edges) {
   const ranks = new Map(nodes.map((item) => [item.id, 0]));
-  // Edges point from a used declaration to the proof that uses it. Repeated
-  // relaxation gives a readable top-to-bottom layering while remaining robust
-  // if an imported graph contains a small cycle.
-  const maxPasses = nodes.length > 400 ? 12 : nodes.length;
-  for (let pass = 0; pass < maxPasses; pass += 1) {
-    let changed = false;
-    edges.forEach((edge) => {
-      const next = Math.min(nodes.length - 1, (ranks.get(edge.source.id) || 0) + 1);
-      if (next > (ranks.get(edge.target.id) || 0)) {
-        ranks.set(edge.target.id, next);
-        changed = true;
-      }
+  // Edges point from a used declaration to the declaration whose proof uses
+  // it. Kahn's algorithm gives a finite longest-path layering and, unlike
+  // repeated relaxation, cannot inflate ranks forever when imported
+  // typeclass declarations contain a small cycle.
+  const outgoing = new Map(nodes.map((item) => [item.id, []]));
+  const indegree = new Map(nodes.map((item) => [item.id, 0]));
+  edges.forEach((edge) => {
+    outgoing.get(edge.source.id)?.push(edge);
+    indegree.set(edge.target.id, (indegree.get(edge.target.id) || 0) + 1);
+  });
+  const queue = nodes.filter((item) => indegree.get(item.id) === 0).map((item) => item.id);
+  const processed = new Set();
+  while (queue.length) {
+    const sourceId = queue.shift();
+    processed.add(sourceId);
+    (outgoing.get(sourceId) || []).forEach((edge) => {
+      const targetId = edge.target.id;
+      ranks.set(targetId, Math.max(ranks.get(targetId) || 0, (ranks.get(sourceId) || 0) + 1));
+      const nextDegree = (indegree.get(targetId) || 0) - 1;
+      indegree.set(targetId, nextDegree);
+      if (nextDegree === 0) queue.push(targetId);
     });
-    if (!changed) break;
+  }
+  // Keep cyclic implementation clusters compact. Their internal edges are
+  // rendered without arrowheads below, while acyclic edges still flow from
+  // an upper rank to a lower one.
+  const remaining = nodes.filter((item) => !processed.has(item.id));
+  if (remaining.length) {
+    const remainingIds = new Set(remaining.map((item) => item.id));
+    const base = Math.max(0, ...edges
+      .filter((edge) => remainingIds.has(edge.target.id) && !remainingIds.has(edge.source.id))
+      .map((edge) => (ranks.get(edge.source.id) || 0) + 1));
+    remaining.forEach((item) => ranks.set(item.id, Math.max(ranks.get(item.id) || 0, base)));
   }
   return ranks;
 }
@@ -533,7 +552,19 @@ function draw() {
   // relaxation places prerequisites above their proof targets.  Distance
   // from the focus is still used for fading, but no longer flattens peers
   // into one horizontal band.
-  const ranks = dependencyRanks(nodes, edges);
+  const topologyRanks = dependencyRanks(nodes, edges);
+  const maxFocusDistance = Math.max(0, ...nodes.map((node) => state.focusDistances.get(node.id) || 0));
+  const rawRanks = new Map(nodes.map((item) => {
+    // Distance supplies the main top-to-bottom dependency hierarchy. The
+    // topological rank breaks ties, so a declaration used by a peer rises
+    // above that peer instead of sharing the focuser's direct-dependency row.
+    const distance = state.focusId ? (state.focusDistances.get(item.id) || 0) : 0;
+    const distanceRank = state.focusId ? (maxFocusDistance - distance) * (nodes.length + 1) : 0;
+    return [item.id, distanceRank + (topologyRanks.get(item.id) || 0)];
+  }));
+  const rankValues = [...new Set(rawRanks.values())].sort((a, b) => a - b);
+  const rankIndex = new Map(rankValues.map((value, index) => [value, index]));
+  const ranks = new Map([...rawRanks.entries()].map(([id, value]) => [id, rankIndex.get(value)]));
   const maxRank = Math.max(0, ...Array.from(ranks.values()));
   // Treat the viewport as a window onto the layout, not as a height to fill.
   // This keeps a focused theorem compact when its dependency depth is small.
@@ -550,11 +581,12 @@ function draw() {
   const link = root.append("g").attr("aria-hidden", "true").selectAll("path").data(edges, (edge) => edge.id).join("path")
     .attr("class", "graph-link used-in-proof")
     .classed("implementation-link", (edge) => !isMajorNode(edge.source) && !isMajorNode(edge.target))
+    .classed("cycle-link", (edge) => (ranks.get(edge.source.id) || 0) >= (ranks.get(edge.target.id) || 0))
     .attr("stroke", (edge) => proofColor(edge.proof))
     // Arrowheads are reserved for edges touching a major declaration.  The
     // complete edge remains visible, while implementation-level chains do
     // not turn into a field of tiny overlapping triangles.
-    .attr("marker-end", (edge) => isMajorNode(edge.source) || isMajorNode(edge.target) ? "url(#arrow-used-in-proof)" : null);
+    .attr("marker-end", (edge) => (ranks.get(edge.source.id) || 0) < (ranks.get(edge.target.id) || 0) && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
   const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
   node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && item.kind === "proposition" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", (item) => KIND_COLORS[item.kind]);
