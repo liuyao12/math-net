@@ -200,7 +200,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .lean-namespace { color: #4ec9b0; }
 .lean-variable { color: #9cdcfe; }
 
-.node-label { pointer-events: none; fill: var(--ink); font: 500 11px Manrope, sans-serif; }
+.node-label { pointer-events: none; fill: var(--ink); font: 500 11px Manrope, sans-serif; paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
 .graph-node { animation: graph-node-enter 220ms ease-out both; }
 .node-label.hidden { display: none; }
 .node-dot { stroke: var(--paper); stroke-width: 2; cursor: pointer; }
