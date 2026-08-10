@@ -1,5 +1,5 @@
 [
-  {"number":1,"title":"The Irrationality of the Square Root of 2"},
+  {"number":1,"title":"The Irrationality of the Square Root of 2","graph":"mathlib","namespace":"MathNetwork.SqrtTwo.irrational"},
   {"number":2,"title":"Fundamental Theorem of Algebra"},
   {"number":3,"title":"The Denumerability of the Rational Numbers"},
   {"number":4,"title":"Pythagorean Theorem"},

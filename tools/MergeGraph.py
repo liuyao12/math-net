@@ -17,7 +17,11 @@ from collections import defaultdict
 
 def proof_record(node: dict) -> dict:
     declaration = node.get("namespace", node["label"])
-    if "gaussian" in declaration.lower():
+    if node.get("locator", "").startswith("mathlib/"):
+        label = "Mathlib · library proof"
+        route_kind = "library-complete"
+        color = "#3f7f8f"
+    elif "gaussian" in declaration.lower():
         label = "Mathlib · Gaussian-Euclidean"
         route_kind = "mathlib"
         color = "#3f7f8f"
