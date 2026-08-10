@@ -501,6 +501,19 @@ function straightLinkPath(edge) {
   return `M${x1},${y1} L${x2},${y2}`;
 }
 
+function curvedLinkPath(edge) {
+  const x1 = edge.source.x;
+  const y1 = edge.source.y;
+  const x2 = edge.target.x;
+  const y2 = edge.target.y;
+  const dy = y2 - y1;
+  if (Math.abs(dy) < 10) {
+    const bend = Math.max(22, Math.min(58, Math.abs(x2 - x1) * 0.18));
+    return `M${x1},${y1} Q${(x1 + x2) / 2},${y1 - bend} ${x2},${y2}`;
+  }
+  return `M${x1},${y1} C${x1},${y1 + dy * 0.42} ${x2},${y2 - dy * 0.42} ${x2},${y2}`;
+}
+
 function draw() {
   if (!state.graph) return;
   const { nodes, edges } = visibleGraph();
@@ -522,12 +535,17 @@ function draw() {
   // into one horizontal band.
   const ranks = dependencyRanks(nodes, edges);
   const maxRank = Math.max(0, ...Array.from(ranks.values()));
-  const layerGap = Math.max(38, Math.min(105, (height - 90) / Math.max(1, maxRank)));
-  const largeGraph = nodes.length > 400;
+  // Treat the viewport as a window onto the layout, not as a height to fill.
+  // This keeps a focused theorem compact when its dependency depth is small.
+  const layerGap = Math.max(22, Math.min(64, (height - 90) / Math.max(1, maxRank)));
+  const occupiedHeight = maxRank * layerGap + 40;
+  const graphTop = Math.max(32, (height - occupiedHeight) / 2);
   const nodesByRank = d3.group(nodes, (item) => ranks.get(item.id) || 0);
+  const maxLayerSize = Math.max(1, ...Array.from(nodesByRank.values()).map((layer) => layer.length));
+  const columnGap = Math.min(112, Math.max(72, (width - 80) / Math.max(1, maxLayerSize)));
   nodesByRank.forEach((layer, rank) => layer.forEach((item, index) => {
-    item.x = width * (index + 1) / (layer.length + 1);
-    item.y = rank * layerGap + 45;
+    item.x = width / 2 + (index - (layer.length - 1) / 2) * columnGap;
+    item.y = graphTop + rank * layerGap;
   }));
   const link = root.append("g").attr("aria-hidden", "true").selectAll("path").data(edges, (edge) => edge.id).join("path")
     .attr("class", "graph-link used-in-proof")
@@ -543,12 +561,13 @@ function draw() {
   node.append("text").attr("class", "node-label").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (!state.showImplementation && !isMajorNode(item)) || (item.label.length > 31 && nodes.length > 12));
   state.simulation?.stop();
   state.simulation = null;
-  if (largeGraph) {
-    link.attr("d", straightLinkPath);
+  const staticLayout = nodes.length > 400 || Boolean(state.focusId);
+  if (staticLayout) {
+    link.attr("d", curvedLinkPath);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
   } else {
-    state.simulation = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id((item) => item.id).distance(105).strength(0.3)).force("y", d3.forceY((item) => (ranks.get(item.id) || 0) * layerGap + 45).strength(0.9)).force("x", d3.forceX(width / 2).strength(0.08)).force("charge", d3.forceManyBody().strength(-260)).force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 30 : 25)).on("tick", () => {
-      link.attr("d", straightLinkPath);
+    state.simulation = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id((item) => item.id).distance(82).strength(0.22)).force("y", d3.forceY((item) => graphTop + (ranks.get(item.id) || 0) * layerGap).strength(1.2)).force("x", d3.forceX(width / 2).strength(0.12)).force("charge", d3.forceManyBody().strength(-180)).force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21)).on("tick", () => {
+      link.attr("d", curvedLinkPath);
       node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     });
   }
