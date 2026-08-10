@@ -58,6 +58,7 @@ const state = {
   revealedIds: new Set(),
   layoutPositions: new Map(),
   revealPaused: false,
+  revealPauseReason: null,
   resumeReveal: null,
   zoomTransform: d3.zoomIdentity,
 };
@@ -367,6 +368,7 @@ function beginProgressiveReveal() {
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.revealPaused = false;
+  state.revealPauseReason = null;
   state.resumeReveal = null;
   if (!state.graph) return;
   const focused = Boolean(state.focusId);
@@ -416,6 +418,7 @@ function beginProgressiveReveal() {
     if (focused) {
       if (viewportHasEdgeNode()) {
         state.revealPaused = true;
+        state.revealPauseReason = "viewport";
         state.revealTimer = null;
         updateHighlight();
         return;
@@ -436,6 +439,7 @@ function beginProgressiveReveal() {
   state.resumeReveal = () => {
     if (!state.revealPaused || state.revealCursor >= state.revealLayers.length) return;
     state.revealPaused = false;
+    state.revealPauseReason = null;
     state.revealTimer = window.setTimeout(advance, 80);
     updateHighlight();
   };
@@ -506,6 +510,16 @@ function nodeNeighbors(nodeId) {
 
 function selectNode(nodeId, redraw = false) {
   const hadFocus = Boolean(state.focusId);
+  if (hadFocus) {
+    state.simulation?.stop();
+    state.simulation = null;
+    if (state.revealTimer) {
+      window.clearTimeout(state.revealTimer);
+      state.revealTimer = null;
+      state.revealPaused = true;
+      state.revealPauseReason = "inspection";
+    }
+  }
   if (!hadFocus) state.focusId = nodeId;
   state.selectedId = nodeId;
   state.selectedProofId = null;
@@ -605,7 +619,9 @@ function updateHighlight() {
       ? state.revealedIds.size
       : neighborhood.size;
     const revealText = state.revealPaused
-      ? "paused at viewport edge · click to continue"
+      ? state.revealPauseReason === "inspection"
+        ? "paused while inspecting · click to continue"
+        : "paused at viewport edge · click to continue"
       : state.revealCursor < state.revealLayers.length
       ? `BFS loading · frontier ${state.revealCursor + 1}/${state.revealLayers.length}`
       : "BFS loaded";
@@ -771,7 +787,7 @@ function draw() {
     // not turn into a field of tiny overlapping triangles.
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; resumeRevealIfVisible(); }));
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; resumeRevealIfVisible(); }));
   node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && item.kind === "proposition" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", (item) => KIND_COLORS[item.kind]);
   node.append("text").attr("class", "node-label").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (!state.showImplementation && !isMajorNode(item)) || (item.label.length > 31 && nodes.length > 12));
   state.simulation?.stop();
@@ -852,6 +868,7 @@ $("#reset").addEventListener("click", () => {
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.revealPaused = false;
+  state.revealPauseReason = null;
   state.resumeReveal = null;
   state.revealDepth = Infinity;
   state.revealLimit = Infinity;
@@ -881,6 +898,7 @@ $("#clear-selection").addEventListener("click", () => {
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.revealPaused = false;
+  state.revealPauseReason = null;
   state.resumeReveal = null;
   state.theoremNumber = null;
   $("#theorem-select").value = "";
