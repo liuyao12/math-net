@@ -53,6 +53,7 @@ const state = {
   revealLimit: Infinity,
   revealTimer: null,
   revealOrder: [],
+  revealLayers: [],
   revealCursor: 0,
   revealedIds: new Set(),
   layoutPositions: new Map(),
@@ -377,10 +378,11 @@ function beginProgressiveReveal() {
         if (!adjacency.has(edge.target.id)) adjacency.set(edge.target.id, []);
         adjacency.get(edge.target.id).push(edge.source.id);
       });
+    const layers = [[state.focusId]];
     const order = [state.focusId];
     const seen = new Set(order);
     let frontier = [state.focusId];
-    while (frontier.length) {
+    while (frontier.length && layers.length <= 3) {
       const next = [];
       frontier.forEach((current) => (adjacency.get(current) || [])
         .slice().sort()
@@ -390,32 +392,35 @@ function beginProgressiveReveal() {
             order.push(neighbor);
             next.push(neighbor);
           }
-        }));
+      }));
+      if (next.length) layers.push(next);
       frontier = next;
     }
     state.revealOrder = order;
+    state.revealLayers = layers;
     state.revealCursor = 1;
   } else {
     state.revealDepth = Infinity;
     state.revealLimit = state.graph.nodes.length > 250 ? 220 : Infinity;
     state.revealOrder = [];
+    state.revealLayers = [];
     state.revealCursor = 0;
   }
   draw();
   const advance = () => {
     if (focused) {
-      if (state.revealCursor >= state.revealOrder.length || state.revealCursor >= 40) {
+      if (state.revealCursor >= state.revealLayers.length) {
         state.revealTimer = null;
         return;
       }
-      state.revealedIds.add(state.revealOrder[state.revealCursor]);
+      state.revealLayers[state.revealCursor].forEach((id) => state.revealedIds.add(id));
       state.revealCursor += 1;
     } else {
       if (state.revealLimit >= state.graph.nodes.length) { state.revealTimer = null; return; }
       state.revealLimit = Math.min(state.graph.nodes.length, state.revealLimit + 220);
     }
     draw();
-    state.revealTimer = window.setTimeout(advance, focused ? 180 : 280);
+    state.revealTimer = window.setTimeout(advance, focused ? 360 : 280);
   };
   state.revealTimer = window.setTimeout(advance, 260);
 }
@@ -566,7 +571,9 @@ function updateHighlight() {
     const visibleCount = state.focusId && state.revealDepth !== Infinity
       ? state.revealedIds.size
       : neighborhood.size;
-    const revealText = state.revealCursor < state.revealOrder.length ? "BFS loading" : "BFS loaded";
+    const revealText = state.revealCursor < state.revealLayers.length
+      ? `BFS loading · frontier ${state.revealCursor + 1}/${state.revealLayers.length}`
+      : "BFS loaded";
     focusStatus.textContent = focus
       ? `${visibleCount}/${neighborhood.size} nodes · ${revealText} · ${focus.label}`
       : state.revealLimit !== Infinity
