@@ -49,6 +49,9 @@ const state = {
   sourceRequest: 0,
   focusDistances: new Map(),
   showImplementation: false,
+  revealDepth: Infinity,
+  revealLimit: Infinity,
+  revealTimer: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -247,9 +250,10 @@ function visibleGraph() {
   const focus = searchFocus(candidateNodes, edgeData);
   const visibleNodes = candidateNodes.filter((node) => {
     if (state.focusId && !state.focusDistances.has(node.id)) return false;
+    if (state.focusId && state.revealDepth !== Infinity && (state.focusDistances.get(node.id) || 0) > state.revealDepth) return false;
     if (state.search && !focus.has(node.id)) return false;
     return true;
-  });
+  }).filter((node, index) => !state.focusId && state.revealLimit !== Infinity ? index < state.revealLimit : true);
   const allowed = new Set(visibleNodes.map((node) => node.id));
   const visibleEdges = edgeData.filter((edge) => allowed.has(edge.source.id) && allowed.has(edge.target.id));
   return { nodes: visibleNodes, edges: visibleEdges };
@@ -309,6 +313,8 @@ function populateTheoremSelect() {
     state.focusId = null;
     state.selectedId = null;
     state.selectedProofId = null;
+    if (state.revealTimer) window.clearTimeout(state.revealTimer);
+    state.revealTimer = null;
     updateTheoremNote();
     selectTheoremNode();
   });
@@ -332,12 +338,44 @@ function selectTheoremNode() {
     (theorem?.namespace && (item.formalizations || []).some((formalization) => formalization.name === theorem.namespace)));
   if (node) {
     state.focusId = node.id;
+    state.revealDepth = 0;
+    state.revealLimit = Infinity;
     selectNode(node.id, true);
   } else {
+    state.revealDepth = Infinity;
+    state.revealLimit = 220;
     renderInspector();
     updateWorkspaceContext();
     draw();
   }
+  beginProgressiveReveal();
+}
+
+function beginProgressiveReveal() {
+  if (state.revealTimer) window.clearTimeout(state.revealTimer);
+  state.revealTimer = null;
+  if (!state.graph) return;
+  const focused = Boolean(state.focusId);
+  if (focused) {
+    state.revealDepth = 0;
+    state.revealLimit = Infinity;
+  } else {
+    state.revealDepth = Infinity;
+    state.revealLimit = state.graph.nodes.length > 250 ? 220 : Infinity;
+  }
+  draw();
+  const advance = () => {
+    if (focused) {
+      if (state.revealDepth >= 3) { state.revealTimer = null; return; }
+      state.revealDepth += 1;
+    } else {
+      if (state.revealLimit >= state.graph.nodes.length) { state.revealTimer = null; return; }
+      state.revealLimit = Math.min(state.graph.nodes.length, state.revealLimit + 220);
+    }
+    draw();
+    state.revealTimer = window.setTimeout(advance, 280);
+  };
+  state.revealTimer = window.setTimeout(advance, 260);
 }
 
 function labelFor(node) {
@@ -481,9 +519,15 @@ function updateHighlight() {
   const focusStatus = $("#focus-status");
   if (focusStatus) {
     const focus = state.focusId ? nodeMap().get(state.focusId) : null;
+    const visibleCount = state.focusId && state.revealDepth !== Infinity
+      ? [...neighborhood].filter((id) => (state.focusDistances.get(id) || 0) <= state.revealDepth).length
+      : neighborhood.size;
+    const revealText = state.revealDepth < 3 ? `loading layer ${state.revealDepth + 1}/3` : "3-level focus";
     focusStatus.textContent = focus
-      ? `${neighborhood.size} nodes in 3-level focus · ${focus.label}`
-      : "all theorem nodes shown · select a theorem to focus";
+      ? `${visibleCount}/${neighborhood.size} nodes · ${revealText} · ${focus.label}`
+      : state.revealLimit !== Infinity
+        ? `${Math.min(state.revealLimit, state.graph.nodes.length)}/${state.graph.nodes.length} nodes loading · select a theorem to focus`
+        : "all theorem nodes shown · select a theorem to focus";
   }
 }
 
@@ -602,7 +646,7 @@ function draw() {
     // not turn into a field of tiny overlapping triangles.
     .attr("marker-end", (edge) => (ranks.get(edge.source.id) || 0) < (ranks.get(edge.target.id) || 0) && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
   node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && item.kind === "proposition" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", (item) => KIND_COLORS[item.kind]);
   node.append("text").attr("class", "node-label").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (!state.showImplementation && !isMajorNode(item)) || (item.label.length > 31 && nodes.length > 12));
   state.simulation?.stop();
@@ -645,7 +689,6 @@ async function load() {
     kindControls();
     selectTheoremNode();
     updateWorkspaceContext();
-    draw();
   } catch (error) {
     const loading = $("#loading-state");
     loading.classList.add("error");
@@ -659,6 +702,10 @@ $("#reset").addEventListener("click", () => {
   state.selectedId = null;
   state.focusId = null;
   state.selectedProofId = null;
+  if (state.revealTimer) window.clearTimeout(state.revealTimer);
+  state.revealTimer = null;
+  state.revealDepth = Infinity;
+  state.revealLimit = Infinity;
   state.theoremNumber = null;
   state.search = "";
   $("#search").value = "";
@@ -680,6 +727,8 @@ $("#clear-selection").addEventListener("click", () => {
   state.selectedId = null;
   state.focusId = null;
   state.selectedProofId = null;
+  if (state.revealTimer) window.clearTimeout(state.revealTimer);
+  state.revealTimer = null;
   state.theoremNumber = null;
   $("#theorem-select").value = "";
   const next = new URL(window.location.href);
