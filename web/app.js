@@ -56,8 +56,10 @@ const state = {
   revealCursor: 0,
   revealedIds: new Set(),
   layoutPositions: new Map(),
+  layoutVelocities: new Map(),
   revealPaused: false,
   resumeReveal: null,
+  revealCapped: false,
   zoomTransform: d3.zoomIdentity,
 };
 
@@ -307,6 +309,7 @@ function populateTheoremSelect() {
       state.focusId = null;
       state.selectedId = null;
       state.layoutPositions.clear();
+      state.layoutVelocities.clear();
       state.revealedIds.clear();
       updateTheoremNote();
       updateWorkspaceContext();
@@ -323,6 +326,7 @@ function populateTheoremSelect() {
     state.selectedId = null;
     state.selectedProofId = null;
     state.layoutPositions.clear();
+    state.layoutVelocities.clear();
     state.revealedIds.clear();
     if (state.revealTimer) window.clearTimeout(state.revealTimer);
     state.revealTimer = null;
@@ -384,11 +388,17 @@ function beginProgressiveReveal() {
       });
     const steps = [];
     const seen = new Set([state.focusId]);
+    const maxFocusNodes = 80;
     const queue = [{ id: state.focusId, depth: 0 }];
+    state.revealCapped = false;
     while (queue.length) {
       const parent = queue.shift();
       if (parent.depth >= 3) continue;
       const children = (adjacency.get(parent.id) || []).slice().sort().filter((neighbor) => {
+        if (seen.size >= maxFocusNodes) {
+          state.revealCapped = true;
+          return false;
+        }
         if (!nodeIds.has(neighbor) || seen.has(neighbor)) return false;
         seen.add(neighbor);
         return true;
@@ -404,6 +414,7 @@ function beginProgressiveReveal() {
     state.revealDepth = Infinity;
     state.revealLimit = state.graph.nodes.length > 250 ? 220 : Infinity;
     state.revealSteps = [];
+    state.revealCapped = false;
     state.revealCursor = 0;
   }
   draw();
@@ -426,7 +437,7 @@ function beginProgressiveReveal() {
       state.revealLimit = Math.min(state.graph.nodes.length, state.revealLimit + 220);
     }
     draw();
-    state.revealTimer = window.setTimeout(advance, focused ? 500 : 280);
+    state.revealTimer = window.setTimeout(advance, focused ? 260 : 280);
   };
   state.resumeReveal = () => {
     if (!state.revealPaused || state.revealCursor >= state.revealSteps.length) return;
@@ -505,6 +516,7 @@ function selectNode(nodeId, redraw = false) {
   state.selectedId = nodeId;
   state.selectedProofId = null;
   state.layoutPositions.clear();
+  state.layoutVelocities.clear();
   state.revealedIds.clear();
   renderInspector();
   updateWorkspaceContext();
@@ -605,6 +617,8 @@ function updateHighlight() {
       ? "paused at viewport edge · click to continue"
       : nextStep
         ? `expanding ${parent?.label || "node"} · ${state.revealCursor + 1}/${state.revealSteps.length}`
+        : state.revealCapped
+          ? "focused neighborhood capped at 80 nodes"
         : "BFS loaded";
     focusStatus.textContent = focus
       ? `${visibleCount}/${neighborhood.size} nodes · ${revealText} · ${focus.label}`
@@ -803,6 +817,15 @@ function draw() {
     if (previous) {
       item.x = previous.x;
       item.y = previous.y;
+      const velocity = state.layoutVelocities.get(item.id);
+      item.vx = velocity?.x ?? 0;
+      item.vy = velocity?.y ?? 0;
+      if (item.id === state.focusId && (item.y < 40 || item.y > height - 40)) {
+        item.x = width / 2;
+        item.y = height * 0.74;
+        item.vx = 0;
+        item.vy = 0;
+      }
     } else {
       const neighbor = edges.find((edge) => edge.source.id === item.id && state.layoutPositions.has(edge.target.id)) ||
         edges.find((edge) => edge.target.id === item.id && state.layoutPositions.has(edge.source.id));
@@ -811,6 +834,8 @@ function draw() {
       );
       item.x = neighborPosition?.x ?? targetX;
       item.y = neighborPosition?.y ?? targetY;
+      item.vx = 0;
+      item.vy = 0;
     }
     item.targetX = targetX;
     item.targetY = targetY;
@@ -854,9 +879,22 @@ function draw() {
       .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
       .force("labels", labelCollisionForce(nodes))
       .force("top-down", topDownForce(edges))
+      .alpha(0.22)
+      .alphaDecay(0.16)
+      .velocityDecay(0.72)
       .on("tick", () => {
       enforceTopDown(nodes, edges, ranks, state.focusId);
-      nodes.forEach((item) => state.layoutPositions.set(item.id, { x: item.x, y: item.y }));
+      const focusNode = nodes.find((item) => item.id === state.focusId);
+      if (focusNode && (focusNode.y < 40 || focusNode.y > height - 40)) {
+        focusNode.x = width / 2;
+        focusNode.y = height * 0.74;
+        focusNode.vx = 0;
+        focusNode.vy = 0;
+      }
+      nodes.forEach((item) => {
+        state.layoutPositions.set(item.id, { x: item.x, y: item.y });
+        state.layoutVelocities.set(item.id, { x: item.vx || 0, y: item.vy || 0 });
+      });
       link.attr("d", curvedLinkPath)
         .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
       node.attr("transform", (item) => `translate(${item.x},${item.y})`);
@@ -904,6 +942,7 @@ $("#reset").addEventListener("click", () => {
   state.focusId = null;
   state.selectedProofId = null;
   state.layoutPositions.clear();
+  state.layoutVelocities.clear();
   state.revealedIds.clear();
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
@@ -933,6 +972,7 @@ $("#clear-selection").addEventListener("click", () => {
   state.focusId = null;
   state.selectedProofId = null;
   state.layoutPositions.clear();
+  state.layoutVelocities.clear();
   state.revealedIds.clear();
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
