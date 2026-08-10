@@ -60,7 +60,7 @@ def merge(graph: dict) -> dict:
         # Imported mathlib theorem declarations remain visually marked as
         # sources, but participate in proposition merging by their checked
         # statement. This is the boundary where independent proof graphs join.
-        if node.get("kind") == "proposition" or node.get("declarationKind") == "proposition":
+        if node.get("kind") == "proposition" or node.get("declarationKind") in {"theorem", "opaque", "axiom", "proposition"}:
             # A proposition is the mathematical statement, not the source
             # file that happens to contain one of its proofs. This lets a
             # Mathlib theorem and a local alternative proof share one node.

@@ -9,8 +9,8 @@ import MathNetwork.Comparisons.IrrationalSqrtTwoDescent
 # Build the project-wide declaration graph
 
 This intentionally works from the elaborated Lean environment. User-facing
-project theorems become proposition nodes, definitions become concept nodes,
-and constants defined in mathlib become imported source nodes. The imported
+project declarations and imported constants retain their actual Lean
+declaration kind (`theorem`, `definition`, `axiom`, and so on). The imported
 closure is expanded to a bounded depth so a selected theorem has multiple
 visible layers of dependencies. Every edge is therefore a strict
 `used-in-proof` edge; this is a declaration graph, not a hand-curated theorem
@@ -34,14 +34,18 @@ private def shortName (name : Name) : String :=
 
 private def declarationKind (ci : ConstantInfo) : String × String :=
   match ci with
-  | .thmInfo _ => ("proposition", "theorem")
-  | .opaqueInfo _ => ("proposition", "theorem")
-  | .axiomInfo _ => ("proposition", "conjecture")
-  | .defnInfo _ => ("concept", "definition")
-  | .quotInfo _ => ("concept", "definition")
-  | .inductInfo _ => ("concept", "definition")
-  | .ctorInfo _ => ("concept", "definition")
-  | .recInfo _ => ("concept", "definition")
+  | .thmInfo _ => ("theorem", "theorem")
+  | .opaqueInfo _ => ("opaque", "opaque")
+  | .axiomInfo _ => ("axiom", "axiom")
+  | .defnInfo _ => ("definition", "definition")
+  | .quotInfo _ => ("quotient", "definition")
+  | .inductInfo _ => ("inductive", "inductive")
+  | .ctorInfo _ => ("constructor", "constructor")
+  | .recInfo _ => ("recursor", "recursor")
+
+private def graphKind (ci : ConstantInfo) : String :=
+  let (kind, _) := declarationKind ci
+  if kind == "theorem" || kind == "opaque" || kind == "axiom" then "proposition" else "concept"
 
 private def moduleOf (env : Environment) (name : Name) : String :=
   match env.getModuleIdxFor? name with
@@ -96,10 +100,11 @@ private def dependencyNames (env : Environment) (targets : Array Name) : Array N
   (dependencyDepths env targets).map (·.1) |>.qsort Name.lt
 
 private def projectNode (env : Environment) (ci : ConstantInfo) (name : Name) (index : Nat) : Json :=
-  let (kind, role) := declarationKind ci
+  let (declarationKind, role) := declarationKind ci
   Json.mkObj [
     ("id", s!"decl-{index}"),
-    ("kind", kind),
+    ("kind", graphKind ci),
+    ("declarationKind", declarationKind),
     ("role", role),
     ("label", shortName name),
     ("statement", toString ci.type),
@@ -120,7 +125,7 @@ private def projectNode (env : Environment) (ci : ConstantInfo) (name : Name) (i
 private def dependencyNode (env : Environment) (name : Name) (index : Nat) (module : String) (depth : Nat) : Json :=
   let (kind, role, statement) := match env.find? name with
     | some ci => let (kind, role) := declarationKind ci; (kind, role, toString ci.type)
-    | none => ("concept", "definition", s!"Lean declaration {name}")
+    | none => ("definition", "definition", s!"Lean declaration {name}")
   Json.mkObj [
     ("id", s!"const-{index}"),
     ("kind", "source"),
@@ -145,7 +150,7 @@ private def dependencyEdges (env : Environment) (targets dependencies : Array Na
     if targets.contains name then
       let index := indexOf name targets
       match env.find? name with
-      | some ci => (s!"decl-{index}", (declarationKind ci).1)
+      | some ci => (s!"decl-{index}", graphKind ci)
       | none => (s!"decl-{index}", "proposition")
     else
       (s!"const-{indexOf name dependencies}", "source")

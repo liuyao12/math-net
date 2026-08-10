@@ -25,7 +25,7 @@ def build(graph: dict) -> dict:
     theorem_nodes = [node for node in graph["nodes"] if node.get("kind") == "proposition"]
     library_theorem_nodes = [
         node for node in graph["nodes"]
-        if node.get("kind") == "source" and node.get("declarationKind") == "proposition"
+        if node.get("kind") == "source" and node.get("declarationKind") in {"theorem", "opaque", "axiom", "proposition"}
     ]
     uses = defaultdict(list)
     used_by = defaultdict(list)

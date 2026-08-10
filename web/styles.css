@@ -129,13 +129,18 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb
 code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 
 .network-panel { min-width: 0; background: var(--paper); }
-.network-toolbar { display: flex; justify-content: space-between; gap: 12px; align-items: end; padding: 22px 24px 15px; }
+.network-toolbar { display: grid; grid-template-columns: minmax(180px, 1fr) auto; gap: 14px 24px; align-items: end; padding: 22px 24px 15px; }
 .toolbar-copy { display: grid; gap: 5px; }
 .toolbar-title { font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
 .network-stats { display: flex; gap: 15px; color: var(--faint); white-space: nowrap; }
 .network-stats strong { color: var(--ink); font-size: 12px; }
 .focus-status { max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
 .focus-status:where(:not(:empty)) { cursor: pointer; }
+.graph-controls { display: flex; align-items: end; justify-content: end; gap: 10px; }
+.graph-control { min-width: 180px; }
+.graph-search { min-width: 250px; }
+.graph-control .field-label { margin-bottom: 6px; }
+.graph-control-note { grid-column: 1 / -1; margin-top: -4px; }
 .graph-stage { position: relative; min-height: 600px; height: calc(100vh - 166px); overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: radial-gradient(circle at 50% 48%, #fbfaf7 0, #f3f2ed 75%); }
 #network { width: 100%; height: 100%; display: block; }
 .graph-hint { position: absolute; right: 17px; bottom: 14px; padding: 6px 8px; color: var(--faint); background: rgba(251, 250, 247, 0.8); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; }
@@ -237,7 +242,9 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
   .graph-badge { display: none; }
   .workspace { display: block; }
   .graph-stage { min-height: 480px; height: 62vh; }
-  .network-toolbar { align-items: start; flex-direction: column; padding: 17px 16px 12px; }
+  .network-toolbar { display: flex; align-items: start; flex-direction: column; padding: 17px 16px 12px; }
+  .graph-controls { width: 100%; align-items: stretch; flex-direction: column; }
+  .graph-control, .graph-search { width: 100%; min-width: 0; }
   .legend { padding-top: 10px; }
   .inspector-header, .inspector-content { padding-left: 16px; padding-right: 16px; }
   .inspector-controls { padding-left: 16px; padding-right: 16px; }

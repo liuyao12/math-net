@@ -1,5 +1,5 @@
 <meta charset="utf-8" />
-<title>math-net · network explorer</title>
+<title>Mathematical Landscape · Lean declaration explorer</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -11,8 +11,8 @@
     <div class="brand-lockup">
       <span class="brand-mark">∴</span>
       <div>
-        <div class="brand-name">math-net</div>
-        <div class="brand-subtitle">proof use · propositions · verification</div>
+        <div class="brand-name">Mathematical Landscape</div>
+        <div class="brand-subtitle">Lean declarations · proof use · verification</div>
       </div>
     </div>
     <div class="graph-badge" id="graph-badge">loading graph</div>
@@ -30,6 +30,22 @@
           <span><strong id="visible-edge-count">—</strong> links</span>
           <span class="focus-status" id="focus-status">select a theorem to focus its dependency neighborhood</span>
         </div>
+        <div class="graph-controls" aria-label="Graph controls">
+          <label class="graph-control">
+            <span class="field-label">List of 100</span>
+            <select id="theorem-select" aria-describedby="theorem-note">
+              <option value="">Choose a theorem…</option>
+            </select>
+          </label>
+          <label class="graph-control graph-search">
+            <span class="field-label">Find a declaration</span>
+            <div class="search-wrap">
+              <span class="search-icon">⌕</span>
+              <input id="search" type="search" placeholder="Search declarations…" autocomplete="off" />
+            </div>
+          </label>
+        </div>
+        <div class="theorem-note graph-control-note" id="theorem-note">Official catalogue · choose a theorem to inspect its status.</div>
       </div>
       <div class="graph-stage" id="graph-stage">
         <svg id="network" role="img" aria-label="Interactive mathematical proposition network"></svg>
@@ -48,18 +64,8 @@
         <button class="close-button" id="clear-selection" aria-label="Clear selection">×</button>
       </div>
       <div class="inspector-controls">
-        <label class="field-label" for="theorem-select">List of 100</label>
-        <select id="theorem-select" aria-describedby="theorem-note">
-          <option value="">Choose a theorem…</option>
-        </select>
-        <div class="theorem-note" id="theorem-note">Official catalogue · choose a theorem to inspect its status.</div>
-        <label class="field-label" for="search">Find a node</label>
-        <div class="search-wrap">
-          <span class="search-icon">⌕</span>
-          <input id="search" type="search" placeholder="Search propositions, concepts…" autocomplete="off" />
-        </div>
         <div class="control-group">
-          <div class="field-label">Node kinds</div>
+          <div class="field-label">Lean declaration kinds</div>
           <div class="check-grid compact" id="kind-filters"></div>
           <label class="filter-option implementation-toggle"><input id="show-implementation" type="checkbox"><span class="filter-dot source"></span><span>Show implementation details</span></label>
         </div>

@@ -6,17 +6,46 @@ const requestedTheorem = query.get("theorem");
 const REPO_ROOT = window.location.pathname.includes("/web/") ? "../" : "./";
 const THEOREMS_URL = "./theorems.json";
 const DATA_URLS = [`${REPO_ROOT}MathNetwork/Graph/project.json`];
-const KIND_LABELS = {
-  proposition: "Propositions",
+const DECLARATION_LABELS = {
+  theorem: "Theorems",
+  opaque: "Opaque declarations",
+  conjecture: "Axioms",
+  definition: "Definitions",
+  quotient: "Quotients",
+  inductive: "Inductives",
+  constructor: "Constructors",
+  recursor: "Recursors",
   "proof-family": "Proof families",
-  concept: "Concepts",
-  source: "Sources",
+  proposition: "Propositions",
+  concept: "Definitions",
+  source: "Imported declarations",
 };
-const KIND_COLORS = {
-  proposition: "#366b80",
+const DECLARATION_COLORS = {
+  theorem: "#366b80",
+  opaque: "#366b80",
+  conjecture: "#b45e4d",
+  definition: "#4c7d74",
+  quotient: "#4c7d74",
+  inductive: "#795a76",
+  constructor: "#795a76",
+  recursor: "#795a76",
   "proof-family": "#a66a2a",
+  proposition: "#366b80",
   concept: "#4c7d74",
   source: "#795a76",
+};
+const DECLARATION_BACKGROUNDS = {
+  theorem: "#dbecee",
+  opaque: "#dbecee",
+  conjecture: "#f1d9d4",
+  definition: "#dcebe5",
+  quotient: "#dcebe5",
+  inductive: "#eadfe8",
+  constructor: "#eadfe8",
+  recursor: "#eadfe8",
+  proposition: "#dbecee",
+  concept: "#dcebe5",
+  source: "#eadfe8",
 };
 const PROOF_COLORS = ["#d16b5d", "#3f7f8f", "#b27a2d", "#7a6397", "#4f8b73", "#b05d91", "#6d7fbd", "#9b7a4b"];
 const VERIFICATION = {
@@ -44,7 +73,7 @@ const state = {
   selectedId: null,
   selectedProofId: null,
   search: "",
-  kinds: new Set(Object.keys(KIND_LABELS)),
+  kinds: new Set(),
   simulation: null,
   sourceRequest: 0,
   focusDistances: new Map(),
@@ -200,6 +229,35 @@ function nodeMap() {
   return new Map(state.graph.nodes.map((node) => [node.id, node]));
 }
 
+function declarationKindFor(node) {
+  if (node?.declarationKind) return node.declarationKind;
+  if (node?.kind === "proposition") return node.role || "theorem";
+  return node?.kind || "definition";
+}
+
+function declarationLabelFor(kind) {
+  return DECLARATION_LABELS[kind] || `${kind.slice(0, 1).toUpperCase()}${kind.slice(1)}s`;
+}
+
+function declarationColorFor(node) {
+  return DECLARATION_COLORS[declarationKindFor(node)] || DECLARATION_COLORS.source;
+}
+
+function declarationBackgroundFor(node) {
+  return DECLARATION_BACKGROUNDS[declarationKindFor(node)] || DECLARATION_BACKGROUNDS.source;
+}
+
+function declarationClassFor(node) {
+  return declarationKindFor(node).replace(/[^a-z0-9-]/gi, "-");
+}
+
+function availableDeclarationKinds() {
+  return [...new Set((state.graph?.nodes || []).map(declarationKindFor))].sort((left, right) => {
+    const order = ["theorem", "opaque", "conjecture", "definition", "quotient", "inductive", "constructor", "recursor"];
+    return (order.indexOf(left) < 0 ? 99 : order.indexOf(left)) - (order.indexOf(right) < 0 ? 99 : order.indexOf(right)) || left.localeCompare(right);
+  });
+}
+
 function isSearchMatch(node) {
   if (!state.search) return true;
   const formalizationNames = (node.formalizations || []).map((item) => item.name);
@@ -256,7 +314,7 @@ function visibleGraph() {
     .filter((edge) => !state.selectedProofId || edge.proof === state.selectedProofId)
     .map((edge) => ({ ...edge, source: nodesById.get(edge.source.id), target: nodesById.get(edge.target.id) }))
     .filter((edge) => edge.source && edge.target);
-  const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(node.kind));
+  const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(declarationKindFor(node)));
   state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData, 3) : new Map();
   const focus = searchFocus(candidateNodes, edgeData);
   const visibleNodes = candidateNodes.filter((node) => {
@@ -272,10 +330,12 @@ function visibleGraph() {
 
 function kindControls() {
   const container = $("#kind-filters");
-  Object.entries(KIND_LABELS).forEach(([key, label]) => {
+  container.replaceChildren();
+  availableDeclarationKinds().forEach((key) => {
+    const label = declarationLabelFor(key);
     const wrapper = document.createElement("label");
     wrapper.className = "filter-option";
-    wrapper.innerHTML = `<input type="checkbox" data-kind="${key}" checked><span class="filter-dot ${key}"></span><span>${label}</span>`;
+    wrapper.innerHTML = `<input type="checkbox" data-kind="${escapeHtml(key)}" checked><span class="filter-dot" style="background:${declarationColorFor({ declarationKind: key })}"></span><span>${escapeHtml(label)}</span>`;
     wrapper.querySelector("input").addEventListener("change", (event) => {
       event.target.checked ? state.kinds.add(key) : state.kinds.delete(key);
       draw();
@@ -502,7 +562,7 @@ function verificationText(node) {
 }
 
 function isMajorNode(node) {
-  return node.kind !== "source" || node.declarationKind === "proposition";
+  return node.kind !== "source" || ["theorem", "opaque", "conjecture"].includes(declarationKindFor(node));
 }
 
 function proofColor(proofId = "") {
@@ -591,7 +651,7 @@ function renderInspector() {
     outgoing.length ? `<div class="detail-label">Used in these proofs</div>${outgoing.map(({ node: neighbor }) => `<div class="relation-row"><span class="relation-name">proof target</span><button class="neighbor" data-neighbor="${escapeHtml(neighbor.id)}">${escapeHtml(neighbor.label)}</button></div>`).join("")}` : "",
   ].join("");
   content.innerHTML = `
-    <span class="node-kind ${escapeHtml(node.kind)}">${escapeHtml(KIND_LABELS[node.kind])}</span>
+    <span class="node-kind ${escapeHtml(declarationClassFor(node))}" style="color:${escapeHtml(declarationColorFor(node))};background:${escapeHtml(declarationBackgroundFor(node))}">${escapeHtml(declarationKindFor(node))}</span>
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(node.label)}</h2>
     ${mergeNote}
@@ -886,7 +946,7 @@ function draw() {
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
   const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; resumeRevealIfVisible(); }));
-  node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && item.kind === "proposition" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", (item) => KIND_COLORS[item.kind]);
+  node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", declarationColorFor);
   node.append("text").attr("class", "node-label").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (!state.showImplementation && !isMajorNode(item)) || (item.label.length > 31 && nodes.length > 12));
   state.simulation?.stop();
   state.simulation = null;
@@ -957,6 +1017,7 @@ async function load() {
     };
     $("#graph-badge").textContent = `${state.graph.nodes.length} nodes · ${state.graph.edges.length} links`;
     $("#network-title").textContent = "Mathematical landscape";
+    state.kinds = new Set(availableDeclarationKinds());
     $(".data-source code").textContent = DATA_URLS.map((url) => url.split("/").pop()).join(" + ");
     $("#loading-state").remove();
     populateTheoremSelect();
@@ -994,7 +1055,7 @@ $("#reset").addEventListener("click", () => {
   document.querySelectorAll("#kind-filters input[type=checkbox]").forEach((input) => { input.checked = true; });
   state.showImplementation = false;
   $("#show-implementation").checked = false;
-  state.kinds = new Set(Object.keys(KIND_LABELS));
+  state.kinds = new Set(availableDeclarationKinds());
   const next = new URL(window.location.href);
   next.searchParams.delete("theorem");
   next.searchParams.delete("graph");
