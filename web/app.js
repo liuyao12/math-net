@@ -212,9 +212,10 @@ function focusDistances(nodeId, edges, maxDepth = 3) {
   const distances = new Map([[nodeId, 0]]);
   const adjacency = new Map();
   edges.forEach((edge) => {
-    if (!adjacency.has(edge.source.id)) adjacency.set(edge.source.id, []);
+    // Edges point from a used declaration to the proof that uses it. For a
+    // selected theorem, walk only upstream so the canvas remains a readable
+    // dependency tree rather than expanding through every dependent theorem.
     if (!adjacency.has(edge.target.id)) adjacency.set(edge.target.id, []);
-    adjacency.get(edge.source.id).push(edge.target.id);
     adjacency.get(edge.target.id).push(edge.source.id);
   });
   let frontier = [nodeId];
@@ -416,7 +417,7 @@ function selectNode(nodeId) {
   state.selectedId = nodeId;
   state.selectedProofId = null;
   renderInspector();
-  updateHighlight();
+  draw();
 }
 
 function selectProof(proofId) {
@@ -479,26 +480,10 @@ function renderInspector() {
 }
 
 function updateHighlight() {
-  const neighborhood = new Set(state.selectedId ? [state.selectedId] : []);
-  if (state.selectedId) {
-    const adjacency = new Map();
-    state.graph.edges.forEach((edge) => {
-      const source = edge.source.id;
-      const target = edge.target.id;
-      if (!adjacency.has(source)) adjacency.set(source, []);
-      if (!adjacency.has(target)) adjacency.set(target, []);
-      adjacency.get(source).push(target);
-      adjacency.get(target).push(source);
-    });
-    let frontier = [state.selectedId];
-    for (let depth = 0; depth < 3; depth += 1) {
-      const next = [];
-      frontier.forEach((nodeId) => (adjacency.get(nodeId) || []).forEach((neighbor) => {
-        if (!neighborhood.has(neighbor)) { neighborhood.add(neighbor); next.push(neighbor); }
-      }));
-      frontier = next;
-    }
-  }
+  // visibleGraph has already computed the bounded, upstream dependency
+  // neighborhood. Reuse it here so the status text and opacity treatment
+  // describe exactly the graph on screen.
+  const neighborhood = state.selectedId ? new Set(state.focusDistances.keys()) : new Set();
   svg.selectAll(".node-dot").classed("selected", (node) => node.id === state.selectedId).classed("dimmed", (node) => state.selectedId && !neighborhood.has(node.id));
   svg.selectAll(".node-label").classed("dimmed", (node) => state.selectedId && !neighborhood.has(node.id));
   svg.selectAll(".graph-link").classed("dimmed", (edge) => state.selectedId && (!neighborhood.has(edge.source.id) || !neighborhood.has(edge.target.id)));
@@ -553,8 +538,9 @@ function draw() {
   const root = svg.append("g");
   svg.call(d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => root.attr("transform", event.transform)));
   const labels = proofLabels();
+  const maxFocusDistance = Math.max(0, ...nodes.map((node) => state.focusDistances.get(node.id) || 0));
   const ranks = state.selectedId
-    ? new Map(nodes.map((item) => [item.id, Math.max(...nodes.map((node) => state.focusDistances.get(node.id) || 0) - (state.focusDistances.get(item.id) || 0), 0)]))
+    ? new Map(nodes.map((item) => [item.id, maxFocusDistance - (state.focusDistances.get(item.id) || 0)]))
     : dependencyRanks(nodes, edges);
   const maxRank = Math.max(0, ...Array.from(ranks.values()));
   const layerGap = Math.max(38, Math.min(105, (height - 90) / Math.max(1, maxRank)));
@@ -637,7 +623,7 @@ $("#reset").addEventListener("click", () => {
   renderInspector();
   draw();
 });
-$("#clear-selection").addEventListener("click", () => { state.selectedId = null; state.selectedProofId = null; renderInspector(); updateHighlight(); });
+$("#clear-selection").addEventListener("click", () => { state.selectedId = null; state.selectedProofId = null; renderInspector(); draw(); });
 $("#show-implementation").addEventListener("change", (event) => { state.showImplementation = event.target.checked; draw(); });
 window.addEventListener("resize", () => draw());
 load();
