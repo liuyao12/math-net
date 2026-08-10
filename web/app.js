@@ -330,7 +330,11 @@ function visibleGraph() {
   }).filter((node, index) => !state.focusId && state.revealLimit !== Infinity ? index < state.revealLimit : true);
   const allowed = new Set(visibleNodes.map((node) => node.id));
   const visibleEdges = edgeData.filter((edge) => allowed.has(edge.source.id) && allowed.has(edge.target.id));
-  return { nodes: visibleNodes, edges: visibleEdges };
+  const connected = new Set();
+  visibleEdges.forEach((edge) => { connected.add(edge.source.id); connected.add(edge.target.id); });
+  const connectedNodes = visibleNodes.filter((node) => node.id === state.focusId || connected.has(node.id));
+  const connectedIds = new Set(connectedNodes.map((node) => node.id));
+  return { nodes: connectedNodes, edges: visibleEdges.filter((edge) => connectedIds.has(edge.source.id) && connectedIds.has(edge.target.id)) };
 }
 
 function kindControls() {
@@ -987,9 +991,13 @@ function draw() {
       .on("tick", () => {
       enforceTopDown(nodes, edges, ranks, state.focusId);
       const focusNode = nodes.find((item) => item.id === state.focusId);
-      if (focusNode && (focusNode.y < 40 || focusNode.y > height - 40)) {
+      if (focusNode && !Number.isFinite(focusNode.fy)) {
+        // The focus is an anchor for the whole progressive layout. Keep it
+        // in a safe lower band while the top-down constraint moves its
+        // prerequisites above it; otherwise a new frontier can briefly push
+        // the theorem below the visible stage.
         focusNode.x = width / 2;
-        focusNode.y = height * 0.74;
+        focusNode.y = Math.max(height * 0.6, Math.min(height * 0.82, focusNode.y));
         focusNode.vx = 0;
         focusNode.vy = 0;
       }
