@@ -209,9 +209,9 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-label.implementation { color: var(--faint); font-size: 10px; }
 .node-dot[data-focus-distance="2"], .node-label[data-focus-distance="2"] { opacity: 0.62; }
 .node-dot[data-focus-distance="3"], .node-label[data-focus-distance="3"] { opacity: 0.3; }
-.graph-link { fill: none; stroke-width: 1.6; opacity: 0.58; stroke-linecap: round; }
+.graph-link { fill: none; stroke-width: 1.25; opacity: 0.48; stroke-linecap: round; }
 .graph-link.dimmed { opacity: 0.08; }
-.graph-link.implementation-link { opacity: 0.2; }
+.graph-link.implementation-link { opacity: 0.16; }
 .graph-link.proves { stroke: var(--gold); }
 .graph-link.uses { stroke: var(--blue); }
 .graph-link.equivalent { stroke: var(--teal); stroke-dasharray: 4 4; }

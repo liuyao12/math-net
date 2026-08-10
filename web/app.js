@@ -511,14 +511,16 @@ function draw() {
   const height = stage.clientHeight;
   svg.attr("viewBox", `0 0 ${width} ${height}`);
   const defs = svg.append("defs");
-  defs.append("marker").attr("id", "arrow-used-in-proof").attr("viewBox", "0 -4 8 8").attr("refX", 20).attr("refY", 0).attr("markerWidth", 5).attr("markerHeight", 5).attr("orient", "auto").append("path").attr("d", "M0,-4L8,0L0,4").attr("fill", "context-stroke");
+  defs.append("marker").attr("id", "arrow-used-in-proof").attr("viewBox", "0 -3 6 6").attr("refX", 14).attr("refY", 0).attr("markerWidth", 3.5).attr("markerHeight", 3.5).attr("orient", "auto").append("path").attr("d", "M0,-3L6,0L0,3").attr("fill", "context-stroke");
   const root = svg.append("g");
   svg.call(d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => root.attr("transform", event.transform)));
   const labels = proofLabels();
-  const maxFocusDistance = Math.max(0, ...nodes.map((node) => state.focusDistances.get(node.id) || 0));
-  const ranks = state.focusId
-    ? new Map(nodes.map((item) => [item.id, maxFocusDistance - (state.focusDistances.get(item.id) || 0)]))
-    : dependencyRanks(nodes, edges);
+  // Keep the dependency direction visible in the layout.  Edges point from
+  // a used declaration to the declaration whose proof uses it, so repeated
+  // relaxation places prerequisites above their proof targets.  Distance
+  // from the focus is still used for fading, but no longer flattens peers
+  // into one horizontal band.
+  const ranks = dependencyRanks(nodes, edges);
   const maxRank = Math.max(0, ...Array.from(ranks.values()));
   const layerGap = Math.max(38, Math.min(105, (height - 90) / Math.max(1, maxRank)));
   const largeGraph = nodes.length > 400;
@@ -531,7 +533,10 @@ function draw() {
     .attr("class", "graph-link used-in-proof")
     .classed("implementation-link", (edge) => !isMajorNode(edge.source) && !isMajorNode(edge.target))
     .attr("stroke", (edge) => proofColor(edge.proof))
-    .attr("marker-end", "url(#arrow-used-in-proof)");
+    // Arrowheads are reserved for edges touching a major declaration.  The
+    // complete edge remains visible, while implementation-level chains do
+    // not turn into a field of tiny overlapping triangles.
+    .attr("marker-end", (edge) => isMajorNode(edge.source) || isMajorNode(edge.target) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
   const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
   node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && item.kind === "proposition" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", (item) => KIND_COLORS[item.kind]);
