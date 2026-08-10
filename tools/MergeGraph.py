@@ -130,6 +130,12 @@ def merge(graph: dict) -> dict:
         rewritten["target"]["kind"] = merged_node_by_id[target_new].get("kind", rewritten["target"].get("kind"))
         if edge.get("proof") in proof_for_old:
             rewritten["proof"] = proof_for_old[edge["proof"]]
+        elif target_old in proof_for_old:
+            # Imported theorem declarations are represented as source nodes,
+            # so BuildGraph leaves their edge proof field empty. Once that
+            # declaration is merged into a proposition, recover its proof
+            # provenance from the original target declaration.
+            rewritten["proof"] = proof_for_old[target_old]
         edges.append(rewritten)
 
     result = dict(graph)

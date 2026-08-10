@@ -204,7 +204,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .lean-variable { color: #9cdcfe; }
 
 .node-label { pointer-events: none; fill: var(--ink); font: 500 11px Manrope, sans-serif; paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
-.graph-node { animation: graph-node-enter 220ms ease-out both; }
+.graph-node { animation: none; }
 .node-label.hidden { display: none; }
 .node-expand { cursor: pointer; }
 .node-expand.hidden { display: none; }
@@ -222,7 +222,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-dot.implementation[data-focus-distance="2"], .node-label.implementation[data-focus-distance="2"] { opacity: 0.1; }
 .node-dot.implementation[data-focus-distance="3"], .node-label.implementation[data-focus-distance="3"] { opacity: 0.06; }
 .graph-link { fill: none; stroke-width: 1.25; opacity: 0.48; stroke-linecap: round; }
-.graph-link { animation: graph-link-enter 220ms ease-out both; }
+.graph-link { animation: none; }
 .graph-link.dimmed { opacity: 0.08; }
 .graph-link.implementation-link { opacity: 0.07; }
 .graph-link.selected-edge { opacity: 0.98; stroke-width: 2.4; }

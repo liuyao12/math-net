@@ -630,10 +630,10 @@ function selectNode(nodeId, redraw = false) {
   if (!hadFocus) state.focusId = nodeId;
   state.selectedId = nodeId;
   state.selectedProofId = null;
-  expandNodeDependencies(nodeId);
+  const expanded = expandNodeDependencies(nodeId, false);
   renderInspector();
   updateWorkspaceContext();
-  if (redraw || !hadFocus) draw();
+  if (redraw || !hadFocus || expanded) draw();
   else updateHighlight();
 }
 
@@ -643,7 +643,7 @@ function selectProof(proofId) {
   draw();
 }
 
-function expandNodeDependencies(nodeId) {
+function expandNodeDependencies(nodeId, redraw = true) {
   const node = nodeMap().get(nodeId);
   if (!node || isExpansionBoundary(node)) return;
   if (Number.isFinite(node.x) && Number.isFinite(node.y)) {
@@ -658,14 +658,15 @@ function expandNodeDependencies(nodeId) {
     const distance = parentDistance + 1;
     if (!state.expandedDistances.has(id) || distance < state.expandedDistances.get(id)) state.expandedDistances.set(id, distance);
   });
-  if (!dependencies.length) return;
+  if (!dependencies.length) return false;
   state.revealPaused = true;
   state.revealPauseReason = "inspection";
   if (state.revealTimer) {
     window.clearTimeout(state.revealTimer);
     state.revealTimer = null;
   }
-  draw();
+  if (redraw) draw();
+  return true;
 }
 
 function scheduleSimulationStop(delay = 900) {
@@ -1085,7 +1086,7 @@ function draw() {
   if (staticLayout) {
     link.attr("d", curvedLinkPath);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`)
-      .transition().duration(state.focusId ? 160 : 0)
+      .transition().duration(0)
       .attr("transform", (item) => state.inspectionAnchor?.id === item.id
         ? `translate(${state.inspectionAnchor.x},${state.inspectionAnchor.y})`
         : `translate(${item.targetX},${item.targetY})`);
@@ -1096,7 +1097,7 @@ function draw() {
       }
       state.layoutPositions.set(item.id, { x: item.targetX, y: item.targetY });
     });
-    link.transition().duration(state.focusId ? 160 : 0).attr("d", (edge) => curvedLinkPath(edge));
+    link.transition().duration(0).attr("d", (edge) => curvedLinkPath(edge));
   } else {
     state.simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(edges).id((item) => item.id).distance(state.focusId ? 104 : 82).strength(state.focusId ? 0.34 : 0.22))
