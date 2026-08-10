@@ -398,17 +398,23 @@ function beginProgressiveReveal() {
     while (queue.length) {
       const parent = queue.shift();
       if (parent.depth >= 3) continue;
-      const children = (adjacency.get(parent.id) || []).slice().sort().filter((neighbor) => {
+      const children = [];
+      const existing = [];
+      (adjacency.get(parent.id) || []).slice().sort().forEach((neighbor) => {
+        if (!nodeIds.has(neighbor)) return;
+        if (seen.has(neighbor)) {
+          existing.push(neighbor);
+          return;
+        }
         if (seen.size >= maxFocusNodes) {
           state.revealCapped = true;
-          return false;
+          return;
         }
-        if (!nodeIds.has(neighbor) || seen.has(neighbor)) return false;
         seen.add(neighbor);
-        return true;
+        children.push(neighbor);
       });
-      if (children.length) {
-        steps.push({ parentId: parent.id, nodeIds: children });
+      if (children.length || existing.length) {
+        steps.push({ parentId: parent.id, nodeIds: children, existingIds: existing });
         children.forEach((id) => queue.push({ id, depth: parent.depth + 1 }));
       }
     }
