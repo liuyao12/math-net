@@ -58,6 +58,8 @@ const state = {
   layoutPositions: new Map(),
   layoutVelocities: new Map(),
   revealPaused: false,
+  revealPauseReason: null,
+  inspectionPaused: false,
   resumeReveal: null,
   revealCapped: false,
   zoomTransform: d3.zoomIdentity,
@@ -370,6 +372,8 @@ function beginProgressiveReveal() {
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.revealPaused = false;
+  state.revealPauseReason = null;
+  state.inspectionPaused = false;
   state.resumeReveal = null;
   if (!state.graph) return;
   const focused = Boolean(state.focusId);
@@ -422,6 +426,7 @@ function beginProgressiveReveal() {
     if (focused) {
       if (viewportHasEdgeNode()) {
         state.revealPaused = true;
+        state.revealPauseReason = "viewport";
         state.revealTimer = null;
         updateHighlight();
         return;
@@ -440,8 +445,18 @@ function beginProgressiveReveal() {
     state.revealTimer = window.setTimeout(advance, focused ? 260 : 280);
   };
   state.resumeReveal = () => {
-    if (!state.revealPaused || state.revealCursor >= state.revealSteps.length) return;
+    if (state.inspectionPaused) {
+      state.inspectionPaused = false;
+      state.simulation?.alpha(0.22).restart();
+    }
+    if (!state.revealPaused || state.revealCursor >= state.revealSteps.length) {
+      state.revealPaused = false;
+      state.revealPauseReason = null;
+      updateHighlight();
+      return;
+    }
     state.revealPaused = false;
+    state.revealPauseReason = null;
     state.revealTimer = window.setTimeout(advance, 80);
     updateHighlight();
   };
@@ -512,12 +527,19 @@ function nodeNeighbors(nodeId) {
 
 function selectNode(nodeId, redraw = false) {
   const hadFocus = Boolean(state.focusId);
+  if (hadFocus) {
+    state.simulation?.stop();
+    state.inspectionPaused = true;
+    state.revealPaused = true;
+    state.revealPauseReason = "inspection";
+    if (state.revealTimer) {
+      window.clearTimeout(state.revealTimer);
+      state.revealTimer = null;
+    }
+  }
   if (!hadFocus) state.focusId = nodeId;
   state.selectedId = nodeId;
   state.selectedProofId = null;
-  state.layoutPositions.clear();
-  state.layoutVelocities.clear();
-  state.revealedIds.clear();
   renderInspector();
   updateWorkspaceContext();
   if (redraw || !hadFocus) draw();
@@ -614,7 +636,9 @@ function updateHighlight() {
     const nextStep = state.revealSteps[state.revealCursor];
     const parent = nextStep ? nodeMap().get(nextStep.parentId) : null;
     const revealText = state.revealPaused
-      ? "paused at viewport edge · click to continue"
+      ? state.revealPauseReason === "inspection"
+        ? "paused while inspecting · click to continue"
+        : "paused at viewport edge · click to continue"
       : nextStep
         ? `expanding ${parent?.label || "node"} · ${state.revealCursor + 1}/${state.revealSteps.length}`
         : state.revealCapped
@@ -947,6 +971,8 @@ $("#reset").addEventListener("click", () => {
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.revealPaused = false;
+  state.revealPauseReason = null;
+  state.inspectionPaused = false;
   state.resumeReveal = null;
   state.revealDepth = Infinity;
   state.revealLimit = Infinity;
@@ -977,6 +1003,7 @@ $("#clear-selection").addEventListener("click", () => {
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.revealPaused = false;
+  state.inspectionPaused = false;
   state.resumeReveal = null;
   state.theoremNumber = null;
   $("#theorem-select").value = "";
