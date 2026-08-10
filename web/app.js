@@ -58,7 +58,6 @@ const state = {
   revealedIds: new Set(),
   layoutPositions: new Map(),
   revealPaused: false,
-  revealPauseReason: null,
   resumeReveal: null,
   zoomTransform: d3.zoomIdentity,
 };
@@ -368,7 +367,6 @@ function beginProgressiveReveal() {
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.revealPaused = false;
-  state.revealPauseReason = null;
   state.resumeReveal = null;
   if (!state.graph) return;
   const focused = Boolean(state.focusId);
@@ -418,7 +416,6 @@ function beginProgressiveReveal() {
     if (focused) {
       if (viewportHasEdgeNode()) {
         state.revealPaused = true;
-        state.revealPauseReason = "viewport";
         state.revealTimer = null;
         updateHighlight();
         return;
@@ -439,7 +436,6 @@ function beginProgressiveReveal() {
   state.resumeReveal = () => {
     if (!state.revealPaused || state.revealCursor >= state.revealLayers.length) return;
     state.revealPaused = false;
-    state.revealPauseReason = null;
     state.revealTimer = window.setTimeout(advance, 80);
     updateHighlight();
   };
@@ -510,16 +506,6 @@ function nodeNeighbors(nodeId) {
 
 function selectNode(nodeId, redraw = false) {
   const hadFocus = Boolean(state.focusId);
-  if (hadFocus) {
-    state.simulation?.stop();
-    state.simulation = null;
-    if (state.revealTimer) {
-      window.clearTimeout(state.revealTimer);
-      state.revealTimer = null;
-      state.revealPaused = true;
-      state.revealPauseReason = "inspection";
-    }
-  }
   if (!hadFocus) state.focusId = nodeId;
   state.selectedId = nodeId;
   state.selectedProofId = null;
@@ -619,9 +605,7 @@ function updateHighlight() {
       ? state.revealedIds.size
       : neighborhood.size;
     const revealText = state.revealPaused
-      ? state.revealPauseReason === "inspection"
-        ? "paused while inspecting · click to continue"
-        : "paused at viewport edge · click to continue"
+      ? "paused at viewport edge · click to continue"
       : state.revealCursor < state.revealLayers.length
       ? `BFS loading · frontier ${state.revealCursor + 1}/${state.revealLayers.length}`
       : "BFS loaded";
@@ -868,7 +852,6 @@ $("#reset").addEventListener("click", () => {
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.revealPaused = false;
-  state.revealPauseReason = null;
   state.resumeReveal = null;
   state.revealDepth = Infinity;
   state.revealLimit = Infinity;
@@ -898,7 +881,6 @@ $("#clear-selection").addEventListener("click", () => {
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.revealPaused = false;
-  state.revealPauseReason = null;
   state.resumeReveal = null;
   state.theoremNumber = null;
   $("#theorem-select").value = "";
