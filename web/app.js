@@ -642,6 +642,21 @@ function curvedLinkPath(edge) {
   return `M${x1},${y1} C${x1},${y1 + dy * 0.42} ${x2},${y2 - dy * 0.42} ${x2},${y2}`;
 }
 
+function topDownForce(edges, gap = 26) {
+  const force = () => {
+    edges.forEach((edge) => {
+      if (edge.source === edge.target) return;
+      const overlap = edge.source.y + gap - edge.target.y;
+      if (overlap > 0) {
+        const shift = overlap * 0.45;
+        edge.source.y -= shift;
+        edge.target.y += shift;
+      }
+    });
+  };
+  return force;
+}
+
 function draw() {
   if (!state.graph) return;
   const { nodes, edges } = visibleGraph();
@@ -684,8 +699,12 @@ function draw() {
   const maxLayerSize = Math.max(1, ...Array.from(nodesByRank.values()).map((layer) => layer.length));
   const columnGap = Math.min(112, Math.max(72, (width - 80) / Math.max(1, maxLayerSize)));
   nodesByRank.forEach((layer, rank) => layer.forEach((item, index) => {
-    const targetX = width / 2 + (index - (layer.length - 1) / 2) * columnGap;
-    const targetY = graphTop + rank * layerGap;
+    const targetX = item.id === state.focusId
+      ? width / 2
+      : width / 2 + (index - (layer.length - 1) / 2) * columnGap;
+    const targetY = item.id === state.focusId
+      ? height * 0.74
+      : graphTop + rank * layerGap;
     const previous = state.layoutPositions.get(item.id);
     if (previous) {
       item.x = previous.x;
@@ -710,7 +729,7 @@ function draw() {
     // Arrowheads are reserved for edges touching a major declaration.  The
     // complete edge remains visible, while implementation-level chains do
     // not turn into a field of tiny overlapping triangles.
-    .attr("marker-end", (edge) => (ranks.get(edge.source.id) || 0) < (ranks.get(edge.target.id) || 0) && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
+    .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
   const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => !isMajorNode(item)).on("click", (_, item) => selectNode(item.id)).call(d3.drag().on("start", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0.3).restart(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { if (!state.simulation) return; item.fx = event.x; item.fy = event.y; }).on("end", (event, item) => { if (!state.simulation) return; if (!event.active) state.simulation.alphaTarget(0); item.fx = null; item.fy = null; }));
   node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && item.kind === "proposition" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", (item) => KIND_COLORS[item.kind]);
@@ -735,13 +754,15 @@ function draw() {
   } else {
     state.simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(edges).id((item) => item.id).distance(state.focusId ? 104 : 82).strength(state.focusId ? 0.34 : 0.22))
-      .force("y", d3.forceY((item) => graphTop + (ranks.get(item.id) || 0) * layerGap).strength(state.focusId ? 0.18 : 1.2))
-      .force("x", d3.forceX((item) => item.targetX ?? width / 2).strength(state.focusId ? 0.12 : 0.12))
+      .force("y", d3.forceY((item) => item.id === state.focusId ? height * 0.74 : graphTop + (ranks.get(item.id) || 0) * layerGap).strength((item) => item.id === state.focusId ? 0.92 : state.focusId ? 0.08 : 1.2))
+      .force("x", d3.forceX((item) => item.id === state.focusId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId ? 0.76 : 0.12))
       .force("charge", d3.forceManyBody().strength(state.focusId ? -230 : -180))
       .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
+      .force("top-down", topDownForce(edges))
       .on("tick", () => {
       nodes.forEach((item) => state.layoutPositions.set(item.id, { x: item.x, y: item.y }));
-      link.attr("d", curvedLinkPath);
+      link.attr("d", curvedLinkPath)
+        .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
       node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     });
   }
