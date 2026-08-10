@@ -52,6 +52,10 @@ const state = {
   revealDepth: Infinity,
   revealLimit: Infinity,
   revealTimer: null,
+  revealOrder: [],
+  revealCursor: 0,
+  revealedIds: new Set(),
+  layoutPositions: new Map(),
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -250,7 +254,7 @@ function visibleGraph() {
   const focus = searchFocus(candidateNodes, edgeData);
   const visibleNodes = candidateNodes.filter((node) => {
     if (state.focusId && !state.focusDistances.has(node.id)) return false;
-    if (state.focusId && state.revealDepth !== Infinity && (state.focusDistances.get(node.id) || 0) > state.revealDepth) return false;
+    if (state.focusId && state.revealDepth !== Infinity && !state.revealedIds.has(node.id)) return false;
     if (state.search && !focus.has(node.id)) return false;
     return true;
   }).filter((node, index) => !state.focusId && state.revealLimit !== Infinity ? index < state.revealLimit : true);
@@ -299,6 +303,8 @@ function populateTheoremSelect() {
       state.theoremNumber = null;
       state.focusId = null;
       state.selectedId = null;
+      state.layoutPositions.clear();
+      state.revealedIds.clear();
       updateTheoremNote();
       updateWorkspaceContext();
       draw();
@@ -313,6 +319,8 @@ function populateTheoremSelect() {
     state.focusId = null;
     state.selectedId = null;
     state.selectedProofId = null;
+    state.layoutPositions.clear();
+    state.revealedIds.clear();
     if (state.revealTimer) window.clearTimeout(state.revealTimer);
     state.revealTimer = null;
     updateTheoremNote();
@@ -359,21 +367,55 @@ function beginProgressiveReveal() {
   if (focused) {
     state.revealDepth = 0;
     state.revealLimit = Infinity;
+    state.revealedIds = new Set([state.focusId]);
+    const nodeIds = new Set(state.graph.nodes.map((node) => node.id));
+    const adjacency = new Map();
+    state.graph.edges
+      .filter((edge) => edge.relation === "used-in-proof")
+      .filter((edge) => !state.selectedProofId || edge.proof === state.selectedProofId)
+      .forEach((edge) => {
+        if (!adjacency.has(edge.target.id)) adjacency.set(edge.target.id, []);
+        adjacency.get(edge.target.id).push(edge.source.id);
+      });
+    const order = [state.focusId];
+    const seen = new Set(order);
+    let frontier = [state.focusId];
+    while (frontier.length) {
+      const next = [];
+      frontier.forEach((current) => (adjacency.get(current) || [])
+        .slice().sort()
+        .forEach((neighbor) => {
+          if (nodeIds.has(neighbor) && !seen.has(neighbor)) {
+            seen.add(neighbor);
+            order.push(neighbor);
+            next.push(neighbor);
+          }
+        }));
+      frontier = next;
+    }
+    state.revealOrder = order;
+    state.revealCursor = 1;
   } else {
     state.revealDepth = Infinity;
     state.revealLimit = state.graph.nodes.length > 250 ? 220 : Infinity;
+    state.revealOrder = [];
+    state.revealCursor = 0;
   }
   draw();
   const advance = () => {
     if (focused) {
-      if (state.revealDepth >= 3) { state.revealTimer = null; return; }
-      state.revealDepth += 1;
+      if (state.revealCursor >= state.revealOrder.length || state.revealCursor >= 40) {
+        state.revealTimer = null;
+        return;
+      }
+      state.revealedIds.add(state.revealOrder[state.revealCursor]);
+      state.revealCursor += 1;
     } else {
       if (state.revealLimit >= state.graph.nodes.length) { state.revealTimer = null; return; }
       state.revealLimit = Math.min(state.graph.nodes.length, state.revealLimit + 220);
     }
     draw();
-    state.revealTimer = window.setTimeout(advance, 280);
+    state.revealTimer = window.setTimeout(advance, focused ? 180 : 280);
   };
   state.revealTimer = window.setTimeout(advance, 260);
 }
@@ -429,6 +471,8 @@ function selectNode(nodeId, redraw = false) {
   if (!hadFocus) state.focusId = nodeId;
   state.selectedId = nodeId;
   state.selectedProofId = null;
+  state.layoutPositions.clear();
+  state.revealedIds.clear();
   renderInspector();
   updateWorkspaceContext();
   if (redraw || !hadFocus) draw();
@@ -520,9 +564,9 @@ function updateHighlight() {
   if (focusStatus) {
     const focus = state.focusId ? nodeMap().get(state.focusId) : null;
     const visibleCount = state.focusId && state.revealDepth !== Infinity
-      ? [...neighborhood].filter((id) => (state.focusDistances.get(id) || 0) <= state.revealDepth).length
+      ? state.revealedIds.size
       : neighborhood.size;
-    const revealText = state.revealDepth < 3 ? `loading layer ${state.revealDepth + 1}/3` : "3-level focus";
+    const revealText = state.revealCursor < state.revealOrder.length ? "BFS loading" : "BFS loaded";
     focusStatus.textContent = focus
       ? `${visibleCount}/${neighborhood.size} nodes · ${revealText} · ${focus.label}`
       : state.revealLimit !== Infinity
@@ -633,8 +677,23 @@ function draw() {
   const maxLayerSize = Math.max(1, ...Array.from(nodesByRank.values()).map((layer) => layer.length));
   const columnGap = Math.min(112, Math.max(72, (width - 80) / Math.max(1, maxLayerSize)));
   nodesByRank.forEach((layer, rank) => layer.forEach((item, index) => {
-    item.x = width / 2 + (index - (layer.length - 1) / 2) * columnGap;
-    item.y = graphTop + rank * layerGap;
+    const targetX = width / 2 + (index - (layer.length - 1) / 2) * columnGap;
+    const targetY = graphTop + rank * layerGap;
+    const previous = state.layoutPositions.get(item.id);
+    if (previous) {
+      item.x = previous.x;
+      item.y = previous.y;
+    } else {
+      const neighbor = edges.find((edge) => edge.source.id === item.id && state.layoutPositions.has(edge.target.id)) ||
+        edges.find((edge) => edge.target.id === item.id && state.layoutPositions.has(edge.source.id));
+      const neighborPosition = neighbor && state.layoutPositions.get(
+        neighbor.source.id === item.id ? neighbor.target.id : neighbor.source.id,
+      );
+      item.x = neighborPosition?.x ?? targetX;
+      item.y = neighborPosition?.y ?? targetY;
+    }
+    item.targetX = targetX;
+    item.targetY = targetY;
   }));
   const link = root.append("g").attr("aria-hidden", "true").selectAll("path").data(edges, (edge) => edge.id).join("path")
     .attr("class", "graph-link used-in-proof")
@@ -654,7 +713,15 @@ function draw() {
   const staticLayout = nodes.length > 400 || Boolean(state.focusId);
   if (staticLayout) {
     link.attr("d", curvedLinkPath);
-    node.attr("transform", (item) => `translate(${item.x},${item.y})`);
+    node.attr("transform", (item) => `translate(${item.x},${item.y})`)
+      .transition().duration(state.focusId ? 160 : 0)
+      .attr("transform", (item) => `translate(${item.targetX},${item.targetY})`);
+    nodes.forEach((item) => {
+      item.x = item.targetX;
+      item.y = item.targetY;
+      state.layoutPositions.set(item.id, { x: item.targetX, y: item.targetY });
+    });
+    link.transition().duration(state.focusId ? 160 : 0).attr("d", (edge) => curvedLinkPath(edge));
   } else {
     state.simulation = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id((item) => item.id).distance(82).strength(0.22)).force("y", d3.forceY((item) => graphTop + (ranks.get(item.id) || 0) * layerGap).strength(1.2)).force("x", d3.forceX(width / 2).strength(0.12)).force("charge", d3.forceManyBody().strength(-180)).force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21)).on("tick", () => {
       link.attr("d", curvedLinkPath);
@@ -702,6 +769,8 @@ $("#reset").addEventListener("click", () => {
   state.selectedId = null;
   state.focusId = null;
   state.selectedProofId = null;
+  state.layoutPositions.clear();
+  state.revealedIds.clear();
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.revealDepth = Infinity;
@@ -727,6 +796,8 @@ $("#clear-selection").addEventListener("click", () => {
   state.selectedId = null;
   state.focusId = null;
   state.selectedProofId = null;
+  state.layoutPositions.clear();
+  state.revealedIds.clear();
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
   state.theoremNumber = null;
