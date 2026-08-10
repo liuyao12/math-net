@@ -87,6 +87,7 @@ const state = {
   layoutPositions: new Map(),
   layoutVelocities: new Map(),
   expandedDistances: new Map(),
+  inspectionAnchor: null,
   revealPaused: false,
   revealPauseReason: null,
   inspectionPaused: false,
@@ -386,6 +387,7 @@ function populateTheoremSelect() {
       state.layoutPositions.clear();
       state.layoutVelocities.clear();
       state.expandedDistances.clear();
+      state.inspectionAnchor = null;
       state.revealedIds.clear();
       updateTheoremNote();
       updateWorkspaceContext();
@@ -404,6 +406,7 @@ function populateTheoremSelect() {
     state.layoutPositions.clear();
     state.layoutVelocities.clear();
     state.expandedDistances.clear();
+    state.inspectionAnchor = null;
     state.revealedIds.clear();
     if (state.revealTimer) window.clearTimeout(state.revealTimer);
     state.revealTimer = null;
@@ -637,6 +640,9 @@ function selectProof(proofId) {
 function expandNodeDependencies(nodeId) {
   const node = nodeMap().get(nodeId);
   if (!node) return;
+  if (Number.isFinite(node.x) && Number.isFinite(node.y)) {
+    state.inspectionAnchor = { id: nodeId, x: node.x, y: node.y };
+  }
   const dependencies = state.graph.edges
     .filter((edge) => edge.relation === "used-in-proof" && edge.target.id === nodeId)
     .map((edge) => edge.source.id);
@@ -739,6 +745,8 @@ function updateHighlight() {
   svg.selectAll(".graph-link")
     .classed("dimmed", (edge) => state.focusId && (!neighborhood.has(edge.source.id) || !neighborhood.has(edge.target.id)))
     .classed("selected-edge", (edge) => Boolean(state.selectedId) && (edge.source.id === state.selectedId || edge.target.id === state.selectedId));
+  const visibleNodes = visibleGraph().nodes;
+  svg.selectAll(".node-expand").classed("hidden", (node) => node.id !== state.selectedId || !hasHiddenDependencies(node.id, visibleNodes));
   const focusStatus = $("#focus-status");
   if (focusStatus) {
     const focus = state.focusId ? nodeMap().get(state.focusId) : null;
@@ -978,6 +986,14 @@ function draw() {
       item.vx = 0;
       item.vy = 0;
     }
+    if (state.inspectionAnchor?.id === item.id) {
+      item.x = state.inspectionAnchor.x;
+      item.y = state.inspectionAnchor.y;
+      item.fx = state.inspectionAnchor.x;
+      item.fy = state.inspectionAnchor.y;
+      item.vx = 0;
+      item.vy = 0;
+    }
     item.targetX = targetX;
     item.targetY = targetY;
   }));
@@ -995,7 +1011,7 @@ function draw() {
   node.append("circle").attr("class", "node-dot").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", declarationColorFor);
   node.append("text").attr("class", "node-label").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (!state.showImplementation && !isMajorNode(item)) || (item.label.length > 31 && nodes.length > 12));
   const expanders = node.append("g").attr("class", "node-expand").attr("transform", "translate(0,-18)")
-    .classed("hidden", (item) => !hasHiddenDependencies(item.id, nodes))
+    .classed("hidden", (item) => item.id !== state.selectedId || !hasHiddenDependencies(item.id, nodes))
     .attr("role", "button")
     .attr("aria-label", (item) => `Expand dependencies of ${item.label}`)
     .on("click", (event, item) => { event.stopPropagation(); expandNodeDependencies(item.id); });
@@ -1011,10 +1027,14 @@ function draw() {
     link.attr("d", curvedLinkPath);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`)
       .transition().duration(state.focusId ? 160 : 0)
-      .attr("transform", (item) => `translate(${item.targetX},${item.targetY})`);
+      .attr("transform", (item) => state.inspectionAnchor?.id === item.id
+        ? `translate(${state.inspectionAnchor.x},${state.inspectionAnchor.y})`
+        : `translate(${item.targetX},${item.targetY})`);
     nodes.forEach((item) => {
-      item.x = item.targetX;
-      item.y = item.targetY;
+      if (state.inspectionAnchor?.id !== item.id) {
+        item.x = item.targetX;
+        item.y = item.targetY;
+      }
       state.layoutPositions.set(item.id, { x: item.targetX, y: item.targetY });
     });
     link.transition().duration(state.focusId ? 160 : 0).attr("d", (edge) => curvedLinkPath(edge));
@@ -1097,6 +1117,7 @@ $("#reset").addEventListener("click", () => {
   state.layoutPositions.clear();
   state.layoutVelocities.clear();
   state.expandedDistances.clear();
+  state.inspectionAnchor = null;
   state.revealedIds.clear();
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
@@ -1130,6 +1151,7 @@ $("#clear-selection").addEventListener("click", () => {
   state.layoutPositions.clear();
   state.layoutVelocities.clear();
   state.expandedDistances.clear();
+  state.inspectionAnchor = null;
   state.revealedIds.clear();
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
