@@ -57,6 +57,8 @@ const state = {
   revealCursor: 0,
   revealedIds: new Set(),
   layoutPositions: new Map(),
+  revealPaused: false,
+  resumeReveal: null,
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -363,6 +365,8 @@ function selectTheoremNode() {
 function beginProgressiveReveal() {
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
+  state.revealPaused = false;
+  state.resumeReveal = null;
   if (!state.graph) return;
   const focused = Boolean(state.focusId);
   if (focused) {
@@ -409,6 +413,16 @@ function beginProgressiveReveal() {
   draw();
   const advance = () => {
     if (focused) {
+      const viewportHeight = stage.clientHeight;
+      const atViewportEdge = state.graph.nodes
+        .filter((node) => state.revealedIds.has(node.id))
+        .some((node) => Number.isFinite(node.y) && (node.y < 28 || node.y > viewportHeight - 28));
+      if (atViewportEdge) {
+        state.revealPaused = true;
+        state.revealTimer = null;
+        updateHighlight();
+        return;
+      }
       if (state.revealCursor >= state.revealLayers.length) {
         state.revealTimer = null;
         return;
@@ -421,6 +435,12 @@ function beginProgressiveReveal() {
     }
     draw();
     state.revealTimer = window.setTimeout(advance, focused ? 360 : 280);
+  };
+  state.resumeReveal = () => {
+    if (!state.revealPaused || state.revealCursor >= state.revealLayers.length) return;
+    state.revealPaused = false;
+    state.revealTimer = window.setTimeout(advance, 80);
+    updateHighlight();
   };
   state.revealTimer = window.setTimeout(advance, 260);
 }
@@ -571,7 +591,9 @@ function updateHighlight() {
     const visibleCount = state.focusId && state.revealDepth !== Infinity
       ? state.revealedIds.size
       : neighborhood.size;
-    const revealText = state.revealCursor < state.revealLayers.length
+    const revealText = state.revealPaused
+      ? "paused at viewport edge · click to continue"
+      : state.revealCursor < state.revealLayers.length
       ? `BFS loading · frontier ${state.revealCursor + 1}/${state.revealLayers.length}`
       : "BFS loaded";
     focusStatus.textContent = focus
@@ -811,6 +833,8 @@ $("#reset").addEventListener("click", () => {
   state.revealedIds.clear();
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
+  state.revealPaused = false;
+  state.resumeReveal = null;
   state.revealDepth = Infinity;
   state.revealLimit = Infinity;
   state.theoremNumber = null;
@@ -838,6 +862,8 @@ $("#clear-selection").addEventListener("click", () => {
   state.revealedIds.clear();
   if (state.revealTimer) window.clearTimeout(state.revealTimer);
   state.revealTimer = null;
+  state.revealPaused = false;
+  state.resumeReveal = null;
   state.theoremNumber = null;
   $("#theorem-select").value = "";
   const next = new URL(window.location.href);
@@ -852,5 +878,6 @@ $("#back-to-theorem").addEventListener("click", () => {
   if (state.focusId) selectNode(state.focusId);
 });
 $("#show-implementation").addEventListener("change", (event) => { state.showImplementation = event.target.checked; draw(); });
+$("#focus-status").addEventListener("click", () => state.resumeReveal?.());
 window.addEventListener("resize", () => draw());
 load();

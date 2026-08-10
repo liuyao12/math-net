@@ -135,6 +135,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .network-stats { display: flex; gap: 15px; color: var(--faint); white-space: nowrap; }
 .network-stats strong { color: var(--ink); font-size: 12px; }
 .focus-status { max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+.focus-status:where(:not(:empty)) { cursor: pointer; }
 .graph-stage { position: relative; min-height: 600px; height: calc(100vh - 166px); overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: radial-gradient(circle at 50% 48%, #fbfaf7 0, #f3f2ed 75%); }
 #network { width: 100%; height: 100%; display: block; }
 .graph-hint { position: absolute; right: 17px; bottom: 14px; padding: 6px 8px; color: var(--faint); background: rgba(251, 250, 247, 0.8); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; }
