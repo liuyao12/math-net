@@ -689,6 +689,25 @@ function topDownForce(edges, gap = 26) {
   return force;
 }
 
+function enforceTopDown(nodes, edges, ranks, focusId, gap = 26) {
+  const ordered = nodes.slice().sort((a, b) => (ranks.get(a.id) || 0) - (ranks.get(b.id) || 0));
+  for (let pass = 0; pass < ordered.length; pass += 1) {
+    edges.forEach((edge) => {
+      if (edge.source === edge.target) return;
+      const overlap = edge.source.y + gap - edge.target.y;
+      if (overlap <= 0) return;
+      if (edge.target.id === focusId) {
+        edge.source.y -= overlap;
+      } else if (edge.source.id === focusId) {
+        edge.target.y += overlap;
+      } else {
+        edge.source.y -= overlap * 0.5;
+        edge.target.y += overlap * 0.5;
+      }
+    });
+  }
+}
+
 function draw() {
   if (!state.graph) return;
   const { nodes, edges } = visibleGraph();
@@ -706,7 +725,8 @@ function draw() {
     root.attr("transform", event.transform);
     resumeRevealIfVisible();
   });
-  svg.call(zoom).call(zoom.transform, state.zoomTransform);
+  svg.call(zoom).property("__zoom", state.zoomTransform);
+  root.attr("transform", state.zoomTransform);
   const labels = proofLabels();
   // Keep the dependency direction visible in the layout.  Edges point from
   // a used declaration to the declaration whose proof uses it, so repeated
@@ -797,6 +817,7 @@ function draw() {
       .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
       .force("top-down", topDownForce(edges))
       .on("tick", () => {
+      enforceTopDown(nodes, edges, ranks, state.focusId);
       nodes.forEach((item) => state.layoutPositions.set(item.id, { x: item.x, y: item.y }));
       link.attr("d", curvedLinkPath)
         .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
