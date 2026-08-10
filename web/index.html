@@ -23,7 +23,7 @@
       <div class="network-toolbar">
         <div class="toolbar-copy">
           <span class="eyebrow">Strict proof-dependency view</span>
-          <span class="toolbar-title" id="network-title">Fermat’s two-square theorem</span>
+          <span class="toolbar-title" id="network-title">Mathematical landscape</span>
         </div>
         <div class="network-stats" aria-live="polite">
           <span><strong id="visible-node-count">—</strong> nodes</span>
@@ -40,7 +40,11 @@
 
     <aside class="inspector" aria-label="Selected node details">
       <div class="inspector-header">
-        <div class="eyebrow">Explore and inspect</div>
+        <div>
+          <div class="eyebrow">Theorem workspace</div>
+          <div class="workspace-context" id="workspace-context">Choose a theorem to begin</div>
+        </div>
+        <button class="back-button" id="back-to-theorem" type="button" hidden>← theorem</button>
         <button class="close-button" id="clear-selection" aria-label="Clear selection">×</button>
       </div>
       <div class="inspector-controls">
@@ -59,13 +63,6 @@
           <div class="check-grid compact" id="kind-filters"></div>
           <label class="filter-option implementation-toggle"><input id="show-implementation" type="checkbox"><span class="filter-dot source"></span><span>Show implementation details</span></label>
         </div>
-        <div class="control-group">
-          <label class="field-label" for="route-filter">Proof family</label>
-          <select id="route-filter">
-            <option value="all">All proof families</option>
-          </select>
-        </div>
-        <div class="legend" id="legend"></div>
         <div class="inspector-actions">
           <button class="quiet-button" id="reset">Reset view</button>
           <div class="data-source">source · <code>project.json</code></div>

@@ -37,12 +37,12 @@ const GITHUB_REPO = "https://github.com/liuyao12/math-net";
 const state = {
   graph: null,
   theorems: [],
-  theoremNumber: requestedTheorem || null,
+  theoremNumber: requestedTheorem || theoremForGraph() || "1",
+  focusId: null,
   selectedId: null,
   selectedProofId: null,
   search: "",
   kinds: new Set(Object.keys(KIND_LABELS)),
-  route: "all",
   simulation: null,
   sourceRequest: 0,
   focusDistances: new Map(),
@@ -202,12 +202,6 @@ function searchFocus(nodes, edges) {
   return focus;
 }
 
-function routeMatch(node, edges) {
-  if (state.route === "all") return true;
-  if (node.id === state.route) return true;
-  return edges.some((edge) => edge.source.id === state.route && edge.target.id === node.id);
-}
-
 function focusDistances(nodeId, edges, maxDepth = 3) {
   const distances = new Map([[nodeId, 0]]);
   const adjacency = new Map();
@@ -237,25 +231,15 @@ function visibleGraph() {
     .map((edge) => ({ ...edge, source: nodesById.get(edge.source.id), target: nodesById.get(edge.target.id) }))
     .filter((edge) => edge.source && edge.target);
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(node.kind));
-  state.focusDistances = state.selectedId ? focusDistances(state.selectedId, edgeData, 3) : new Map();
+  state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData, 3) : new Map();
   const focus = searchFocus(candidateNodes, edgeData);
   const visibleNodes = candidateNodes.filter((node) => {
-    if (state.selectedId && !state.focusDistances.has(node.id)) return false;
+    if (state.focusId && !state.focusDistances.has(node.id)) return false;
     if (state.search && !focus.has(node.id)) return false;
-    if (node.kind === "proof-family" && state.route !== "all" && node.id !== state.route) return false;
     return true;
   });
   const allowed = new Set(visibleNodes.map((node) => node.id));
   const visibleEdges = edgeData.filter((edge) => allowed.has(edge.source.id) && allowed.has(edge.target.id));
-  if (state.route !== "all") {
-    const routeNode = nodesById.get(state.route);
-    const adjacent = new Set([state.route]);
-    visibleEdges.forEach((edge) => {
-      if (edge.source.id === state.route) adjacent.add(edge.target.id);
-      if (edge.target.id === state.route) adjacent.add(edge.source.id);
-    });
-    return { nodes: visibleNodes.filter((node) => adjacent.has(node.id) || node.id === routeNode?.id), edges: visibleEdges.filter((edge) => adjacent.has(edge.source.id) && adjacent.has(edge.target.id)) };
-  }
   return { nodes: visibleNodes, edges: visibleEdges };
 }
 
@@ -273,17 +257,6 @@ function kindControls() {
   });
 }
 
-function routeControls() {
-  const select = $("#route-filter");
-  state.graph.nodes.filter((node) => node.kind === "proof-family").forEach((node) => {
-    const option = document.createElement("option");
-    option.value = node.id;
-    option.textContent = node.label;
-    select.append(option);
-  });
-  select.addEventListener("change", (event) => { state.route = event.target.value; draw(); });
-}
-
 function theoremForGraph() {
   if (requestedGraph === "fermat") return "20";
   if (requestedGraph === "euler") return "17";
@@ -298,7 +271,7 @@ function populateTheoremSelect() {
     option.textContent = `${String(theorem.number).padStart(2, "0")} · ${theorem.title}`;
     select.append(option);
   });
-  state.theoremNumber = state.theoremNumber || null;
+  state.theoremNumber = state.theoremNumber || "1";
   if (state.theoremNumber) select.value = String(state.theoremNumber);
   updateTheoremNote();
   select.addEventListener("change", (event) => {
@@ -308,7 +281,11 @@ function populateTheoremSelect() {
       next.searchParams.delete("theorem");
       history.replaceState(null, "", next);
       state.theoremNumber = null;
+      state.focusId = null;
+      state.selectedId = null;
       updateTheoremNote();
+      updateWorkspaceContext();
+      draw();
       return;
     }
     const theorem = state.theorems.find((item) => String(item.number) === number);
@@ -317,6 +294,9 @@ function populateTheoremSelect() {
     next.searchParams.delete("graph");
     history.pushState(null, "", next);
     state.theoremNumber = number;
+    state.focusId = null;
+    state.selectedId = null;
+    state.selectedProofId = null;
     updateTheoremNote();
     selectTheoremNode();
   });
@@ -338,32 +318,13 @@ function selectTheoremNode() {
   const theorem = state.theorems.find((item) => String(item.number) === String(state.theoremNumber));
   const node = state.graph?.nodes.find((item) => theorem?.namespace === item.namespace ||
     (theorem?.namespace && (item.formalizations || []).some((formalization) => formalization.name === theorem.namespace)));
-  if (node) selectNode(node.id);
-}
-
-function legend() {
-  const container = $("#legend");
-  Object.entries(KIND_LABELS).forEach(([key, label]) => {
-    const item = document.createElement("span");
-    item.className = "legend-item";
-    item.innerHTML = `<span class="legend-dot ${key}"></span>${label}`;
-    container.append(item);
-  });
-  const labels = proofLabels();
-  if (labels.size) {
-    const heading = document.createElement("div");
-    heading.className = "legend-heading";
-    heading.textContent = "Arrow colors · proof provenance";
-    container.append(heading);
-    const proofContainer = document.createElement("div");
-    proofContainer.className = "legend-proofs";
-    [...labels.entries()].forEach(([id, label]) => {
-      const item = document.createElement("span");
-      item.className = "legend-item";
-      item.innerHTML = `<span class="legend-line" style="background:${proofColor(id)}"></span>${escapeHtml(label)}`;
-      proofContainer.append(item);
-    });
-    container.append(proofContainer);
+  if (node) {
+    state.focusId = node.id;
+    selectNode(node.id);
+  } else {
+    renderInspector();
+    updateWorkspaceContext();
+    draw();
   }
 }
 
@@ -414,9 +375,11 @@ function nodeNeighbors(nodeId) {
 }
 
 function selectNode(nodeId) {
+  if (!state.focusId) state.focusId = nodeId;
   state.selectedId = nodeId;
   state.selectedProofId = null;
   renderInspector();
+  updateWorkspaceContext();
   draw();
 }
 
@@ -451,7 +414,7 @@ function renderInspector() {
   const depthNote = Number.isInteger(node.dependencyDepth)
     ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported mathlib declaration · layer ${node.dependencyDepth} of the bounded closure.</p></div>`
     : "";
-  const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}">${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
+  const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(proof.color || proofColor(proof.id))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
   const neighborRows = [
@@ -479,19 +442,33 @@ function renderInspector() {
   loadProofSource(node, content.querySelector("#proof-source"), sourceRequest);
 }
 
+function updateWorkspaceContext() {
+  const context = $("#workspace-context");
+  const back = $("#back-to-theorem");
+  if (!context || !back) return;
+  const map = nodeMap();
+  const focus = state.focusId ? map.get(state.focusId) : null;
+  const selected = state.selectedId ? map.get(state.selectedId) : null;
+  context.textContent = focus ? `Theorem · ${focus.label}` : "Choose a theorem to begin";
+  const title = $("#network-title");
+  if (title) title.textContent = focus ? `${focus.label} · dependency neighborhood` : "Mathematical landscape";
+  back.hidden = !focus || !selected || selected.id === focus.id;
+  back.setAttribute("aria-label", focus ? `Return to theorem ${focus.label}` : "Return to theorem");
+}
+
 function updateHighlight() {
   // visibleGraph has already computed the bounded, upstream dependency
-  // neighborhood. Reuse it here so the status text and opacity treatment
-  // describe exactly the graph on screen.
-  const neighborhood = state.selectedId ? new Set(state.focusDistances.keys()) : new Set();
-  svg.selectAll(".node-dot").classed("selected", (node) => node.id === state.selectedId).classed("dimmed", (node) => state.selectedId && !neighborhood.has(node.id));
-  svg.selectAll(".node-label").classed("dimmed", (node) => state.selectedId && !neighborhood.has(node.id));
-  svg.selectAll(".graph-link").classed("dimmed", (edge) => state.selectedId && (!neighborhood.has(edge.source.id) || !neighborhood.has(edge.target.id)));
+  // neighborhood. Reuse it here so the theorem focus remains stable while a
+  // neighboring node is inspected.
+  const neighborhood = state.focusId ? new Set(state.focusDistances.keys()) : new Set();
+  svg.selectAll(".node-dot").classed("selected", (node) => node.id === state.selectedId).classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
+  svg.selectAll(".node-label").classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
+  svg.selectAll(".graph-link").classed("dimmed", (edge) => state.focusId && (!neighborhood.has(edge.source.id) || !neighborhood.has(edge.target.id)));
   const focusStatus = $("#focus-status");
   if (focusStatus) {
-    const selected = state.selectedId ? nodeMap().get(state.selectedId) : null;
-    focusStatus.textContent = selected
-      ? `${neighborhood.size} nodes in 3-level focus · ${selected.label}`
+    const focus = state.focusId ? nodeMap().get(state.focusId) : null;
+    focusStatus.textContent = focus
+      ? `${neighborhood.size} nodes in 3-level focus · ${focus.label}`
       : "all theorem nodes shown · select a theorem to focus";
   }
 }
@@ -539,7 +516,7 @@ function draw() {
   svg.call(d3.zoom().scaleExtent([0.35, 3]).on("zoom", (event) => root.attr("transform", event.transform)));
   const labels = proofLabels();
   const maxFocusDistance = Math.max(0, ...nodes.map((node) => state.focusDistances.get(node.id) || 0));
-  const ranks = state.selectedId
+  const ranks = state.focusId
     ? new Map(nodes.map((item) => [item.id, maxFocusDistance - (state.focusDistances.get(item.id) || 0)]))
     : dependencyRanks(nodes, edges);
   const maxRank = Math.max(0, ...Array.from(ranks.values()));
@@ -591,14 +568,13 @@ async function load() {
       edges: graphs.flatMap((graph) => graph.edges),
     };
     $("#graph-badge").textContent = `${state.graph.nodes.length} nodes · ${state.graph.edges.length} links`;
-    $("#network-title").textContent = state.graph.label;
+    $("#network-title").textContent = "Mathematical landscape";
     $(".data-source code").textContent = DATA_URLS.map((url) => url.split("/").pop()).join(" + ");
     $("#loading-state").remove();
     populateTheoremSelect();
     kindControls();
-    routeControls();
-    legend();
     selectTheoremNode();
+    updateWorkspaceContext();
     draw();
   } catch (error) {
     const loading = $("#loading-state");
@@ -611,19 +587,42 @@ async function load() {
 $("#search").addEventListener("input", (event) => { state.search = event.target.value.trim(); draw(); });
 $("#reset").addEventListener("click", () => {
   state.selectedId = null;
+  state.focusId = null;
   state.selectedProofId = null;
+  state.theoremNumber = null;
   state.search = "";
-  state.route = "all";
   $("#search").value = "";
-  $("#route-filter").value = "all";
+  $("#theorem-select").value = "";
   document.querySelectorAll("#kind-filters input[type=checkbox]").forEach((input) => { input.checked = true; });
   state.showImplementation = false;
   $("#show-implementation").checked = false;
   state.kinds = new Set(Object.keys(KIND_LABELS));
+  const next = new URL(window.location.href);
+  next.searchParams.delete("theorem");
+  next.searchParams.delete("graph");
+  history.replaceState(null, "", next);
+  updateTheoremNote();
   renderInspector();
+  updateWorkspaceContext();
   draw();
 });
-$("#clear-selection").addEventListener("click", () => { state.selectedId = null; state.selectedProofId = null; renderInspector(); draw(); });
+$("#clear-selection").addEventListener("click", () => {
+  state.selectedId = null;
+  state.focusId = null;
+  state.selectedProofId = null;
+  state.theoremNumber = null;
+  $("#theorem-select").value = "";
+  const next = new URL(window.location.href);
+  next.searchParams.delete("theorem");
+  history.replaceState(null, "", next);
+  updateTheoremNote();
+  renderInspector();
+  updateWorkspaceContext();
+  draw();
+});
+$("#back-to-theorem").addEventListener("click", () => {
+  if (state.focusId) selectNode(state.focusId);
+});
 $("#show-implementation").addEventListener("change", (event) => { state.showImplementation = event.target.checked; draw(); });
 window.addEventListener("resize", () => draw());
 load();

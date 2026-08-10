@@ -148,11 +148,14 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 
 .inspector { border-left: 1px solid var(--line); max-height: calc(100vh - 76px); overflow: auto; }
 .inspector-header { display: flex; align-items: center; justify-content: space-between; padding: 23px 20px 15px; border-bottom: 1px solid var(--line); }
+.workspace-context { margin-top: 5px; color: var(--ink); font-size: 12px; font-weight: 600; }
 .inspector-controls { padding: 17px 20px 16px; border-bottom: 1px solid var(--line); }
 .control-group { margin-top: 16px; }
 .inspector-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; }
 .inspector-actions .data-source { margin-top: 0; text-align: right; }
 .close-button { width: 26px; height: 26px; border: 0; color: var(--muted); background: transparent; font-size: 21px; line-height: 1; }
+.back-button { margin-left: auto; margin-right: 8px; padding: 5px 7px; border: 1px solid var(--line-strong); border-radius: 5px; color: var(--blue); background: var(--blue-soft); font-size: 11px; }
+.back-button:hover { color: var(--ink); }
 .inspector-content { padding: 20px; }
 .empty-inspector { display: grid; justify-items: start; gap: 11px; padding-top: 44px; }
 .empty-glyph { color: var(--line-strong); font-size: 42px; line-height: 1; }
@@ -236,6 +239,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .proof-list { display: grid; gap: 7px; }
 .proof-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.34); }
 .proof-row.selected { border-color: var(--ink); background: rgba(255,255,255,.7); }
-.proof-select { border: 0; padding: 0; background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.proof-select { display: flex; align-items: flex-start; gap: 7px; border: 0; padding: 0; background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }
+.proof-color { flex: 0 0 auto; width: 18px; height: 2px; margin-top: 9px; border-radius: 2px; }
 .proof-select small { display: block; margin-top: 2px; color: var(--muted); font: 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
 .proof-status { color: var(--muted); font: 10px var(--mono); white-space: nowrap; }
