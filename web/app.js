@@ -710,7 +710,10 @@ function draw() {
   node.append("text").attr("class", "node-label").classed("implementation", (item) => !isMajorNode(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (!state.showImplementation && !isMajorNode(item)) || (item.label.length > 31 && nodes.length > 12));
   state.simulation?.stop();
   state.simulation = null;
-  const staticLayout = nodes.length > 400 || Boolean(state.focusId);
+  // Focused neighborhoods should settle organically.  The rank calculation
+  // supplies only a soft vertical preference; it must not turn the graph into
+  // a stack of quantized horizontal bands.
+  const staticLayout = nodes.length > 500;
   if (staticLayout) {
     link.attr("d", curvedLinkPath);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`)
@@ -723,7 +726,14 @@ function draw() {
     });
     link.transition().duration(state.focusId ? 160 : 0).attr("d", (edge) => curvedLinkPath(edge));
   } else {
-    state.simulation = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id((item) => item.id).distance(82).strength(0.22)).force("y", d3.forceY((item) => graphTop + (ranks.get(item.id) || 0) * layerGap).strength(1.2)).force("x", d3.forceX(width / 2).strength(0.12)).force("charge", d3.forceManyBody().strength(-180)).force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21)).on("tick", () => {
+    state.simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(edges).id((item) => item.id).distance(state.focusId ? 104 : 82).strength(state.focusId ? 0.34 : 0.22))
+      .force("y", d3.forceY((item) => graphTop + (ranks.get(item.id) || 0) * layerGap).strength(state.focusId ? 0.18 : 1.2))
+      .force("x", d3.forceX((item) => item.targetX ?? width / 2).strength(state.focusId ? 0.12 : 0.12))
+      .force("charge", d3.forceManyBody().strength(state.focusId ? -230 : -180))
+      .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
+      .on("tick", () => {
+      nodes.forEach((item) => state.layoutPositions.set(item.id, { x: item.x, y: item.y }));
       link.attr("d", curvedLinkPath);
       node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     });
