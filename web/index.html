@@ -62,7 +62,8 @@
         <button class="back-button" id="back-to-theorem" type="button" hidden>← theorem</button>
         <button class="close-button" id="clear-selection" aria-label="Clear selection">×</button>
       </div>
-      <div class="inspector-controls">
+      <details class="inspector-controls">
+        <summary>Graph display and Lean declaration kinds</summary>
         <div class="control-group">
           <div class="field-label">Lean declaration kinds</div>
           <div class="check-grid compact" id="kind-filters"></div>
@@ -74,7 +75,7 @@
           <button class="quiet-button" id="reset">Reset view</button>
           <div class="data-source">source · <code>project.json</code></div>
         </div>
-      </div>
+      </details>
       <div id="inspector-content" class="inspector-content">
         <div class="empty-inspector">
           <div class="empty-glyph">◎</div>

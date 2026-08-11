@@ -961,24 +961,27 @@ function renderInspector() {
     relationRows(incoming, "Direct proof dependencies"),
     relationRows(outgoing, "Used by direct proof targets"),
   ].join("");
+  const provenance = [
+    mergeNote,
+    comparisonNote,
+    depthNote,
+    presentation,
+    importance,
+    node.verification?.note ? `<div class="detail-block"><div class="detail-label">Verification note</div><p>${escapeHtml(node.verification.note)}</p></div>` : "",
+    formalizations ? `<div class="detail-block"><div class="detail-label">Formalization</div>${formalizations}</div>` : "",
+    github && !formalizations ? `<div class="detail-block"><div class="detail-label">Source</div><div class="formalization"><a href="${escapeHtml(github)}" target="_blank" rel="noreferrer">Open declaration on GitHub ↗</a></div></div>` : "",
+  ].join("");
   content.innerHTML = `
     <span class="node-kind ${escapeHtml(declarationClassFor(node))}" style="color:${escapeHtml(declarationColorFor(node))};background:${escapeHtml(declarationBackgroundFor(node))}">${escapeHtml(declarationKindFor(node))}</span>
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(node.label)}</h2>
-    ${mergeNote}
-    ${comparisonNote}
-    ${depthNote}
-    ${presentation}
-    ${importance}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
-    ${node.verification?.note ? `<div class="detail-block"><div class="detail-label">Verification note</div><p>${escapeHtml(node.verification.note)}</p></div>` : ""}
-    ${formalizations ? `<div class="detail-block"><div class="detail-label">Formalization</div>${formalizations}</div>` : ""}
-    ${github && !formalizations ? `<div class="detail-block"><div class="detail-label">Source</div><div class="formalization"><a href="${escapeHtml(github)}" target="_blank" rel="noreferrer">Open declaration on GitHub ↗</a></div></div>` : ""}
     ${proofs ? `<div class="detail-block"><div class="detail-label">Proof routes · select one to filter dependencies</div><div class="proof-list">${proofs}</div></div>` : ""}
     <div class="detail-block"><div class="detail-label">Lean proof source${activeProof ? ` · ${escapeHtml(activeProof.label)}${state.selectedProofId ? "" : " (default)"}` : ""}</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>
     ${neighborRows ? `<div class="detail-block"><div class="neighbor-list">${neighborRows}</div></div>` : ""}
+    ${provenance ? `<details class="provenance"><summary>Checked provenance and formalization</summary><div class="provenance-content">${provenance}</div></details>` : ""}
   `;
   content.querySelectorAll("[data-neighbor]").forEach((button) => button.addEventListener("click", () => selectNode(button.dataset.neighbor)));
   content.querySelectorAll("[data-proof]").forEach((button) => button.addEventListener("click", () => selectProof(button.dataset.proof)));
