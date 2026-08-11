@@ -355,6 +355,54 @@ function searchFocus(nodes, edges) {
   return focus;
 }
 
+function searchCandidates(query) {
+  if (!state.graph || query.trim().length < 2) return [];
+  const needle = query.trim().toLowerCase();
+  return state.graph.nodes
+    .filter((node) => isMathematicalNode(node) && isSearchMatch({ ...node, label: node.label || "" }))
+    .map((node) => {
+      const label = node.label.toLowerCase();
+      const namespace = (node.namespace || "").toLowerCase();
+      const score = label === needle ? 0 : label.startsWith(needle) ? 1 : namespace.startsWith(needle) ? 2 : 3;
+      return { node, score };
+    })
+    .sort((left, right) => left.score - right.score || Number(isLandmark(right.node)) - Number(isLandmark(left.node)) || left.node.label.localeCompare(right.node.label))
+    .slice(0, 8)
+    .map(({ node }) => node);
+}
+
+function renderSearchResults() {
+  const container = $("#search-results");
+  const matches = searchCandidates(state.search);
+  container.innerHTML = matches.map((node) => `<button class="search-result" role="option" data-search-node="${escapeHtml(node.id)}"><span class="search-result-name">${escapeHtml(node.label)}</span><span class="search-result-meta">${escapeHtml(declarationKindFor(node))}${node.namespace ? ` · ${escapeHtml(node.namespace)}` : ""}</span></button>`).join("");
+  container.querySelectorAll("[data-search-node]").forEach((button) => button.addEventListener("click", () => focusDeclaration(button.dataset.searchNode)));
+}
+
+function focusDeclaration(nodeId) {
+  if (!nodeMap().has(nodeId)) return;
+  state.focusId = nodeId;
+  state.selectedId = nodeId;
+  state.selectedProofId = null;
+  state.theoremNumber = null;
+  state.search = "";
+  state.layoutPositions.clear();
+  state.layoutVelocities.clear();
+  state.pinnedPositions.clear();
+  state.expandedDistances.clear();
+  state.inspectionAnchor = null;
+  $("#search").value = "";
+  $("#search-results").replaceChildren();
+  $("#theorem-select").value = "";
+  const next = new URL(window.location.href);
+  next.searchParams.delete("theorem");
+  next.searchParams.delete("graph");
+  history.replaceState(null, "", next);
+  updateTheoremNote();
+  renderInspector();
+  updateWorkspaceContext();
+  beginProgressiveReveal();
+}
+
 function focusDistances(nodeId, edges, maxDepth = 3) {
   const distances = new Map([[nodeId, 0]]);
   const adjacency = new Map();
@@ -1583,7 +1631,26 @@ async function load() {
   }
 }
 
-$("#search").addEventListener("input", (event) => { state.search = event.target.value.trim(); draw(); });
+$("#search").addEventListener("input", (event) => {
+  state.search = event.target.value.trim();
+  renderSearchResults();
+  if (!state.search) draw();
+});
+$("#search").addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.currentTarget.value = "";
+    state.search = "";
+    renderSearchResults();
+    draw();
+  }
+  if (event.key === "Enter") {
+    const first = $("#search-results [data-search-node]");
+    if (first) {
+      event.preventDefault();
+      focusDeclaration(first.dataset.searchNode);
+    }
+  }
+});
 $("#fit-layout").addEventListener("click", () => {
   state.zoomTransform = d3.zoomIdentity;
   state.pinnedPositions.clear();
@@ -1611,6 +1678,7 @@ $("#reset").addEventListener("click", () => {
   state.theoremNumber = null;
   state.search = "";
   $("#search").value = "";
+  $("#search-results").replaceChildren();
   $("#theorem-select").value = "";
   document.querySelectorAll("#kind-filters input[type=checkbox]").forEach((input) => { input.checked = true; });
   state.showImplementation = false;
