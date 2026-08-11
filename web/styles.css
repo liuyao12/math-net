@@ -133,7 +133,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 
 .network-panel { min-width: 0; background: var(--paper); }
 .network-toolbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px 24px; align-items: end; padding: 16px 24px 13px; }
-.network-stats { display: flex; gap: 15px; color: var(--faint); white-space: nowrap; }
+.network-stats { display: flex; align-items: center; gap: 15px; color: var(--faint); white-space: nowrap; }
 .network-stats strong { color: var(--ink); font-size: 12px; }
 .focus-status { max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
 .focus-status:where(:not(:empty)) { cursor: pointer; }
@@ -144,7 +144,11 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .graph-control-note { grid-column: 1 / -1; margin-top: -4px; }
 .graph-stage { position: relative; min-height: 600px; height: calc(100vh - 166px); overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: radial-gradient(circle at 50% 48%, #fbfaf7 0, #f3f2ed 75%); }
 #network { width: 100%; height: 100%; display: block; }
+.graph-orientation { position: absolute; z-index: 1; top: 15px; left: 17px; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); background: rgba(251, 250, 247, 0.9); font: 10px "DM Mono", ui-monospace, monospace; pointer-events: none; }
+.graph-orientation strong { color: var(--blue); font-size: 14px; line-height: 0.7; }
 .graph-hint { position: absolute; right: 17px; bottom: 14px; padding: 6px 8px; color: var(--faint); background: rgba(251, 250, 247, 0.8); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; }
+.fit-layout { padding: 5px 7px; border: 1px solid var(--line-strong); border-radius: 5px; color: var(--blue); background: var(--blue-soft); font: 10px "DM Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.04em; }
+.fit-layout:hover { color: var(--ink); border-color: var(--blue); }
 .loading-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--muted); }
 .loading-state.error { color: var(--red); max-width: 280px; text-align: center; }
 .legend { display: flex; flex-wrap: wrap; gap: 10px 14px; padding: 13px 0 0; color: var(--muted); font-size: 11px; }

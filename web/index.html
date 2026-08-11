@@ -40,13 +40,15 @@
           <span><strong id="visible-node-count">—</strong> nodes</span>
           <span><strong id="visible-edge-count">—</strong> links</span>
           <span class="focus-status" id="focus-status">select a theorem to focus its dependency neighborhood</span>
+          <button class="fit-layout" id="fit-layout" type="button" title="Reset zoom and manual node positions">Fit theorem</button>
         </div>
         <div class="theorem-note graph-control-note" id="theorem-note">Official catalogue · choose a theorem to inspect its status.</div>
         <div class="proof-legend" id="proof-legend" aria-label="Dependency arrow colors"></div>
       </div>
       <div class="graph-stage" id="graph-stage">
         <svg id="network" role="img" aria-label="Interactive mathematical proposition network"></svg>
-        <div class="graph-hint">arrow direction: used declaration → proof · drag · zoom · inspect</div>
+        <div class="graph-orientation" aria-hidden="true"><span>Prerequisites used in a proof</span><strong>↓</strong><span>Result proved below</span></div>
+        <div class="graph-hint">static directed layout · drag a node to pin it · scroll to zoom</div>
         <div class="loading-state" id="loading-state">Loading the network…</div>
       </div>
     </section>

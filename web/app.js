@@ -947,7 +947,7 @@ function renderInspector() {
     ${node.verification?.note ? `<div class="detail-block"><div class="detail-label">Verification note</div><p>${escapeHtml(node.verification.note)}</p></div>` : ""}
     ${formalizations ? `<div class="detail-block"><div class="detail-label">Formalization</div>${formalizations}</div>` : ""}
     ${github && !formalizations ? `<div class="detail-block"><div class="detail-label">Source</div><div class="formalization"><a href="${escapeHtml(github)}" target="_blank" rel="noreferrer">Open declaration on GitHub ↗</a></div></div>` : ""}
-    <div class="detail-block"><div class="detail-label">Lean proof source · quoted code</div><blockquote class="proof-source pending" id="proof-source"><code>Loading declaration…</code></blockquote></div>
+    <div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>
     ${proofs ? `<div class="detail-block"><div class="detail-label">Proofs · select one to filter dependencies</div><div class="proof-list">${proofs}</div></div>` : ""}
     ${neighborRows ? `<div class="detail-block"><div class="neighbor-list">${neighborRows}</div></div>` : ""}
   `;
@@ -1546,6 +1546,12 @@ async function load() {
 }
 
 $("#search").addEventListener("input", (event) => { state.search = event.target.value.trim(); draw(); });
+$("#fit-layout").addEventListener("click", () => {
+  state.zoomTransform = d3.zoomIdentity;
+  state.pinnedPositions.clear();
+  state.inspectionAnchor = null;
+  draw();
+});
 $("#reset").addEventListener("click", () => {
   state.selectedId = null;
   state.focusId = null;
