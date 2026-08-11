@@ -192,8 +192,6 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .formalization + .formalization { margin-top: 6px; }
 .formalization a { color: var(--blue); }
 .proof-source { max-height: 420px; margin: 0; padding: 13px 14px; overflow: auto; border: 1px solid #30353b; border-left: 3px solid #569cd6; border-radius: 6px; color: #d4d4d4; background: #1e1e1e; font: 11px/1.6 "DM Mono", ui-monospace, monospace; white-space: pre; tab-size: 2; quotes: none; }
-.proof-source::before { content: "“"; display: inline-block; margin-right: 5px; color: #569cd6; font: 26px/0.7 Georgia, serif; vertical-align: -5px; user-select: none; }
-.proof-source::after { content: "”"; display: block; margin-top: 7px; color: #569cd6; font: 26px/0.7 Georgia, serif; text-align: right; user-select: none; }
 .proof-source code { color: inherit; font: inherit; }
 .proof-source.pending { color: var(--muted); }
 .lean-comment { color: #6a9955; }

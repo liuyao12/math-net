@@ -204,6 +204,11 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
     for group in groups.values():
         representative = group[0]
         merged = dict(representative)
+        # A declaration name is not always a useful reader-facing theorem
+        # title. Keep the canonical Lean name in `namespace`/proof records,
+        # while giving the benchmark its conventional mathematical label.
+        if any(node.get("namespace") == "MathNetwork.SqrtTwo.irrational" for node in group):
+            merged["label"] = "irrational (√2)"
         merged["formalizations"] = []
         merged["proofs"] = []
         seen_formalizations = set()
