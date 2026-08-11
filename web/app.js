@@ -1190,9 +1190,9 @@ function dependencyRanks(nodes, edges) {
 }
 
 function directedLayout(nodes, edges, width, height) {
-  // Unlike a force simulation, Dagre's ranked layout has a hard invariant:
-  // every edge in this acyclic proof graph runs from an earlier (upper) rank
-  // to a later (lower) rank. D3 is only used for interaction and rendering.
+  // Dagre supplies a deterministic, valid initial ordering. It is then
+  // refined by a constrained force pass below, rather than used as the final
+  // drawing: that lets nearby branches find a more natural arrangement.
   const graph = new dagre.graphlib.Graph({ multigraph: true });
   graph.setGraph({ rankdir: "TB", ranksep: 58, nodesep: 42, edgesep: 16, marginx: 18, marginy: 24 });
   graph.setDefaultEdgeLabel(() => ({}));
@@ -1422,7 +1422,7 @@ function enforceTopDown(nodes, edges, ranks, focusId, coreId, gap = 26) {
   }
 }
 
-function labelCollisionForce(nodes) {
+function horizontalLabelCollisionForce(nodes) {
   const active = nodes.filter((node) => isMajorNode(node) && (nodes.length <= 12 || node.label.length <= 31));
   const widthOf = (node) => Math.max(30, labelFor(node).length * 6.2 + 20);
   const boxOf = (node) => {
@@ -1438,30 +1438,79 @@ function labelCollisionForce(nodes) {
           if (leftBox.right < rightBox.left || rightBox.right < leftBox.left || leftBox.bottom < rightBox.top || rightBox.bottom < leftBox.top) return;
           const horizontal = Math.min(leftBox.right, rightBox.right) - Math.max(leftBox.left, rightBox.left) + 4;
           const vertical = Math.min(leftBox.bottom, rightBox.bottom) - Math.max(leftBox.top, rightBox.top) + 4;
-          if (horizontal < vertical) {
-            const direction = left.x <= right.x ? -1 : 1;
-            left.x += direction * horizontal * 0.55;
-            right.x -= direction * horizontal * 0.55;
-          } else {
-            const direction = left.y <= right.y ? -1 : 1;
-            left.y += direction * vertical * 0.55;
-            right.y -= direction * vertical * 0.55;
-          }
+          const direction = left.x <= right.x ? -1 : 1;
+          left.x += direction * horizontal * 0.55;
+          right.x -= direction * horizontal * 0.55;
         });
         nodes.forEach((right) => {
           if (right === left) return;
           const box = boxOf(left);
           const radius = right.kind === "proof-family" ? 10 : isMajorNode(right) ? 8 : 5;
           const inside = right.x + radius > box.left && right.x - radius < box.right && right.y + radius > box.top && right.y - radius < box.bottom;
-          if (inside) {
-            const direction = right.y >= left.y ? -1 : 1;
-            left.y += direction * (Math.min(box.bottom, right.y + radius) - Math.max(box.top, right.y - radius) + 6) * 0.55;
-          }
+          if (inside) left.x += (right.x >= left.x ? -1 : 1) * (radius + 9);
         });
       });
     }
   };
   return force;
+}
+
+function projectStrictTopDown(nodes, edges, ranks, gap = 30) {
+  // Project after the force relaxation. A node's vertical coordinate is a
+  // continuous (fractional) rank: topology supplies only an inequality, not
+  // an integer layer. The layout therefore has organic vertical spacing
+  // without ever reversing a proof arrow.
+  const forwardEdges = edges.filter((edge) => (ranks.get(edge.source.id) || 0) < (ranks.get(edge.target.id) || 0));
+  for (let pass = 0; pass < nodes.length + 2; pass += 1) {
+    let changed = false;
+    forwardEdges.forEach((edge) => {
+      const overlap = edge.source.y + gap - edge.target.y;
+      if (overlap <= 0) return;
+      changed = true;
+      const sourcePinned = Number.isFinite(edge.source.fx);
+      const targetPinned = Number.isFinite(edge.target.fx);
+      if (sourcePinned && !targetPinned) edge.target.y += overlap;
+      else if (targetPinned && !sourcePinned) edge.source.y -= overlap;
+      else {
+        edge.source.y -= overlap * 0.5;
+        edge.target.y += overlap * 0.5;
+      }
+    });
+    if (!changed) break;
+  }
+}
+
+function refineDirectedLayout(nodes, edges, ranks, width, height, coreId) {
+  nodes.forEach((node) => {
+    node.targetX = node.x;
+    node.targetY = node.y;
+    node.vx = 0;
+    node.vy = 0;
+  });
+  // This simulation is deliberately synchronous. It gives force-directed
+  // branch placement without the continual drift and flicker of a live
+  // simulation, and the projection below is a hard top-to-bottom rule.
+  d3.forceSimulation(nodes)
+    .force("x", d3.forceX((node) => node.targetX).strength((node) => node.id === coreId || node.id === state.focusId ? 0.34 : 0.12))
+    .force("y", d3.forceY((node) => node.targetY).strength((node) => node.id === coreId || node.id === state.focusId ? 0.24 : 0.045))
+    .force("link", d3.forceLink(edges).id((node) => node.id).distance(80).strength(0.09))
+    .force("charge", d3.forceManyBody().strength(-115))
+    .force("collide", d3.forceCollide().radius((node) => Math.max(17, Math.min(46, labelFor(node).length * 3.1 + 12))).strength(0.58))
+    .force("label-separation", horizontalLabelCollisionForce(nodes))
+    .stop()
+    .tick(130);
+  projectStrictTopDown(nodes, edges, ranks);
+  const focus = nodes.find((node) => node.id === state.focusId);
+  if (focus) {
+    // Present the proposition in a stable lower reading position; the graph
+    // extends upward as its prerequisites are revealed.
+    const shift = height * 0.72 - focus.y;
+    nodes.forEach((node) => { node.y += shift; });
+  }
+  nodes.forEach((node) => {
+    state.layoutPositions.set(node.id, { x: node.x, y: node.y });
+    state.layoutVelocities.set(node.id, { x: 0, y: 0 });
+  });
 }
 
 function draw() {
@@ -1617,6 +1666,7 @@ function draw() {
   state.simulation = null;
   if (state.focusId) {
     directedLayout(nodes, edges, width, height);
+    refineDirectedLayout(nodes, edges, ranks, width, height, coreId);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     link.attr("d", (edge) => routedLinkPath(edge, nodes))
       .attr("marker-end", (edge) => isMajorNode(edge.source) || isMajorNode(edge.target) ? "url(#arrow-used-in-proof)" : null);
