@@ -101,6 +101,8 @@ const state = {
   pinnedPositions: new Map(),
   expandedDistances: new Map(),
   inspectionAnchor: null,
+  rankTransition: null,
+  rankTransitionFrame: null,
   revealPaused: false,
   revealPauseReason: null,
   inspectionPaused: false,
@@ -974,10 +976,9 @@ function selectNode(nodeId, redraw = false) {
   if (!hadFocus) state.focusId = nodeId;
   state.selectedId = nodeId;
   state.selectedProofId = null;
-  const expanded = expandNodeDependencies(nodeId, false);
   renderInspector();
   updateWorkspaceContext();
-  if (redraw || !hadFocus || expanded) draw();
+  if (redraw || !hadFocus) draw();
   else updateHighlight();
 }
 
@@ -1003,6 +1004,9 @@ function expandNodeDependencies(nodeId, redraw = true) {
     if (!state.expandedDistances.has(id) || distance < state.expandedDistances.get(id)) state.expandedDistances.set(id, distance);
   });
   if (!dependencies.length) return false;
+  state.rankTransition = Number.isFinite(node.x) && Number.isFinite(node.y)
+    ? { id: nodeId, x: node.x, y: node.y }
+    : null;
   state.revealPaused = true;
   state.revealPauseReason = "inspection";
   if (state.revealTimer) {
@@ -1011,6 +1015,37 @@ function expandNodeDependencies(nodeId, redraw = true) {
   }
   if (redraw) draw();
   return true;
+}
+
+function animateExpandedNodeToRank(nodeSelection, linkSelection, nodes) {
+  const transition = state.rankTransition;
+  if (!transition) return;
+  const node = nodes.find((item) => item.id === transition.id);
+  if (!node || !Number.isFinite(transition.x) || !Number.isFinite(transition.y)) {
+    state.rankTransition = null;
+    return;
+  }
+  const end = { x: node.x, y: node.y };
+  const startTime = performance.now();
+  const duration = 460;
+  const ease = (time) => 1 - (1 - time) ** 3;
+  const update = (now) => {
+    const progress = Math.min(1, (now - startTime) / duration);
+    const amount = ease(progress);
+    node.x = transition.x + (end.x - transition.x) * amount;
+    node.y = transition.y + (end.y - transition.y) * amount;
+    nodeSelection.attr("transform", (item) => `translate(${item.x},${item.y})`);
+    linkSelection.attr("d", (edge) => routedLinkPath(edge, nodes));
+    if (progress < 1) state.rankTransitionFrame = requestAnimationFrame(update);
+    else {
+      node.x = end.x;
+      node.y = end.y;
+      state.layoutPositions.set(node.id, end);
+      state.rankTransition = null;
+      state.rankTransitionFrame = null;
+    }
+  };
+  update(startTime);
 }
 
 function scheduleSimulationStop(delay = 900) {
@@ -1517,6 +1552,10 @@ function rankLockedLayout(nodes, ranks, width, height, coreId, routeSides) {
 
 function draw() {
   if (!state.graph) return;
+  if (state.rankTransitionFrame) {
+    cancelAnimationFrame(state.rankTransitionFrame);
+    state.rankTransitionFrame = null;
+  }
   const { nodes, edges } = visibleGraph();
   $("#visible-node-count").textContent = nodes.length;
   $("#visible-edge-count").textContent = edges.length;
@@ -1533,6 +1572,8 @@ function draw() {
     resumeRevealIfVisible();
   });
   svg.call(zoom).property("__zoom", state.zoomTransform);
+  // A node double-click is reserved for dependency expansion, not zooming.
+  svg.on("dblclick.zoom", null);
   root.attr("transform", state.zoomTransform);
   const labels = proofLabels();
   // Keep the dependency direction visible in the layout.  Edges point from
@@ -1637,7 +1678,7 @@ function draw() {
     // not turn into a field of tiny overlapping triangles.
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => displayLabelFor(item)).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("focus-node", (item) => item.id === state.focusId).classed("ambient-node", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.rankY ?? item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = item.rankY ?? item.y; item.fx = event.x; item.fy = item.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.rankY ?? item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => displayLabelFor(item)).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("focus-node", (item) => item.id === state.focusId).classed("ambient-node", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).on("dblclick", (event, item) => { event.stopPropagation(); if (hasHiddenDependencies(item.id, nodes)) expandNodeDependencies(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.rankY ?? item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = item.rankY ?? item.y; item.fx = event.x; item.fy = item.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.rankY ?? item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
   // A merged declaration can have checked proof terms from more than one
   // repository. Render its disk as a pie, rather than assigning it a fourth
   // misleading color; single-source declarations remain solid repository color.
@@ -1672,6 +1713,7 @@ function draw() {
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     link.attr("d", (edge) => routedLinkPath(edge, nodes))
       .attr("marker-end", (edge) => isMajorNode(edge.source) || isMajorNode(edge.target) ? "url(#arrow-used-in-proof)" : null);
+    animateExpandedNodeToRank(node, link, nodes);
     updateHighlight();
     return;
   }
