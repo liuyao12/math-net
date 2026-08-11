@@ -3,10 +3,9 @@ import Mathlib.NumberTheory.Real.Irrational
 /-!
 # Irrationality of the square root of two
 
-This is an exact math-net wrapper around mathlib's checked theorem. The
-alternative infinite-descent route is documented in
-`docs/irrational-sqrt-two-routes.md`; it is not imported as a checked route
-because the current Tao Analysis source still contains `sorry`s.
+This is the mathlib route in the checked comparison for `Irrational (√2)`.
+The common proposition is specialized here so it can be compared directly
+with the computable-analysis infinite-descent route.
 -/
 
 namespace MathNetwork.SqrtTwo

@@ -97,8 +97,8 @@ The route is still conditional when it treats imported lemmas as black boxes.
 Its status means that the local Lean term checks; its `closure` and
 `blackBoxes` fields say how much of the surrounding library has been opened.
 Thus “mathlib already proves it” and “math-net has indexed this route” are
-separate facts. A future computable-analysis comparison should normally add a
-bridge proposition such as “this certified interval function induces a
+separate facts. A computable-analysis comparison should normally add a bridge
+proposition such as “this certified interval function induces a
 mathlib-continuous function,” rather than reproduce the whole calculus proof.
 
 ## First benchmark suite

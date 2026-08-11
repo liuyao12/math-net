@@ -3,8 +3,8 @@ import ComputableAnalysis.SqrtTwoDescent
 
 namespace MathNetwork.SqrtTwo
 
-/-- The same proposition as mathlib's `irrational_sqrt_two`, bridged from the
-    independent infinite-descent core in computable-analysis. -/
+/-- The same proposition as the mathlib route, bridged from the independent
+    infinite-descent core in computable-analysis. -/
 theorem irrational_descent : Irrational (√2) := by
   apply irrational_sqrt_natCast_iff.mpr
   rintro ⟨a, ha⟩

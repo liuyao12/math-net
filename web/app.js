@@ -62,7 +62,7 @@ const ROUTE_KIND_LABELS = {
   "pedagogical-narrow": "narrow pedagogical route",
   "foundation-comparison": "foundation comparison",
   computational: "computational route",
-  "computable-analysis": "computable-analysis route",
+  "computable-analysis": "computable-analysis",
 };
 const GITHUB_REPO = "https://github.com/liuyao12/math-net";
 const COMPUTABLE_ANALYSIS_REPO = "https://github.com/liuyao12/computable-analysis";
@@ -729,6 +729,10 @@ function renderInspector() {
   const mergeNote = node.declarationCount > 1
     ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations. Each formalization below remains available as a separate proof/source route.</p></div>`
     : "";
+  const comparison = node.comparison;
+  const comparisonNote = comparison
+    ? `<div class="detail-block comparison-block"><div class="detail-label">Checked comparison</div><p>${escapeHtml(comparison.identity)}. The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node.</p>${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
+    : "";
   const depthNote = Number.isInteger(node.dependencyDepth)
     ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported declaration · layer ${node.dependencyDepth}.${node.dependencyBoundary ? " Expansion stops here at a Lean structure boundary; click the node’s marker to inspect any indexed dependencies." : ""}</p></div>`
     : "";
@@ -744,6 +748,7 @@ function renderInspector() {
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(node.label)}</h2>
     ${mergeNote}
+    ${comparisonNote}
     ${depthNote}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}

@@ -82,7 +82,8 @@
         "label": { "$ref": "#/$defs/nonEmptyString" },
           "description": { "type": "string" },
         "tags": { "$ref": "#/$defs/stringList" },
-        "verification": { "$ref": "#/$defs/verification" }
+        "verification": { "$ref": "#/$defs/verification" },
+        "comparison": { "$ref": "#/$defs/comparison" }
       }
     },
     "verification": {
@@ -97,6 +98,31 @@
         "assumptions": { "$ref": "#/$defs/stringList" },
         "axioms": { "$ref": "#/$defs/stringList" },
         "closure": { "enum": ["closed", "open", "not-applicable"] },
+        "note": { "type": "string" }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "routes"],
+      "properties": {
+        "identity": { "$ref": "#/$defs/nonEmptyString" },
+        "registry": { "$ref": "#/$defs/nonEmptyString" },
+        "routes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["proof", "repository", "declaration"],
+            "properties": {
+              "proof": { "$ref": "#/$defs/id" },
+              "repository": { "$ref": "#/$defs/nonEmptyString" },
+              "declaration": { "$ref": "#/$defs/nonEmptyString" }
+            }
+          },
+          "minItems": 2,
+          "uniqueItems": true
+        },
         "note": { "type": "string" }
       }
     },
@@ -133,7 +159,7 @@
         "label": { "$ref": "#/$defs/nonEmptyString" },
         "declaration": { "$ref": "#/$defs/nonEmptyString" },
         "status": { "enum": ["kernel-checked", "imported-checked", "formalized", "planned", "informal"] },
-        "routeKind": { "enum": ["library-complete", "pedagogical-narrow", "foundation-comparison", "computational"] },
+        "routeKind": { "enum": ["library-complete", "pedagogical-narrow", "foundation-comparison", "computational", "mathlib", "computable-analysis", "local"] },
         "scope": { "enum": ["local", "local-with-imports", "imported", "none"] },
         "closure": { "enum": ["closed", "partial", "open", "not-applicable"] },
         "blackBoxes": { "$ref": "#/$defs/stringList" },

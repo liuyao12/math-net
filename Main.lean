@@ -1,5 +1,6 @@
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
+import MathNetwork.Comparisons.Registry
 
 open MathNetwork.Fermat
 

@@ -48,7 +48,9 @@ from a declaration used by another included declaration to the declaration
 that contains it.
 
 `tools/MergeGraph.py` then merges proposition nodes only when their elaborated
-statements and Lean modules are identical. Concept/definition nodes remain one
+statements are identical. The comparison registry and `CheckComparison.lean`
+provide the kernel-backed check for comparison units; the merger does not infer
+mathematical equivalence from similar text. Concept/definition nodes remain one
 per declaration. Each declaration contributing to a merged proposition becomes
 a proof-provenance record, and its dependency edges retain that record in the
 `proof` field so the UI can color proof routes independently.

@@ -102,6 +102,21 @@ def merge(graph: dict) -> dict:
                     merged["formalizations"].append(item)
         if len(group) > 1:
             merged["declarationCount"] = len(group)
+            merged["comparison"] = {
+                "identity": "exact elaborated proposition statement",
+                "routes": [
+                    {
+                        "proof": record["id"],
+                        "repository": record["routeKind"],
+                        "declaration": record["declaration"],
+                    }
+                    for record in merged["proofs"]
+                ],
+                "note": (
+                    "The declarations are merged only because Lean checked their "
+                    "elaborated proposition types as definitionally equal."
+                ),
+            }
             merged["verification"] = dict(merged.get("verification", {}))
             merged["verification"]["note"] = (
                 merged["verification"].get("note", "")
