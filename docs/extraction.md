@@ -60,13 +60,5 @@ a proof-provenance record, and its dependency edges retain that record in the
 Regenerate it after changing the imported project surface with:
 
 ```sh
-lake env lean tools/BuildGraph.lean \
-  | python3 tools/MergeGraph.py > MathNetwork/Graph/project.json
-```
-
-Build the theorem-centred index over that graph with:
-
-```sh
-python3 tools/BuildCatalogue.py < MathNetwork/Graph/project.json \
-  > MathNetwork/Graph/theorem-catalogue.json
+tools/build-graph.sh
 ```

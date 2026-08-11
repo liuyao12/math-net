@@ -12,8 +12,8 @@ For the square-root-of-two benchmark:
 - `MathNetwork.Comparisons.irrationalSqrtTwo` stores both proof terms in one
   `CheckedComparison` value.
 
-The comparison registry forces both route fields to have the same proposition
-type. `tools/CheckComparison.lean` additionally asks Lean's definitional
+The comparison registry forces every route in the list to have the same
+proposition type. `tools/CheckComparison.lean` additionally asks Lean's definitional
 equality procedure to compare the elaborated declaration types:
 
 ```sh
@@ -23,4 +23,7 @@ tools/check-comparisons.sh
 The graph merger uses exact elaborated proposition statements to join the
 dependency graphs. The explicit comparison registry records why that merge is
 intended and which repository supplies each route; it does not replace the
-kernel check.
+kernel check. `tools/ExportComparisons.lean` exports the checked registry
+metadata to `MathNetwork/Graph/comparisons.json`, and `tools/build-graph.sh`
+feeds that manifest into the graph merger. This keeps the generated graph
+reproducible as more comparison objects are added.

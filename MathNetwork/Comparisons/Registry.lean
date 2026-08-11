@@ -20,21 +20,24 @@ structure CheckedProof (statement : Prop) where
 structure CheckedComparison where
   id : String
   statement : Prop
-  mathlib : CheckedProof statement
-  computableAnalysis : CheckedProof statement
+  routes : List (CheckedProof statement)
 
 def irrationalSqrtTwo : CheckedComparison where
   id := "irrational-sqrt-two"
   statement := Irrational (√2)
-  mathlib := {
-    repository := "mathlib"
-    declaration := "MathNetwork.SqrtTwo.irrational"
-    proof := MathNetwork.SqrtTwo.irrational
-  }
-  computableAnalysis := {
-    repository := "computable-analysis"
-    declaration := "MathNetwork.SqrtTwo.irrational_descent"
-    proof := MathNetwork.SqrtTwo.irrational_descent
-  }
+  routes := [
+    {
+      repository := "mathlib"
+      declaration := "MathNetwork.SqrtTwo.irrational"
+      proof := MathNetwork.SqrtTwo.irrational
+    },
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.SqrtTwo.irrational_descent"
+      proof := MathNetwork.SqrtTwo.irrational_descent
+    }
+  ]
+
+def all : List CheckedComparison := [irrationalSqrtTwo]
 
 end MathNetwork.Comparisons

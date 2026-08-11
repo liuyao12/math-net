@@ -331,15 +331,45 @@ function focusDistances(nodeId, edges, maxDepth = 3) {
   return distances;
 }
 
+function proofRouteEdges(edges, focusId, proofId) {
+  if (!proofId || !focusId) return edges;
+  // A proof selection identifies the proof term at the focus node. Its
+  // dependencies are themselves declarations with their own proof edges, so
+  // retain the entire upstream closure after selecting the focus edge. The
+  // old implementation kept only one proof id and silently removed the
+  // theorems used by that proof's dependencies.
+  const selected = edges.filter((edge) => edge.target.id === focusId && edge.proof === proofId);
+  const result = [];
+  const includedEdges = new Set();
+  const frontier = new Set();
+  selected.forEach((edge) => {
+    result.push(edge);
+    includedEdges.add(edge.id);
+    frontier.add(edge.source.id);
+  });
+  while (frontier.size) {
+    const next = new Set();
+    edges.forEach((edge) => {
+      if (!frontier.has(edge.target.id) || includedEdges.has(edge.id)) return;
+      includedEdges.add(edge.id);
+      result.push(edge);
+      next.add(edge.source.id);
+    });
+    frontier.clear();
+    next.forEach((id) => frontier.add(id));
+  }
+  return result;
+}
+
 function visibleGraph() {
   const nodesById = nodeMap();
-  const edgeData = state.graph.edges
+  const allEdgeData = state.graph.edges
     .filter((edge) => edge.relation === "used-in-proof")
-    .filter((edge) => !state.selectedProofId || edge.proof === state.selectedProofId)
     .map((edge) => ({ ...edge, source: nodesById.get(edge.source.id), target: nodesById.get(edge.target.id) }))
     .filter((edge) => edge.source && edge.target);
+  const edgeData = proofRouteEdges(allEdgeData, state.focusId, state.selectedProofId);
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(declarationKindFor(node)));
-  state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData, 3) : new Map();
+  state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData, 5) : new Map();
   state.expandedDistances.forEach((distance, id) => {
     if (!state.focusDistances.has(id) || distance < state.focusDistances.get(id)) state.focusDistances.set(id, distance);
   });
@@ -478,10 +508,11 @@ function beginProgressiveReveal() {
     state.revealedIds = new Set([state.focusId]);
     const nodeIds = new Set(state.graph.nodes.map((node) => node.id));
     const adjacency = new Map();
-    state.graph.edges
-      .filter((edge) => edge.relation === "used-in-proof")
-      .filter((edge) => !state.selectedProofId || edge.proof === state.selectedProofId)
-      .forEach((edge) => {
+    proofRouteEdges(
+      state.graph.edges.filter((edge) => edge.relation === "used-in-proof"),
+      state.focusId,
+      state.selectedProofId,
+    ).forEach((edge) => {
         if (!adjacency.has(edge.target.id)) adjacency.set(edge.target.id, []);
         adjacency.get(edge.target.id).push(edge.source.id);
       });
@@ -869,6 +900,27 @@ function proofRouteSides(nodes, edges, focusId) {
   const sides = new Map();
   const focus = nodes.find((node) => node.id === focusId);
   if (!focus || !(focus.proofs || []).length) return sides;
+  if (state.selectedProofId) {
+    // Once one proof is selected, its upstream closure is the subject of the
+    // view. Keep that route on the central spine; repository lanes are useful
+    // only while comparing multiple routes at the merged proposition.
+    const incoming = new Map();
+    edges.forEach((edge) => {
+      if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
+      incoming.get(edge.target.id).push(edge);
+    });
+    const queue = [focusId];
+    sides.set(focusId, 0);
+    while (queue.length) {
+      const targetId = queue.shift();
+      (incoming.get(targetId) || []).forEach((edge) => {
+        if (sides.has(edge.source.id)) return;
+        sides.set(edge.source.id, 0);
+        queue.push(edge.source.id);
+      });
+    }
+    return sides;
+  }
   const groupForProof = new Map();
   const groups = [];
   (focus.proofs || []).forEach((proof) => {

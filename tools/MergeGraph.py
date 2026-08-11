@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 from collections import defaultdict
 
 
@@ -56,7 +57,22 @@ def proof_record(node: dict) -> dict:
     return record
 
 
-def merge(graph: dict) -> dict:
+def comparison_manifest(path: str | None) -> dict[str, dict]:
+    if not path:
+        return {}
+    data = json.loads(Path(path).read_text())
+    return {
+        route["declaration"]: {
+            "id": comparison["id"],
+            "repository": route["repository"],
+        }
+        for comparison in data.get("comparisons", [])
+        for route in comparison.get("routes", [])
+    }
+
+
+def merge(graph: dict, manifest_path: str | None = None) -> dict:
+    registered_routes = comparison_manifest(manifest_path)
     nodes = graph["nodes"]
     node_by_id = {node["id"]: node for node in nodes}
     groups: dict[tuple, list[dict]] = defaultdict(list)
@@ -108,21 +124,36 @@ def merge(graph: dict) -> dict:
                     merged["formalizations"].append(item)
         if len(group) > 1:
             merged["declarationCount"] = len(group)
+            registered = [
+                (record, registered_routes[record["declaration"]])
+                for record in merged["proofs"]
+                if record["declaration"] in registered_routes
+            ]
+            comparison_routes = [
+                {
+                    "proof": record["id"],
+                    "repository": metadata["repository"],
+                    "declaration": record["declaration"],
+                }
+                for record, metadata in registered
+            ] or [
+                {
+                    "proof": record["id"],
+                    "repository": record["routeKind"],
+                    "declaration": record["declaration"],
+                }
+                for record in merged["proofs"]
+            ]
             merged["comparison"] = {
                 "identity": "exact elaborated proposition statement",
-                "routes": [
-                    {
-                        "proof": record["id"],
-                        "repository": record["routeKind"],
-                        "declaration": record["declaration"],
-                    }
-                    for record in merged["proofs"]
-                ],
+                "routes": comparison_routes,
                 "note": (
                     "The declarations are merged only because Lean checked their "
                     "elaborated proposition types as definitionally equal."
                 ),
             }
+            if registered:
+                merged["comparison"]["registry"] = registered[0][1]["id"]
             merged["verification"] = dict(merged.get("verification", {}))
             merged["verification"]["note"] = (
                 merged["verification"].get("note", "")
@@ -171,6 +202,11 @@ def merge(graph: dict) -> dict:
 
 
 if __name__ == "__main__":
+    manifest = None
+    if len(sys.argv) == 3 and sys.argv[1] == "--comparisons":
+        manifest = sys.argv[2]
+    elif len(sys.argv) != 1:
+        raise SystemExit("usage: MergeGraph.py [--comparisons manifest.json]")
     graph = json.load(sys.stdin)
-    json.dump(merge(graph), sys.stdout, separators=(",", ":"), sort_keys=True)
+    json.dump(merge(graph, manifest), sys.stdout, separators=(",", ":"), sort_keys=True)
     sys.stdout.write("\n")
