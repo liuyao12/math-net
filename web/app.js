@@ -48,7 +48,12 @@ const DECLARATION_BACKGROUNDS = {
   concept: "#dcebe5",
   source: "#eadfe8",
 };
-const PROOF_COLORS = ["#d16b5d", "#3f7f8f", "#b27a2d", "#7a6397", "#4f8b73", "#b05d91", "#6d7fbd", "#9b7a4b"];
+const REPOSITORIES = {
+  mathlib: { label: "mathlib", color: "#3f7f8f" },
+  "computable-analysis": { label: "computable-analysis", color: "#a45b38" },
+  "math-net": { label: "math-net", color: "#7a6397" },
+  unknown: { label: "unclassified source", color: "#7f8589" },
+};
 const VERIFICATION = {
   checked: { glyph: "✓", label: "Lean-checked", className: "checked" },
   "imported-checked": { glyph: "↗", label: "Imported + checked", className: "imported" },
@@ -858,14 +863,42 @@ function isMajorNode(node) {
   return isMathematicalNode(node);
 }
 
+function repositoryForProof(proof) {
+  if (!proof) return "unknown";
+  if (proof.routeKind === "local") return "math-net";
+  if (proof.routeKind === "mathlib" || proof.locator?.startsWith("mathlib/")) return "mathlib";
+  if (proof.routeKind === "computable-analysis") return "computable-analysis";
+  if (proof.file?.startsWith("MathNetwork/")) return "math-net";
+  return "unknown";
+}
+
+function repositoryForFormalization(formalization) {
+  if (formalization?.repository === "mathlib4" || formalization?.locator?.startsWith("mathlib/")) return "mathlib";
+  if (formalization?.repository === "computable-analysis") return "computable-analysis";
+  if (formalization?.name?.startsWith("MathNetwork.")) return "math-net";
+  return null;
+}
+
+function repositoriesForNode(node) {
+  const repositories = new Set((node.proofs || []).map(repositoryForProof));
+  if (!repositories.size) (node.formalizations || []).map(repositoryForFormalization).filter(Boolean).forEach((repository) => repositories.add(repository));
+  if (!repositories.size && node.locator?.startsWith("mathlib/")) repositories.add("mathlib");
+  if (!repositories.size && node.file?.startsWith("MathNetwork/")) repositories.add("math-net");
+  if (!repositories.size && node.namespace?.startsWith("MathNetwork.")) repositories.add("math-net");
+  if (!repositories.size) repositories.add("unknown");
+  return [...repositories].sort((left, right) => REPOSITORIES[left].label.localeCompare(REPOSITORIES[right].label));
+}
+
+function repositoryColor(repository) {
+  return (REPOSITORIES[repository] || REPOSITORIES.unknown).color;
+}
+
 function proofColor(proofId = "") {
   for (const node of state.graph?.nodes || []) {
     const proof = (node.proofs || []).find((item) => item.id === proofId);
-    if (proof?.color) return proof.color;
+    if (proof) return repositoryColor(repositoryForProof(proof));
   }
-  let hash = 0;
-  for (const character of proofId) hash = ((hash << 5) - hash + character.charCodeAt(0)) | 0;
-  return PROOF_COLORS[Math.abs(hash) % PROOF_COLORS.length];
+  return repositoryColor("unknown");
 }
 
 function proofLabels() {
@@ -878,21 +911,34 @@ function proofLabels() {
 function renderProofLegend() {
   const container = $("#proof-legend");
   if (!container || !state.graph) return;
-  const labels = proofLabels();
   const proofMeta = new Map();
   state.graph.nodes.forEach((node) => (node.proofs || []).forEach((proof) => proofMeta.set(proof.id, proof)));
   const usedProofs = new Set(state.graph.edges.map((edge) => edge.proof).filter(Boolean));
-  const grouped = new Map();
+  const grouped = new Set();
   [...usedProofs].forEach((proofId) => {
     const proof = proofMeta.get(proofId);
-    const key = proof?.routeKind || proofId;
-    if (!grouped.has(key)) grouped.set(key, { id: proofId, label: ROUTE_KIND_LABELS[key] || labels.get(proofId) || key });
+    grouped.add(repositoryForProof(proof));
   });
-  const entries = [...grouped.values()]
+  const entries = [...grouped]
+    .map((id) => ({ id, label: (REPOSITORIES[id] || REPOSITORIES.unknown).label }))
     .sort((left, right) => left.label.localeCompare(right.label));
   container.innerHTML = entries.length
-    ? `<span class="legend-heading">Arrow colors · proof routes</span>${entries.map((entry) => `<span class="legend-item"><span class="legend-line" style="background:${escapeHtml(proofColor(entry.id))}"></span><span>${escapeHtml(entry.label)}</span></span>`).join("")}`
+    ? `<span class="legend-heading">Repository colors · nodes and proof arrows</span>${entries.map((entry) => `<span class="legend-item"><span class="legend-dot repository-dot" style="background:${escapeHtml(repositoryColor(entry.id))}"></span><span>${escapeHtml(entry.label)}</span></span>`).join("")}`
     : "";
+}
+
+function nodeRadius(item, coreId, ambientIds) {
+  return item.id === state.focusId ? 13 : item.id === coreId ? 12 : ambientIds.has(item.id) ? 8 : item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4;
+}
+
+function pieSlicePath(index, count, radius) {
+  const start = -Math.PI / 2 + (index * 2 * Math.PI / count);
+  const end = -Math.PI / 2 + ((index + 1) * 2 * Math.PI / count);
+  const x1 = radius * Math.cos(start);
+  const y1 = radius * Math.sin(start);
+  const x2 = radius * Math.cos(end);
+  const y2 = radius * Math.sin(end);
+  return `M0,0 L${x1},${y1} A${radius},${radius} 0 ${end - start > Math.PI ? 1 : 0} 1 ${x2},${y2} Z`;
 }
 
 function nodeNeighbors(nodeId) {
@@ -1018,7 +1064,7 @@ function renderInspector() {
   const presentation = node.presentation
     ? `<div class="detail-block"><div class="detail-label">Graph role</div><p><strong>${escapeHtml(node.presentation.category)}</strong> · ${escapeHtml(node.presentation.reason)}</p><p class="muted-note">Presentation heuristic, not a logical distinction in Lean.</p></div>`
     : "";
-  const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(proof.color || proofColor(proof.id))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
+  const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
   const relationRows = (entries, label) => entries.length
@@ -1075,6 +1121,7 @@ function updateHighlight() {
   // neighboring node is inspected.
   const neighborhood = state.focusId ? new Set(state.focusDistances.keys()) : new Set();
   svg.selectAll(".node-dot").classed("selected", (node) => node.id === state.selectedId).classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
+  svg.selectAll(".node-pie").classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
   svg.selectAll(".node-label").classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
   svg.selectAll(".graph-link")
     .classed("dimmed", (edge) => state.focusId && (!neighborhood.has(edge.source.id) || !neighborhood.has(edge.target.id)))
@@ -1540,7 +1587,22 @@ function draw() {
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
   const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => displayLabelFor(item)).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("focus-node", (item) => item.id === state.focusId).classed("ambient-node", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = event.y; item.fx = event.x; item.fy = event.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
-  node.append("circle").attr("class", "node-dot").classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("landmark", (item) => state.showLandmarks && isLandmark(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.id === state.focusId ? 13 : item.id === coreId ? 12 : ambientIds.has(item.id) ? 8 : item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", declarationColorFor);
+  // A merged declaration can have checked proof terms from more than one
+  // repository. Render its disk as a pie, rather than assigning it a fourth
+  // misleading color; single-source declarations remain solid repository color.
+  node.each(function (item) {
+    const repositories = repositoriesForNode(item);
+    if (repositories.length < 2) return;
+    const radius = nodeRadius(item, coreId, ambientIds);
+    d3.select(this).append("g").attr("class", "node-pie").attr("aria-hidden", "true")
+      .selectAll("path").data(repositories).join("path")
+      .attr("d", (_, index) => pieSlicePath(index, repositories.length, radius))
+      .attr("fill", (repository) => repositoryColor(repository));
+  });
+  node.append("circle").attr("class", "node-dot").classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("landmark", (item) => state.showLandmarks && isLandmark(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => nodeRadius(item, coreId, ambientIds)).attr("fill", (item) => {
+    const repositories = repositoriesForNode(item);
+    return repositories.length === 1 ? repositoryColor(repositories[0]) : "transparent";
+  });
   node.append("text").attr("class", "node-label").classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 16).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (isSuppressedNode(item) && item.id !== state.selectedId && item.id !== state.focusId && !ambientIds.has(item.id)) || (item.id !== coreId && !ambientIds.has(item.id) && displayLabelFor(item).length > 31 && nodes.length > 12));
   const expanders = node.append("g").attr("class", "node-expand").attr("transform", "translate(0,-18)")
     .classed("hidden", (item) => item.id !== state.selectedId || !hasHiddenDependencies(item.id, nodes))

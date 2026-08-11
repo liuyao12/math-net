@@ -116,6 +116,7 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb
 .filter-option input { accent-color: var(--blue); }
 .implementation-toggle { margin-top: 10px; color: var(--faint); }
 .filter-dot, .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.repository-dot { box-shadow: 0 0 0 1px rgba(38, 48, 54, 0.16); }
 .filter-dot.proposition, .legend-dot.proposition { background: var(--blue); }
 .filter-dot.proof-family, .legend-dot.proof-family { background: var(--gold); }
 .filter-dot.concept, .legend-dot.concept { background: var(--teal); }
@@ -231,6 +232,8 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-expand text { fill: var(--blue); font: 500 12px Manrope, sans-serif; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
 .node-expand:hover circle { fill: var(--blue-soft); stroke: var(--ink); }
 .node-dot { stroke: var(--paper); stroke-width: 2; cursor: pointer; }
+.node-pie { pointer-events: none; }
+.node-pie.dimmed { opacity: 0.16; }
 .node-dot.selected { stroke: var(--ink); stroke-width: 3; }
 .node-dot.dimmed { opacity: 0.16; }
 .node-label.dimmed { opacity: 0.16; }
