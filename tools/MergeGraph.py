@@ -129,6 +129,61 @@ def annotate_importance(nodes: list[dict], edges: list[dict]) -> None:
         }
 
 
+def annotate_presentation(nodes: list[dict]) -> None:
+    """Classify how a declaration should be presented, not how true it is.
+
+    The Lean kernel does not distinguish a mathematical theorem from the
+    generated plumbing that makes a formalization work.  This conservative,
+    inspectable heuristic keeps all of that plumbing in the graph while
+    letting a reader see the mathematical spine first.
+    """
+    implementation_kinds = {"constructor", "recursor", "quotient"}
+    implementation_suffixes = {
+        "mk", "rec", "recOn", "casesOn", "brecOn", "below", "noConfusion",
+        "inst", "toFun", "toNat", "toInt", "toRat", "toReal", "toAdd",
+        "toMul", "toOne", "toPow", "toNPow", "toLE", "toPreorder",
+    }
+    semantic_definition_prefixes = (
+        "Real.", "Complex.", "Nat.", "Int.", "Rat.", "Polynomial.",
+        "MeasureTheory.", "Analysis.", "Topology.", "Calculus.",
+    )
+    foundational_definition_modules = (
+        "mathlib/Mathlib.Algebra.", "mathlib/Mathlib.Data.",
+        "mathlib/Mathlib.Logic.", "mathlib/Mathlib.Init.",
+    )
+    for node in nodes:
+        declaration = node.get("namespace", node.get("label", ""))
+        declaration_kind = node.get("declarationKind", "")
+        last = declaration.rsplit(".", 1)[-1]
+        generated = (
+            declaration_kind in implementation_kinds
+            or last in implementation_suffixes
+            or last.startswith("inst")
+            or "._proof_" in declaration
+            or ".match_" in declaration
+        )
+        if generated:
+            category = "implementation"
+            reason = "Lean-generated constructor, recursor, projection, instance, or internal helper."
+        elif (
+            declaration_kind in {"theorem", "opaque"}
+            and node.get("locator", "").endswith(".Defs")
+            and node.get("locator", "").startswith(foundational_definition_modules)
+        ):
+            category = "routine"
+            reason = "Routine foundational lemma from a definitions module; retained but suppressed in the explanatory view."
+        elif node.get("kind") == "proposition" or declaration_kind in {"theorem", "opaque", "axiom", "proposition"}:
+            category = "mathematical"
+            reason = "Checked mathematical proposition or theorem declaration."
+        elif declaration_kind == "definition" and declaration.startswith(semantic_definition_prefixes):
+            category = "mathematical"
+            reason = "Named mathematical definition used in the displayed proof landscape."
+        else:
+            category = "supporting"
+            reason = "Supporting type, definition, or algebraic infrastructure needed by the proof."
+        node["presentation"] = {"category": category, "reason": reason}
+
+
 def merge(graph: dict, manifest_path: str | None = None) -> dict:
     registered_routes = comparison_manifest(manifest_path)
     nodes = graph["nodes"]
@@ -252,6 +307,7 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
     result["nodes"] = merged_nodes
     result["edges"] = edges
     annotate_importance(result["nodes"], result["edges"])
+    annotate_presentation(result["nodes"])
     result["merge"] = {
         "key": "exact elaborated proposition statement across local and imported declarations",
         "definitions": "one node per declaration",

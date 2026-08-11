@@ -84,7 +84,8 @@
         "tags": { "$ref": "#/$defs/stringList" },
         "verification": { "$ref": "#/$defs/verification" },
         "comparison": { "$ref": "#/$defs/comparison" },
-        "importance": { "$ref": "#/$defs/importance" }
+        "importance": { "$ref": "#/$defs/importance" },
+        "presentation": { "$ref": "#/$defs/presentation" }
       }
     },
     "verification": {
@@ -138,6 +139,15 @@
         "landmark": { "type": "boolean" },
         "signals": { "$ref": "#/$defs/stringList" },
         "method": { "$ref": "#/$defs/nonEmptyString" }
+      }
+    },
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "reason"],
+      "properties": {
+        "category": { "enum": ["mathematical", "supporting", "routine", "implementation"] },
+        "reason": { "$ref": "#/$defs/nonEmptyString" }
       }
     },
     "proposition": {

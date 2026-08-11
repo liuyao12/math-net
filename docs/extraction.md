@@ -54,6 +54,15 @@ proof reuse and the number of downstream declarations reachable from the node.
 This is a navigation heuristic, not a measure of proof difficulty or
 mathematical depth; the UI labels it as such.
 
+The merge pass also attaches a presentation role to each declaration:
+`mathematical`, `supporting`, `routine`, or `implementation`. This is an
+explicit heuristic for reading the graph, never a Lean-level classification.
+Generated constructors/recursors are implementation details; small theorems
+from foundational `*.Defs` modules are routine details (for example `mul_one`
+and `Nat.prime_two`). Routine and implementation nodes are suppressed by
+default and visually contracted, but remain in the extracted graph and can be
+revealed with the background-details control.
+
 `tools/MergeGraph.py` then merges proposition nodes only when their elaborated
 statements are identical. The comparison registry and `CheckComparison.lean`
 provide the kernel-backed check for comparison units; the merger does not infer
