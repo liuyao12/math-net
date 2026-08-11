@@ -1075,23 +1075,47 @@ function theoremLike(node) {
   return node?.kind === "proposition" || ["theorem", "opaque", "axiom", "proposition"].includes(declarationKindFor(node));
 }
 
+function semanticTokens(text) {
+  const identifiers = String(text || "").match(/[A-Za-z][A-Za-z0-9_'.]*/g) || [];
+  const tokens = new Set();
+  identifiers.forEach((identifier) => {
+    const normalized = identifier.toLowerCase();
+    if (normalized.length >= 4 && !normalized.startsWith("inst") && !normalized.includes("hyg")) tokens.add(normalized);
+    identifier.replace(/([a-z])([A-Z])/g, "$1 $2").split(/[_.']/).forEach((part) => {
+      const word = part.toLowerCase();
+      if (word.length >= 4 && !word.startsWith("inst") && !word.includes("hyg")) tokens.add(word);
+    });
+  });
+  return tokens;
+}
+
+function theoremTitleForFocus() {
+  return state.theorems.find((theorem) => String(theorem.number) === String(state.theoremNumber))?.title || "";
+}
+
 function coreNodeFor(nodes) {
   if (!state.focusId) return null;
   const focus = nodes.find((node) => node.id === state.focusId);
   if (!focus) return null;
-  const focusWords = new Set((`${focus.namespace || ""} ${focus.label || ""}`.toLowerCase().match(/[a-z][a-z0-9]+/g) || []).filter((word) => word.length > 3));
-  const candidates = nodes.filter((node) => {
+  const neighborhood = nodes.filter((node) => state.focusDistances.has(node.id) && isMathematicalNode(node));
+  const tokenFrequency = new Map();
+  neighborhood.forEach((node) => semanticTokens(`${node.namespace || ""} ${node.statement || ""}`).forEach((token) => {
+    tokenFrequency.set(token, (tokenFrequency.get(token) || 0) + 1);
+  }));
+  const focusTokens = semanticTokens(`${focus.namespace || ""} ${focus.statement || ""} ${theoremTitleForFocus()}`);
+  const candidates = neighborhood.filter((node) => {
     const distance = state.focusDistances.get(node.id);
     return node.id !== state.focusId && isMathematicalNode(node) && theoremLike(node) && distance >= 1 && distance <= 4;
   });
   return candidates.sort((left, right) => {
     const rank = (node) => {
-      const words = `${node.namespace || ""} ${node.label || ""}`.toLowerCase().match(/[a-z][a-z0-9]+/g) || [];
-      const overlap = words.filter((word) => focusWords.has(word)).length;
+      const tokens = semanticTokens(`${node.namespace || ""} ${node.statement || ""}`);
+      const semanticOverlap = [...tokens].filter((token) => focusTokens.has(token)).reduce((total, token) =>
+        total + Math.log((neighborhood.length + 1) / ((tokenFrequency.get(token) || 0) + 1)), 0);
       const distance = state.focusDistances.get(node.id) || 0;
-      const bridge = /\bIff\b|\bEq\b/.test(node.statement || "") ? 90 : 0;
+      const bridge = /\bIff\b/.test(node.statement || "") && semanticOverlap > 0 ? 18 : 0;
       const directUse = node.importance?.directUses || 0;
-      return bridge + overlap * 34 + Math.log1p(directUse) * 10 + (node.importance?.score || 0) * 0.18 - Math.abs(distance - 2) * 12;
+      return semanticOverlap * 42 + bridge + Math.log1p(directUse) * 4 + (node.importance?.score || 0) * 0.08 - Math.abs(distance - 2) * 7;
     };
     return rank(right) - rank(left);
   })[0]?.id || null;

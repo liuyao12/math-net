@@ -139,19 +139,26 @@ def annotate_presentation(nodes: list[dict]) -> None:
     """
     foundational_definition_modules = (
         "mathlib/Mathlib.Algebra.", "mathlib/Mathlib.Data.",
-        "mathlib/Mathlib.Logic.", "mathlib/Mathlib.Init.",
+        "mathlib/Mathlib.Logic.", "mathlib/Mathlib.Init.", "mathlib/Mathlib.Order.",
+    )
+    implementation_modules = (
+        "mathlib/Mathlib.Tactic.", "mathlib/Mathlib.Meta.",
+        "mathlib/Mathlib.Lean.", "mathlib/Mathlib.Util.",
     )
 
     def foundational(node: dict) -> bool:
         return node.get("locator", "").startswith(foundational_definition_modules)
 
+    def implementation_module(node: dict) -> bool:
+        return node.get("locator", "").startswith(implementation_modules)
+
     for node in nodes:
         declaration_kind = node.get("declarationKind", "")
         declaration = node.get("namespace", node.get("label", ""))
         generated = declaration_kind in {"constructor", "recursor", "quotient"} or "._proof_" in declaration or ".match_" in declaration
-        if generated or node.get("structuralProjection", False):
+        if generated or node.get("structuralProjection", False) or implementation_module(node):
             category = "implementation"
-            reason = "Kernel-generated declaration or a structure projection identified by Lean's structure metadata."
+            reason = "Kernel-generated declaration, Lean structure projection, or tactic/meta implementation declaration."
         elif (
             declaration_kind in {"theorem", "opaque"}
             and foundational(node)
