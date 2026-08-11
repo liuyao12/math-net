@@ -606,6 +606,18 @@ function proofLabels() {
   return labels;
 }
 
+function renderProofLegend() {
+  const container = $("#proof-legend");
+  if (!container || !state.graph) return;
+  const labels = proofLabels();
+  const usedProofs = new Set(state.graph.edges.map((edge) => edge.proof).filter(Boolean));
+  const entries = [...usedProofs].map((proofId) => ({ id: proofId, label: labels.get(proofId) || proofId }))
+    .sort((left, right) => left.label.localeCompare(right.label));
+  container.innerHTML = entries.length
+    ? `<span class="legend-heading">Arrow colors · proof routes</span>${entries.map((entry) => `<span class="legend-item"><span class="legend-line" style="background:${escapeHtml(proofColor(entry.id))}"></span><span>${escapeHtml(entry.label)}</span></span>`).join("")}`
+    : "";
+}
+
 function nodeNeighbors(nodeId) {
   const map = nodeMap();
   return state.graph.edges.flatMap((edge) => {
@@ -1156,6 +1168,7 @@ async function load() {
     $("#loading-state").remove();
     populateTheoremSelect();
     kindControls();
+    renderProofLegend();
     selectTheoremNode();
     updateWorkspaceContext();
   } catch (error) {
