@@ -232,8 +232,8 @@ function compactLeanSource(source, { maxLines = 32, maxLineLength = 260 } = {}) 
   ].join("\n");
 }
 
-async function loadProofSource(node, container, request) {
-  const proof = (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
+async function loadProofSource(node, container, request, selectedProof = null) {
+  const proof = selectedProof || (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
   const file = sourceFileFor(node, proof);
   const formalization = proof
     ? { file: proof.file, name: proof.declaration }
@@ -910,6 +910,7 @@ function renderInspector() {
   const sourceRequest = ++state.sourceRequest;
   const neighbors = nodeNeighbors(node.id);
   const github = githubUrlFor(node);
+  const activeProof = (node.proofs || []).find((item) => item.id === state.selectedProofId) || node.proofs?.[0] || null;
   const formalizations = (node.formalizations || []).map((item) => {
     const file = item.file ? `<br><span>${escapeHtml(item.file)}${item.anchor ? ` · ${escapeHtml(item.anchor)}` : ""}</span>` : "";
     const github = githubUrlFor(node, item);
@@ -934,7 +935,7 @@ function renderInspector() {
   const presentation = node.presentation
     ? `<div class="detail-block"><div class="detail-label">Graph role</div><p><strong>${escapeHtml(node.presentation.category)}</strong> · ${escapeHtml(node.presentation.reason)}</p><p class="muted-note">Presentation heuristic, not a logical distinction in Lean.</p></div>`
     : "";
-  const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(proof.color || proofColor(proof.id))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
+  const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${activeProof?.id === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(proof.color || proofColor(proof.id))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
   const relationRows = (entries, label) => entries.length
@@ -965,7 +966,7 @@ function renderInspector() {
   `;
   content.querySelectorAll("[data-neighbor]").forEach((button) => button.addEventListener("click", () => selectNode(button.dataset.neighbor)));
   content.querySelectorAll("[data-proof]").forEach((button) => button.addEventListener("click", () => selectProof(button.dataset.proof)));
-  loadProofSource(node, content.querySelector("#proof-source"), sourceRequest);
+  loadProofSource(node, content.querySelector("#proof-source"), sourceRequest, activeProof);
 }
 
 function updateWorkspaceContext() {
