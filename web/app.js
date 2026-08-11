@@ -935,7 +935,7 @@ function renderInspector() {
   const presentation = node.presentation
     ? `<div class="detail-block"><div class="detail-label">Graph role</div><p><strong>${escapeHtml(node.presentation.category)}</strong> · ${escapeHtml(node.presentation.reason)}</p><p class="muted-note">Presentation heuristic, not a logical distinction in Lean.</p></div>`
     : "";
-  const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${activeProof?.id === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(proof.color || proofColor(proof.id))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
+  const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(proof.color || proofColor(proof.id))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
   const relationRows = (entries, label) => entries.length
@@ -961,7 +961,7 @@ function renderInspector() {
     ${formalizations ? `<div class="detail-block"><div class="detail-label">Formalization</div>${formalizations}</div>` : ""}
     ${github && !formalizations ? `<div class="detail-block"><div class="detail-label">Source</div><div class="formalization"><a href="${escapeHtml(github)}" target="_blank" rel="noreferrer">Open declaration on GitHub ↗</a></div></div>` : ""}
     ${proofs ? `<div class="detail-block"><div class="detail-label">Proof routes · select one to filter dependencies</div><div class="proof-list">${proofs}</div></div>` : ""}
-    <div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>
+    <div class="detail-block"><div class="detail-label">Lean proof source${activeProof ? ` · ${escapeHtml(activeProof.label)}${state.selectedProofId ? "" : " (default)"}` : ""}</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>
     ${neighborRows ? `<div class="detail-block"><div class="neighbor-list">${neighborRows}</div></div>` : ""}
   `;
   content.querySelectorAll("[data-neighbor]").forEach((button) => button.addEventListener("click", () => selectNode(button.dataset.neighbor)));
