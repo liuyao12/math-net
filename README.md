@@ -12,8 +12,8 @@ The intended release name, local folder, and GitHub repository name are all
 ## Interactive explorer
 
 The first network browser is in [`web/`](web/). By default it reads the
-generated project-wide Lean declaration graph, currently containing 1,072
-nodes and 8,051 checked dependency edges. It supports theorem selection,
+generated project-wide Lean declaration graph, currently containing 2,087
+nodes and 20,351 checked dependency edges. It supports theorem selection,
 multi-level neighborhood fading, proposition search, strict proof-dependency
 edges, and click-to-inspect Lean source. The theorem-centred index is
 [`theorem-catalogue.json`](MathNetwork/Graph/theorem-catalogue.json). Run

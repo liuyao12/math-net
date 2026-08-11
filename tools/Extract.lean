@@ -11,7 +11,13 @@ private def namesToJson (xs : Array Name) : Json :=
   toJson (xs.map Name.toString)
 
 private def directConstants (ci : ConstantInfo) : Array Name :=
-  ci.getUsedConstantsAsSet.toArray.qsort Name.lt
+  let used := ci.type.getUsedConstantsAsSet.toArray.foldl
+    (init := ({} : NameSet)) fun used name => NameSet.insert used name
+  let used := match ci.value? (allowOpaque := true) with
+    | some value => value.getUsedConstantsAsSet.toArray.foldl
+        (init := used) fun used name => NameSet.insert used name
+    | none => used
+  used.toArray.qsort Name.lt
 
 private def graphRelevant (name : Name) : Bool :=
   let text := name.toString

@@ -158,6 +158,8 @@
         "id": { "$ref": "#/$defs/id" },
         "label": { "$ref": "#/$defs/nonEmptyString" },
         "declaration": { "$ref": "#/$defs/nonEmptyString" },
+        "file": { "$ref": "#/$defs/nonEmptyString" },
+        "locator": { "$ref": "#/$defs/nonEmptyString" },
         "status": { "enum": ["kernel-checked", "imported-checked", "formalized", "planned", "informal"] },
         "routeKind": { "enum": ["library-complete", "pedagogical-narrow", "foundation-comparison", "computational", "mathlib", "computable-analysis", "local"] },
         "scope": { "enum": ["local", "local-with-imports", "imported", "none"] },

@@ -41,11 +41,13 @@ sorted by declaration name for reproducibility.
 `tools/BuildGraph.lean` uses the same elaborated environment to emit
 `MathNetwork/Graph/project.json`. It includes every non-internal
 `MathNetwork.*` declaration loaded by the project and a bounded three-level
-dependency closure of declarations defined in `Mathlib.*` modules. Theorems
-are proposition nodes, definitions are concept nodes, and imported mathlib
-declarations are source nodes. The only generated edge is `used-in-proof`,
-from a declaration used by another included declaration to the declaration
-that contains it.
+dependency closure of declarations defined in `Mathlib.*` or
+`ComputableAnalysis.*` modules. The extractor inspects both the declaration
+type and the elaborated value, so local adapter proofs expose the imported
+theorems and definitions they actually call. Theorems are proposition nodes,
+definitions are concept nodes, and imported declarations are source nodes.
+The only generated edge is `used-in-proof`, from a declaration used by
+another included declaration to the declaration that contains it.
 
 `tools/MergeGraph.py` then merges proposition nodes only when their elaborated
 statements are identical. The comparison registry and `CheckComparison.lean`

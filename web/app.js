@@ -153,8 +153,14 @@ function highlightLean(source) {
   }).join("") || "";
 }
 
-function sourceFileFor(node) {
-  const local = (node.formalizations || []).find((item) => item.file)?.file;
+function sourceFileFor(node, proof = null) {
+  if (proof?.locator?.startsWith("mathlib/")) {
+    return `${proof.locator.slice("mathlib/".length).replaceAll(".", "/")}.lean`;
+  }
+  if (proof?.locator?.startsWith("computable-analysis/")) {
+    return `${proof.locator.slice("computable-analysis/".length).replaceAll(".", "/")}.lean`;
+  }
+  const local = proof?.file || (node.formalizations || []).find((item) => item.file)?.file;
   if (local) return local;
   if (node.module?.startsWith("MathNetwork.")) return `${node.module.replaceAll(".", "/")}.lean`;
   if (node.locator?.startsWith("mathlib/")) {
@@ -166,13 +172,14 @@ function sourceFileFor(node) {
   return null;
 }
 
-function sourceUrlFor(node) {
-  const file = sourceFileFor(node);
+function sourceUrlFor(node, proof = null) {
+  const file = sourceFileFor(node, proof);
+  const locator = proof?.locator || node.locator;
   if (!file) return null;
-  if (node.locator?.startsWith("mathlib/")) {
+  if (locator?.startsWith("mathlib/")) {
     return `https://raw.githubusercontent.com/leanprover-community/mathlib4/master/${file}`;
   }
-  if (node.locator?.startsWith("computable-analysis/")) {
+  if (locator?.startsWith("computable-analysis/")) {
     return `https://raw.githubusercontent.com/liuyao12/computable-analysis/main/${file}`;
   }
   return `${REPO_ROOT}${file}`;
@@ -206,20 +213,23 @@ function declarationSource(text, name) {
 }
 
 async function loadProofSource(node, container, request) {
-  const file = sourceFileFor(node);
-  const formalization = (node.formalizations || []).find((item) => item.file);
+  const proof = (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
+  const file = sourceFileFor(node, proof);
+  const formalization = proof
+    ? { file: proof.file, name: proof.declaration }
+    : (node.formalizations || []).find((item) => item.file);
   if (!file) {
     container.textContent = "No source locator is available for this generated declaration. The statement above is the checked declaration type.";
     container.classList.remove("pending");
     return;
   }
-  const path = sourceUrlFor(node);
+  const path = sourceUrlFor(node, proof);
   try {
     const response = await fetch(path);
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const text = await response.text();
     if (request !== state.sourceRequest) return;
-    const source = declarationSource(text, formalization?.name || node.namespace || node.label);
+    const source = declarationSource(text, formalization?.name || proof?.declaration || node.namespace || node.label);
     const code = source || `-- Source file: ${file}\n-- The declaration is elaborated or generated in this module.\n\n${text}`;
     container.innerHTML = `<code>${highlightLean(code)}</code>`;
     container.classList.remove("pending");

@@ -37,7 +37,7 @@ def proof_record(node: dict) -> dict:
         label = "math-net · local proof"
         route_kind = "local"
         color = "#7a6397"
-    return {
+    record = {
         "id": f"proof-{node['id']}",
         "label": label,
         "declaration": declaration,
@@ -48,6 +48,12 @@ def proof_record(node: dict) -> dict:
         "closure": "partial",
         "note": "Proof provenance retained from the elaborated Lean declaration.",
     }
+    module = node.get("module", "")
+    if module.startswith("MathNetwork."):
+        record["file"] = f"{module.replace('.', '/')}.lean"
+    if node.get("locator"):
+        record["locator"] = node["locator"]
+    return record
 
 
 def merge(graph: dict) -> dict:

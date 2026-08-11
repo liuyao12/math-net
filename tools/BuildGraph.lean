@@ -59,7 +59,16 @@ private def isTrackedDependency (env : Environment) (name : Name) : Bool :=
 private def maxDependencyDepth : Nat := 3
 
 private def directConstants (ci : ConstantInfo) : Array Name :=
-  ci.getUsedConstantsAsSet.toArray.qsort Name.lt
+  -- `ConstantInfo.getUsedConstantsAsSet` is the declaration-type surface.
+  -- For a proof graph we must also inspect the value: a local adapter often
+  -- has a small type but its proof term calls an imported theorem.
+  let used := ci.type.getUsedConstantsAsSet.toArray.foldl
+    (init := ({} : NameSet)) fun used name => NameSet.insert used name
+  let used := match ci.value? (allowOpaque := true) with
+    | some value => value.getUsedConstantsAsSet.toArray.foldl
+        (init := used) fun used name => NameSet.insert used name
+    | none => used
+  used.toArray.qsort Name.lt
 
 private def indexOf (name : Name) (names : Array Name) : Nat :=
   let rec go (xs : List Name) (i : Nat) : Nat :=
@@ -80,20 +89,23 @@ private def dependencyDepths (env : Environment) (targets : Array Name) : Array 
       match frontier.toList with
       | [] => out
       | (name, depth) :: rest =>
-        if seen.contains name then visit fuel rest.toArray seen out
+        let seen := seen.insert name
+        let out := if isTrackedDependency env name && !isInternal name then out.push (name, depth) else out
+        if depth >= maxDependencyDepth then visit fuel rest.toArray seen out
         else
-          let seen := seen.insert name
-          let out := if isTrackedDependency env name && !isInternal name then out.push (name, depth) else out
-          if depth >= maxDependencyDepth then visit fuel rest.toArray seen out
-          else
-            match env.find? name with
-            | some ci =>
-              let next := (directConstants ci).foldl (init := rest.toArray) fun next dependency =>
-                if isTrackedDependency env dependency && !isInternal dependency then
-                  next.push (dependency, depth + 1)
-                else next
-              visit fuel next seen out
-            | none => visit fuel rest.toArray seen out
+          match env.find? name with
+          | some ci =>
+            let (next, seen) := (directConstants ci).foldl
+              (init := (rest.toArray, seen)) fun (next, seen) dependency =>
+                if isTrackedDependency env dependency && !isInternal dependency &&
+                    !seen.contains dependency then
+                  (next.push (dependency, depth + 1), seen.insert dependency)
+                else (next, seen)
+            visit fuel next seen out
+          | none => visit fuel rest.toArray seen out
+  -- Targets are the initial work items and must still be processed; later
+  -- discoveries are inserted into `seen` when enqueued to avoid the large
+  -- duplicate frontier that made the original extractor appear to hang.
   visit 100000 (targets.map (fun name => (name, 0))) {} #[]
 
 private def dependencyNames (env : Environment) (targets : Array Name) : Array Name :=
