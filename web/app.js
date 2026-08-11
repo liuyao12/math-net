@@ -430,7 +430,7 @@ function upstreamPath(focusId, targetId, edges) {
   return path;
 }
 
-function upstreamDependencies(rootId, edges, maxDepth = 2) {
+function upstreamDependencies(rootId, edges, maxDepth = 1) {
   if (!rootId) return new Set();
   const incoming = new Map();
   edges.forEach((edge) => {
@@ -464,7 +464,13 @@ function visibleGraph() {
   const coreId = coreNodeFor(state.graph.nodes);
   state.coreId = coreId;
   const corePath = coreId ? upstreamPath(state.focusId, coreId, edgeData) : new Set();
-  const coreDependencies = coreId ? upstreamDependencies(coreId, edgeData) : new Set();
+  // Keep the core theorem's *direct* inputs in view even when they are
+  // normally background declarations. Further foundations stay behind the
+  // node's explicit expander; two raw extraction levels can be hundreds of
+  // typeclass/projection details rather than mathematical content.
+  const coreDependencies = coreId
+    ? new Set([...upstreamDependencies(coreId, edgeData)].filter((id) => isMathematicalNode(nodesById.get(id))))
+    : new Set();
   const forcedIds = new Set([...corePath, ...coreDependencies]);
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(declarationKindFor(node)) &&
     (!isSuppressedNode(node) || node.id === state.focusId || node.id === state.selectedId || forcedIds.has(node.id)));
@@ -660,6 +666,7 @@ function beginProgressiveReveal() {
       });
     const steps = [];
     const seen = new Set([state.focusId]);
+    const visibleSeen = new Set([state.focusId]);
     const maxFocusNodes = 80;
     const queue = [{ id: state.focusId, depth: 0 }];
     state.revealCapped = false;
@@ -672,15 +679,24 @@ function beginProgressiveReveal() {
       (adjacency.get(parent.id) || []).slice().sort().forEach((neighbor) => {
         if (!nodeIds.has(neighbor)) return;
         if (seen.has(neighbor)) {
-          existing.push(neighbor);
+          if (!isSuppressedNode(nodeMap().get(neighbor))) existing.push(neighbor);
           return;
         }
-        if (seen.size >= maxFocusNodes) {
+        const neighborNode = nodeMap().get(neighbor);
+        const visibleNeighbor = !isSuppressedNode(neighborNode);
+        if (visibleNeighbor && visibleSeen.size >= maxFocusNodes) {
           state.revealCapped = true;
           return;
         }
         seen.add(neighbor);
-        children.push(neighbor);
+        if (visibleNeighbor) {
+          visibleSeen.add(neighbor);
+          children.push(neighbor);
+        }
+        // Hidden Lean infrastructure is traversed so a later mathematical
+        // theorem can still be discovered, but it does not create an empty
+        // animation batch in the reader-facing graph.
+        if (!visibleNeighbor) queue.push({ id: neighbor, depth: parent.depth + 1 });
       });
       if (children.length || existing.length) {
         steps.push({ parentId: parent.id, nodeIds: children, existingIds: existing });
@@ -998,22 +1014,19 @@ function updateHighlight() {
   const focusStatus = $("#focus-status");
   if (focusStatus) {
     const focus = state.focusId ? nodeMap().get(state.focusId) : null;
-    const visibleCount = state.focusId && state.revealDepth !== Infinity
-      ? state.revealedIds.size
-      : neighborhood.size;
+    const visibleCount = svg.selectAll(".graph-node").size();
     const nextStep = state.revealSteps[state.revealCursor];
-    const parent = nextStep ? nodeMap().get(nextStep.parentId) : null;
     const revealText = state.revealPaused
       ? state.revealPauseReason === "inspection"
         ? "paused while inspecting · click to continue"
         : "paused at viewport edge · click to continue"
       : nextStep
-        ? `expanding ${parent?.label || "node"} · ${state.revealCursor + 1}/${state.revealSteps.length}`
+        ? "discovering Lean prerequisites"
         : state.revealCapped
           ? "focused neighborhood capped at 80 nodes"
-        : "BFS loaded";
+        : "proof neighborhood loaded";
     focusStatus.textContent = focus
-      ? `${visibleCount}/${neighborhood.size} nodes · ${revealText} · ${focus.label}`
+      ? `${visibleCount} shown · ${revealText} · ${focus.label}`
       : state.revealLimit !== Infinity
         ? `${Math.min(state.revealLimit, state.graph.nodes.length)}/${state.graph.nodes.length} nodes loading · select a theorem to focus`
         : "all theorem nodes shown · select a theorem to focus";
@@ -1077,14 +1090,19 @@ function directedLayout(nodes, edges, width, height) {
   const maxX = Math.max(...positions.map((item) => item.x));
   const minY = Math.min(...positions.map((item) => item.y));
   const maxY = Math.max(...positions.map((item) => item.y));
-  const scale = Math.min(1, (width - 64) / Math.max(1, maxX - minX), (height - 72) / Math.max(1, maxY - minY));
-  const offsetX = (width - (maxX - minX) * scale) / 2 - minX * scale;
-  const offsetY = Math.max(28, (height - (maxY - minY) * scale) * 0.68) - minY * scale;
+  // Preserve vertical rank separation independently of width. A uniform
+  // scale turns a broad proof graph into a nearly horizontal tangle merely
+  // because its labels need several columns; the vertical order is the
+  // principal reading structure for this view.
+  const scaleX = Math.min(1, (width - 64) / Math.max(1, maxX - minX));
+  const scaleY = Math.min(1, (height - 92) / Math.max(1, maxY - minY));
+  const offsetX = (width - (maxX - minX) * scaleX) / 2 - minX * scaleX;
+  const offsetY = Math.max(32, (height - (maxY - minY) * scaleY) * 0.68) - minY * scaleY;
   positions.forEach((position) => {
     const node = nodes.find((item) => item.id === position.id);
     const pinned = state.pinnedPositions.get(node.id);
-    node.x = pinned?.x ?? position.x * scale + offsetX;
-    node.y = pinned?.y ?? position.y * scale + offsetY;
+    node.x = pinned?.x ?? position.x * scaleX + offsetX;
+    node.y = pinned?.y ?? position.y * scaleY + offsetY;
     node.vx = 0;
     node.vy = 0;
     node.targetX = node.x;
