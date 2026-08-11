@@ -1458,31 +1458,6 @@ function horizontalLabelCollisionForce(nodes) {
   return force;
 }
 
-function projectStrictTopDown(nodes, edges, ranks, gap = 30) {
-  // Project after the force relaxation. A node's vertical coordinate is a
-  // continuous (fractional) rank: topology supplies only an inequality, not
-  // an integer layer. The layout therefore has organic vertical spacing
-  // without ever reversing a proof arrow.
-  const forwardEdges = edges.filter((edge) => (ranks.get(edge.source.id) || 0) < (ranks.get(edge.target.id) || 0));
-  for (let pass = 0; pass < nodes.length + 2; pass += 1) {
-    let changed = false;
-    forwardEdges.forEach((edge) => {
-      const overlap = edge.source.y + gap - edge.target.y;
-      if (overlap <= 0) return;
-      changed = true;
-      const sourcePinned = Number.isFinite(edge.source.fx);
-      const targetPinned = Number.isFinite(edge.target.fx);
-      if (sourcePinned && !targetPinned) edge.target.y += overlap;
-      else if (targetPinned && !sourcePinned) edge.source.y -= overlap;
-      else {
-        edge.source.y -= overlap * 0.5;
-        edge.target.y += overlap * 0.5;
-      }
-    });
-    if (!changed) break;
-  }
-}
-
 function applyProofRouteLanes(nodes, routeSides, width, coreId) {
   const sides = [...new Set(routeSides.values())].filter((side) => side !== 0);
   if (!sides.length) return;
@@ -1492,6 +1467,11 @@ function applyProofRouteLanes(nodes, routeSides, width, coreId) {
   bySide.forEach((lane, side) => {
     lane.sort((left, right) => left.targetY - right.targetY || left.id.localeCompare(right.id));
     lane.forEach((node, index) => {
+      const pinned = state.pinnedPositions.get(node.id);
+      if (pinned) {
+        node.targetX = pinned.x;
+        return;
+      }
       const withinLane = Math.max(-laneGap * 0.55, Math.min(laneGap * 0.55, (index - (lane.length - 1) / 2) * 34));
       const laneX = center + side * laneGap + withinLane;
       // Dagre determines local order; the lane is a strong geometric cue,
@@ -1509,35 +1489,27 @@ function applyProofRouteLanes(nodes, routeSides, width, coreId) {
   }
 }
 
-function refineDirectedLayout(nodes, edges, ranks, width, height, coreId, routeSides) {
+function rankLockedLayout(nodes, ranks, width, height, coreId, routeSides) {
+  const focusRank = ranks.get(state.focusId) || Math.max(0, ...ranks.values());
+  const rankGap = 52;
   nodes.forEach((node) => {
     node.targetX = node.x;
-    node.targetY = node.y;
+    node.targetY = height * 0.72 - (focusRank - (ranks.get(node.id) || 0)) * rankGap;
+    node.rankY = node.targetY;
+    node.y = node.rankY;
     node.vx = 0;
     node.vy = 0;
+    node.fx = null;
+    node.fy = null;
   });
   applyProofRouteLanes(nodes, routeSides, width, coreId);
-  // This simulation is deliberately synchronous. It gives force-directed
-  // branch placement without the continual drift and flicker of a live
-  // simulation, and the projection below is a hard top-to-bottom rule.
-  d3.forceSimulation(nodes)
-    .force("x", d3.forceX((node) => node.targetX).strength((node) => node.id === state.focusId ? 0.34 : node.id === coreId && !routeSides.get(node.id) ? 0.34 : 0.18))
-    .force("y", d3.forceY((node) => node.targetY).strength((node) => node.id === coreId || node.id === state.focusId ? 0.24 : 0.045))
-    .force("link", d3.forceLink(edges).id((node) => node.id).distance(80).strength(0.09))
-    .force("charge", d3.forceManyBody().strength(-115))
-    .force("collide", d3.forceCollide().radius((node) => Math.max(17, Math.min(46, labelFor(node).length * 3.1 + 12))).strength(0.58))
-    .force("label-separation", horizontalLabelCollisionForce(nodes))
-    .stop()
-    .tick(130);
-  projectStrictTopDown(nodes, edges, ranks);
-  const focus = nodes.find((node) => node.id === state.focusId);
-  if (focus) {
-    // Present the proposition in a stable lower reading position; the graph
-    // extends upward as its prerequisites are revealed.
-    const shift = height * 0.72 - focus.y;
-    nodes.forEach((node) => { node.y += shift; });
-  }
+  nodes.forEach((node) => { node.x = node.targetX; });
+  // Within a rank, resolve only horizontal label collisions. This preserves
+  // the mathematical dependency height as an invariant.
+  const separateLabels = horizontalLabelCollisionForce(nodes);
+  for (let pass = 0; pass < 8; pass += 1) separateLabels();
   nodes.forEach((node) => {
+    node.y = node.rankY;
     state.layoutPositions.set(node.id, { x: node.x, y: node.y });
     state.layoutVelocities.set(node.id, { x: 0, y: 0 });
   });
@@ -1665,7 +1637,7 @@ function draw() {
     // not turn into a field of tiny overlapping triangles.
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => displayLabelFor(item)).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("focus-node", (item) => item.id === state.focusId).classed("ambient-node", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = event.y; item.fx = event.x; item.fy = event.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => displayLabelFor(item)).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("focus-node", (item) => item.id === state.focusId).classed("ambient-node", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.rankY ?? item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = item.rankY ?? item.y; item.fx = event.x; item.fy = item.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.rankY ?? item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
   // A merged declaration can have checked proof terms from more than one
   // repository. Render its disk as a pie, rather than assigning it a fourth
   // misleading color; single-source declarations remain solid repository color.
@@ -1696,7 +1668,7 @@ function draw() {
   state.simulation = null;
   if (state.focusId) {
     directedLayout(nodes, edges, width, height);
-    refineDirectedLayout(nodes, edges, ranks, width, height, coreId, routeSides);
+    rankLockedLayout(nodes, ranks, width, height, coreId, routeSides);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     link.attr("d", (edge) => routedLinkPath(edge, nodes))
       .attr("marker-end", (edge) => isMajorNode(edge.source) || isMajorNode(edge.target) ? "url(#arrow-used-in-proof)" : null);
@@ -1724,7 +1696,7 @@ function draw() {
       .force("x", d3.forceX((item) => item.id === state.focusId || item.id === coreId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId || item.id === coreId ? 0.94 : routeSides.has(item.id) && routeSides.get(item.id) !== 0 ? 0.42 : 0.12))
       .force("charge", d3.forceManyBody().strength(state.focusId ? -230 : -180))
       .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
-      .force("labels", labelCollisionForce(nodes))
+      .force("labels", horizontalLabelCollisionForce(nodes))
       .force("top-down", topDownForce(edges, ranks, coreId))
       .alpha(0.22)
       .alphaDecay(0.16)
