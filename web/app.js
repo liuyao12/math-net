@@ -103,6 +103,7 @@ const state = {
   inspectionAnchor: null,
   rankTransition: null,
   rankTransitionFrame: null,
+  rankSettleStarts: null,
   revealPaused: false,
   revealPauseReason: null,
   inspectionPaused: false,
@@ -1017,31 +1018,45 @@ function expandNodeDependencies(nodeId, redraw = true) {
   return true;
 }
 
-function animateExpandedNodeToRank(nodeSelection, linkSelection, nodes) {
-  const transition = state.rankTransition;
-  if (!transition) return;
-  const node = nodes.find((item) => item.id === transition.id);
-  if (!node || !Number.isFinite(transition.x) || !Number.isFinite(transition.y)) {
+function animateRankLockedSettle(nodeSelection, linkSelection, nodes) {
+  const starts = new Map(state.rankSettleStarts || []);
+  if (state.rankTransition) starts.set(state.rankTransition.id, { x: state.rankTransition.x, y: state.rankTransition.y });
+  if (!starts.size) return;
+  const ends = new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
+  const moving = [...starts].filter(([id, start]) => {
+    const end = ends.get(id);
+    return end && (Math.abs(start.x - end.x) > 1 || Math.abs(start.y - end.y) > 1);
+  });
+  if (!moving.length) {
+    state.rankSettleStarts = null;
     state.rankTransition = null;
     return;
   }
-  const end = { x: node.x, y: node.y };
   const startTime = performance.now();
-  const duration = 460;
-  const ease = (time) => 1 - (1 - time) ** 3;
+  const duration = 720;
+  const ease = (time) => (1 - Math.exp(-6 * time)) / (1 - Math.exp(-6));
   const update = (now) => {
     const progress = Math.min(1, (now - startTime) / duration);
     const amount = ease(progress);
-    node.x = transition.x + (end.x - transition.x) * amount;
-    node.y = transition.y + (end.y - transition.y) * amount;
+    moving.forEach(([id, start]) => {
+      const node = nodes.find((item) => item.id === id);
+      const end = ends.get(id);
+      node.x = start.x + (end.x - start.x) * amount;
+      node.y = start.y + (end.y - start.y) * amount;
+    });
     nodeSelection.attr("transform", (item) => `translate(${item.x},${item.y})`);
     linkSelection.attr("d", (edge) => routedLinkPath(edge, nodes));
     if (progress < 1) state.rankTransitionFrame = requestAnimationFrame(update);
     else {
-      node.x = end.x;
-      node.y = end.y;
-      state.layoutPositions.set(node.id, end);
+      moving.forEach(([id]) => {
+        const node = nodes.find((item) => item.id === id);
+        const end = ends.get(id);
+        node.x = end.x;
+        node.y = end.y;
+        state.layoutPositions.set(node.id, end);
+      });
       state.rankTransition = null;
+      state.rankSettleStarts = null;
       state.rankTransitionFrame = null;
     }
   };
@@ -1393,36 +1408,10 @@ function curvedLinkPath(edge) {
 }
 
 function routedLinkPath(edge, nodes = []) {
-  const offset = edge.parallelOffset || 0;
-  const x1 = edge.source.x + offset;
-  const y1 = edge.source.y;
-  const x2 = edge.target.x + offset;
-  const y2 = edge.target.y;
-  const dy = y2 - y1;
-  if (Math.abs(dy) < 1) return curvedLinkPath(edge);
-  const obstacles = nodes
-    .filter((node) => node.id !== edge.source.id && node.id !== edge.target.id)
-    .filter((node) => Number.isFinite(node.x) && Number.isFinite(node.y))
-    .map((node) => ({
-      node,
-      halfWidth: Math.max(14, labelFor(node).length * 3.2 + 10),
-      halfHeight: 13,
-    }))
-    .filter(({ node }) => node.y > Math.min(y1, y2) + 12 && node.y < Math.max(y1, y2) - 12)
-    .sort((left, right) => Math.abs(left.node.y - (y1 + dy * 0.5)) - Math.abs(right.node.y - (y1 + dy * 0.5)));
-  const obstacle = obstacles.find(({ node, halfWidth, halfHeight }) => {
-    const t = (node.y - y1) / dy;
-    const pathX = x1 + (x2 - x1) * t;
-    return Math.abs(pathX - node.x) < halfWidth + 7 && Math.abs(node.y - (y1 + dy * t)) < halfHeight + 7;
-  });
-  if (!obstacle) return curvedLinkPath(edge);
-  const { node, halfWidth, halfHeight } = obstacle;
-  const t = (node.y - y1) / dy;
-  const pathX = x1 + (x2 - x1) * t;
-  const detourX = pathX <= node.x ? node.x - halfWidth - 12 : node.x + halfWidth + 12;
-  const beforeY = node.y - halfHeight - 7;
-  const afterY = node.y + halfHeight + 7;
-  return `M${x1},${y1} C${x1},${y1 + dy * 0.28} ${detourX},${beforeY - 18} ${detourX},${beforeY} C${detourX},${afterY} ${x2},${y2 - dy * 0.28} ${x2},${y2}`;
+  // Deliberately no obstacle-routing detours here. A cubic with endpoint
+  // tangents vertical and control points between its endpoint heights is
+  // monotone in y, so it crosses each horizontal line at most once.
+  return curvedLinkPath(edge);
 }
 
 function separateParallelProofEdges(edges) {
@@ -1569,6 +1558,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
   });
   applyProofRouteLanes(nodes, routeSides, width, coreId);
   nodes.forEach((node) => { node.x = node.targetX; });
+  const settleStarts = new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
   // Run forces only within each fixed rank. `fy` prevents the simulation
   // from changing proof height, while charge, link tension, and collision
   // make siblings and neighboring routes separate horizontally.
@@ -1586,6 +1576,10 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     .stop()
     .tick(120);
   enforceRouteLaneBounds(nodes, routeSides, width);
+  state.rankSettleStarts = [...settleStarts.entries()].filter(([id, start]) => {
+    const node = nodes.find((item) => item.id === id);
+    return Math.abs(start.x - node.x) > 1 || Math.abs(start.y - node.y) > 1;
+  });
   nodes.forEach((node) => {
     node.y = node.rankY;
     node.fx = null;
@@ -1758,8 +1752,8 @@ function draw() {
     rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     link.attr("d", (edge) => routedLinkPath(edge, nodes))
-      .attr("marker-end", (edge) => isMajorNode(edge.source) || isMajorNode(edge.target) ? "url(#arrow-used-in-proof)" : null);
-    animateExpandedNodeToRank(node, link, nodes);
+      .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
+    animateRankLockedSettle(node, link, nodes);
     updateHighlight();
     return;
   }
