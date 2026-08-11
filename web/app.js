@@ -813,11 +813,20 @@ function renderProofLegend() {
 
 function nodeNeighbors(nodeId) {
   const map = nodeMap();
-  return state.graph.edges.flatMap((edge) => {
-    if (edge.source.id === nodeId) return [{ relation: edge.relation, node: map.get(edge.target.id), direction: "out" }];
-    if (edge.target.id === nodeId) return [{ relation: edge.relation, node: map.get(edge.source.id), direction: "in" }];
-    return [];
-  }).filter((item) => item.node);
+  const neighbors = new Map();
+  state.graph.edges.forEach((edge) => {
+    const direction = edge.source.id === nodeId ? "out" : edge.target.id === nodeId ? "in" : null;
+    if (!direction) return;
+    const neighborId = direction === "out" ? edge.target.id : edge.source.id;
+    const neighbor = map.get(neighborId);
+    if (!neighbor || neighborId === nodeId) return;
+    const key = `${direction}:${neighborId}`;
+    if (!neighbors.has(key)) neighbors.set(key, { relation: edge.relation, node: neighbor, direction, proofs: new Set() });
+    if (edge.proof) neighbors.get(key).proofs.add(edge.proof);
+  });
+  return [...neighbors.values()]
+    .map((item) => ({ ...item, proofs: [...item.proofs] }))
+    .sort((left, right) => Number(isMajorNode(right.node)) - Number(isMajorNode(left.node)) || left.node.label.localeCompare(right.node.label));
 }
 
 function selectNode(nodeId, redraw = false) {
@@ -928,9 +937,12 @@ function renderInspector() {
   const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(proof.color || proofColor(proof.id))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
+  const relationRows = (entries, label) => entries.length
+    ? `<div class="detail-label">${label} · ${entries.length}</div>${entries.map(({ node: neighbor, proofs: proofIds }) => `<div class="relation-row"><span class="relation-name">${proofIds.length > 1 ? `${proofIds.length} proof routes` : "direct use"}</span><button class="neighbor" data-neighbor="${escapeHtml(neighbor.id)}">${escapeHtml(neighbor.label)}</button></div>`).join("")}`
+    : "";
   const neighborRows = [
-    incoming.length ? `<div class="detail-label">Proof dependencies</div>${incoming.map(({ node: neighbor }) => `<div class="relation-row"><span class="relation-name">used in proof</span><button class="neighbor" data-neighbor="${escapeHtml(neighbor.id)}">${escapeHtml(neighbor.label)}</button></div>`).join("")}` : "",
-    outgoing.length ? `<div class="detail-label">Used in these proofs</div>${outgoing.map(({ node: neighbor }) => `<div class="relation-row"><span class="relation-name">proof target</span><button class="neighbor" data-neighbor="${escapeHtml(neighbor.id)}">${escapeHtml(neighbor.label)}</button></div>`).join("")}` : "",
+    relationRows(incoming, "Direct proof dependencies"),
+    relationRows(outgoing, "Used by direct proof targets"),
   ].join("");
   content.innerHTML = `
     <span class="node-kind ${escapeHtml(declarationClassFor(node))}" style="color:${escapeHtml(declarationColorFor(node))};background:${escapeHtml(declarationBackgroundFor(node))}">${escapeHtml(declarationKindFor(node))}</span>
@@ -947,8 +959,8 @@ function renderInspector() {
     ${node.verification?.note ? `<div class="detail-block"><div class="detail-label">Verification note</div><p>${escapeHtml(node.verification.note)}</p></div>` : ""}
     ${formalizations ? `<div class="detail-block"><div class="detail-label">Formalization</div>${formalizations}</div>` : ""}
     ${github && !formalizations ? `<div class="detail-block"><div class="detail-label">Source</div><div class="formalization"><a href="${escapeHtml(github)}" target="_blank" rel="noreferrer">Open declaration on GitHub ↗</a></div></div>` : ""}
+    ${proofs ? `<div class="detail-block"><div class="detail-label">Proof routes · select one to filter dependencies</div><div class="proof-list">${proofs}</div></div>` : ""}
     <div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>
-    ${proofs ? `<div class="detail-block"><div class="detail-label">Proofs · select one to filter dependencies</div><div class="proof-list">${proofs}</div></div>` : ""}
     ${neighborRows ? `<div class="detail-block"><div class="neighbor-list">${neighborRows}</div></div>` : ""}
   `;
   content.querySelectorAll("[data-neighbor]").forEach((button) => button.addEventListener("click", () => selectNode(button.dataset.neighbor)));
