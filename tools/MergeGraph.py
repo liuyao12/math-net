@@ -161,6 +161,17 @@ def annotate_presentation(nodes: list[dict]) -> None:
             or last.startswith("inst")
             or "._proof_" in declaration
             or ".match_" in declaration
+            # Coercion/projection names are useful to the elaborator but are
+            # rarely explanatory landmarks in a mathematical proof. Restrict
+            # this rule to foundational modules so named maps elsewhere stay
+            # visible.
+            or (
+                declaration_kind == "definition"
+                and last.startswith("to")
+                and len(last) > 2
+                and last[2:3].isupper()
+                and node.get("locator", "").startswith(foundational_definition_modules)
+            )
         )
         if generated:
             category = "implementation"

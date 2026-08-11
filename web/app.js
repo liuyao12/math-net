@@ -204,13 +204,28 @@ function githubUrlFor(node, item = null) {
 function declarationSource(text, name) {
   const short = name.split(".").pop();
   const escaped = short.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const declaration = new RegExp(`^\\s*(theorem|lemma|def|noncomputable def|example|axiom|instance|class|structure|inductive)\\s+${escaped}\\b`, "m");
+  const declaration = new RegExp(`^\\s*(?:(?:protected|private)\\s+)?(?:(?:noncomputable)\\s+)?(theorem|lemma|def|abbrev|example|axiom|opaque|instance|class|structure|inductive)\\s+${escaped}\\b`, "m");
   const match = declaration.exec(text);
   if (!match) return null;
   const start = text.lastIndexOf("\n", match.index) + 1;
   const rest = text.slice(match.index + match[0].length);
   const next = rest.search(/\n(?=\s*(?:theorem|lemma|def|noncomputable def|example|axiom)\s+)/);
   return text.slice(start, next < 0 ? text.length : match.index + match[0].length + next + 1).trim();
+}
+
+function compactLeanSource(source, { maxLines = 32, maxLineLength = 260 } = {}) {
+  const lines = String(source).trim().split("\n");
+  const shortened = lines.map((line) => line.length <= maxLineLength
+    ? line
+    : `${line.slice(0, maxLineLength - 42)}  -- … ${line.length - maxLineLength + 42} characters omitted`);
+  if (shortened.length <= maxLines) return shortened.join("\n");
+  const head = Math.ceil(maxLines * 0.7);
+  const tail = maxLines - head;
+  return [
+    ...shortened.slice(0, head),
+    `-- … ${shortened.length - head - tail} source lines omitted; open the full file on GitHub`,
+    ...shortened.slice(-tail),
+  ].join("\n");
 }
 
 async function loadProofSource(node, container, request) {
@@ -231,7 +246,9 @@ async function loadProofSource(node, container, request) {
     const text = await response.text();
     if (request !== state.sourceRequest) return;
     const source = declarationSource(text, formalization?.name || proof?.declaration || node.namespace || node.label);
-    const code = source || `-- Source file: ${file}\n-- The declaration is elaborated or generated in this module.\n\n${text}`;
+    const code = source
+      ? compactLeanSource(source)
+      : `-- Source file: ${file}\n-- ${node.label} is elaborated or generated in this module.\n-- Its declaration cannot be isolated reliably from source text; use the GitHub link for the full file.`;
     container.innerHTML = `<code>${highlightLean(code)}</code>`;
     container.classList.remove("pending");
   } catch (error) {
