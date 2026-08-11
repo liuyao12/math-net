@@ -1261,7 +1261,10 @@ function proofRouteSides(nodes, edges, focusId) {
     if (!groups.includes(key)) groups.push(key);
     groupForProof.set(proof.id, key);
   });
-  const groupSide = new Map(groups.map((group, index) => [group, groups.length < 2 ? 0 : index === 0 ? -1 : index === groups.length - 1 ? 1 : 0]));
+  // Proof families occupy evenly spaced horizontal lanes. With two routes
+  // this is left/right; with three or more, the lanes remain evenly spaced
+  // instead of collapsing the middle alternatives onto the shared spine.
+  const groupSide = new Map(groups.map((group, index) => [group, index - (groups.length - 1) / 2]));
   const incoming = new Map();
   edges.forEach((edge) => {
     if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
@@ -1480,18 +1483,45 @@ function projectStrictTopDown(nodes, edges, ranks, gap = 30) {
   }
 }
 
-function refineDirectedLayout(nodes, edges, ranks, width, height, coreId) {
+function applyProofRouteLanes(nodes, routeSides, width, coreId) {
+  const sides = [...new Set(routeSides.values())].filter((side) => side !== 0);
+  if (!sides.length) return;
+  const center = width / 2;
+  const laneGap = Math.min(290, Math.max(130, width / (Math.max(...sides.map(Math.abs)) * 2 + 2)));
+  const bySide = d3.group(nodes.filter((node) => routeSides.get(node.id)), (node) => routeSides.get(node.id));
+  bySide.forEach((lane, side) => {
+    lane.sort((left, right) => left.targetY - right.targetY || left.id.localeCompare(right.id));
+    lane.forEach((node, index) => {
+      const withinLane = Math.max(-laneGap * 0.55, Math.min(laneGap * 0.55, (index - (lane.length - 1) / 2) * 34));
+      const laneX = center + side * laneGap + withinLane;
+      // Dagre determines local order; the lane is a strong geometric cue,
+      // not an artificial disconnection of genuine cross-route edges.
+      node.targetX = node.targetX * 0.22 + laneX * 0.78;
+    });
+  });
+  const coreSide = routeSides.get(coreId);
+  if (coreSide) {
+    const core = nodes.find((node) => node.id === coreId);
+    if (core) {
+      core.fx = null;
+      core.fy = null;
+    }
+  }
+}
+
+function refineDirectedLayout(nodes, edges, ranks, width, height, coreId, routeSides) {
   nodes.forEach((node) => {
     node.targetX = node.x;
     node.targetY = node.y;
     node.vx = 0;
     node.vy = 0;
   });
+  applyProofRouteLanes(nodes, routeSides, width, coreId);
   // This simulation is deliberately synchronous. It gives force-directed
   // branch placement without the continual drift and flicker of a live
   // simulation, and the projection below is a hard top-to-bottom rule.
   d3.forceSimulation(nodes)
-    .force("x", d3.forceX((node) => node.targetX).strength((node) => node.id === coreId || node.id === state.focusId ? 0.34 : 0.12))
+    .force("x", d3.forceX((node) => node.targetX).strength((node) => node.id === state.focusId ? 0.34 : node.id === coreId && !routeSides.get(node.id) ? 0.34 : 0.18))
     .force("y", d3.forceY((node) => node.targetY).strength((node) => node.id === coreId || node.id === state.focusId ? 0.24 : 0.045))
     .force("link", d3.forceLink(edges).id((node) => node.id).distance(80).strength(0.09))
     .force("charge", d3.forceManyBody().strength(-115))
@@ -1666,7 +1696,7 @@ function draw() {
   state.simulation = null;
   if (state.focusId) {
     directedLayout(nodes, edges, width, height);
-    refineDirectedLayout(nodes, edges, ranks, width, height, coreId);
+    refineDirectedLayout(nodes, edges, ranks, width, height, coreId, routeSides);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     link.attr("d", (edge) => routedLinkPath(edge, nodes))
       .attr("marker-end", (edge) => isMajorNode(edge.source) || isMajorNode(edge.target) ? "url(#arrow-used-in-proof)" : null);
