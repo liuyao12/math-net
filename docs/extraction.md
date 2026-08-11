@@ -57,11 +57,13 @@ mathematical depth; the UI labels it as such.
 The merge pass also attaches a presentation role to each declaration:
 `mathematical`, `supporting`, `routine`, or `implementation`. This is an
 explicit heuristic for reading the graph, never a Lean-level classification.
-Generated constructors/recursors are implementation details; small theorems
-from foundational `*.Defs` modules are routine details (for example `mul_one`
-and `Nat.prime_two`). Routine and implementation nodes are suppressed by
-default and visually contracted, but remain in the extracted graph and can be
-revealed with the background-details control.
+Generated constructors/recursors and parent-structure projections are
+implementation details; the latter are detected from Lean's own structure
+metadata (not from a list of projection names). Small theorems from
+foundational `*.Defs` modules are routine details (for example `mul_one` and
+`Nat.prime_two`). Routine and implementation nodes are suppressed by default
+and visually contracted, but remain in the extracted graph and can be revealed
+with the background-details control.
 
 `tools/MergeGraph.py` then merges proposition nodes only when their elaborated
 statements are identical. The comparison registry and `CheckComparison.lean`

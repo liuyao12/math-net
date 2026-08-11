@@ -111,7 +111,14 @@ private def dependencyDepths (env : Environment) (targets : Array Name) : Array 
 private def dependencyNames (env : Environment) (targets : Array Name) : Array Name :=
   (dependencyDepths env targets).map (·.1) |>.qsort Name.lt
 
-private def projectNode (env : Environment) (ci : ConstantInfo) (name : Name) (index : Nat) : Json :=
+private def structuralProjectionNames (env : Environment) : NameSet :=
+  env.constants.fold (init := ({} : NameSet)) fun names structureName _ =>
+    match getStructureInfo? env structureName with
+    | some info => info.fieldInfo.foldl (init := names) fun names field =>
+        names.insert field.projFn
+    | none => names
+
+private def projectNode (env : Environment) (projections : NameSet) (ci : ConstantInfo) (name : Name) (index : Nat) : Json :=
   let (declarationKind, role) := declarationKind ci
   Json.mkObj [
     ("id", s!"decl-{index}"),
@@ -121,6 +128,7 @@ private def projectNode (env : Environment) (ci : ConstantInfo) (name : Name) (i
     ("label", shortName name),
     ("statement", toString ci.type),
     ("namespace", name.toString),
+    ("structuralProjection", Json.bool (projections.contains name)),
     ("module", moduleOf env name),
     ("formalizations", Json.arr #[Json.mkObj [
       ("language", "Lean"),
@@ -134,7 +142,7 @@ private def projectNode (env : Environment) (ci : ConstantInfo) (name : Name) (i
     ])
   ]
 
-private def dependencyNode (env : Environment) (name : Name) (index : Nat) (module : String) (depth : Nat) : Json :=
+private def dependencyNode (env : Environment) (projections : NameSet) (name : Name) (index : Nat) (module : String) (depth : Nat) : Json :=
   let (kind, role, statement) := match env.find? name with
     | some ci => let (kind, role) := declarationKind ci; (kind, role, toString ci.type)
     | none => ("definition", "definition", s!"Lean declaration {name}")
@@ -146,6 +154,7 @@ private def dependencyNode (env : Environment) (name : Name) (index : Nat) (modu
     ("label", shortName name),
     ("statement", statement),
     ("namespace", name.toString),
+    ("structuralProjection", Json.bool (projections.contains name)),
     ("locator", if module.startsWith "Mathlib." then s!"mathlib/{module}" else s!"computable-analysis/{module}"),
     ("citation", name.toString),
     ("dependencyDepth", toJson depth),
@@ -191,15 +200,16 @@ elab_rules : command
   | `(build_project_graph) => do
     let env ← getEnv
     let targets := projectNames env
+    let projections := structuralProjectionNames env
     let depths := dependencyDepths env targets
     let dependencies := depths.map (·.1) |>.qsort Name.lt
     let nodes := targets.mapIdx (fun i name =>
       match env.find? name with
-      | some ci => projectNode env ci name i
+      | some ci => projectNode env projections ci name i
       | none => Json.mkObj [("id", s!"decl-{i}"), ("kind", "proposition"),
           ("role", "theorem"), ("label", shortName name),
           ("statement", s!"Lean declaration {name}")]) ++
-      dependencies.mapIdx (fun i name => dependencyNode env name i (moduleOf env name)
+      dependencies.mapIdx (fun i name => dependencyNode env projections name i (moduleOf env name)
         (depths.find? (·.1 == name) |>.map (·.2) |>.getD 1))
     let edges := dependencyEdges env targets dependencies
     let report := Json.mkObj [

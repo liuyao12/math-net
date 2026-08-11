@@ -137,56 +137,32 @@ def annotate_presentation(nodes: list[dict]) -> None:
     inspectable heuristic keeps all of that plumbing in the graph while
     letting a reader see the mathematical spine first.
     """
-    implementation_kinds = {"constructor", "recursor", "quotient"}
-    implementation_suffixes = {
-        "mk", "rec", "recOn", "casesOn", "brecOn", "below", "noConfusion",
-        "inst", "toFun", "toNat", "toInt", "toRat", "toReal", "toAdd",
-        "toMul", "toOne", "toPow", "toNPow", "toLE", "toPreorder",
-    }
-    semantic_definition_prefixes = (
-        "Real.", "Complex.", "Nat.", "Int.", "Rat.", "Polynomial.",
-        "MeasureTheory.", "Analysis.", "Topology.", "Calculus.",
-    )
     foundational_definition_modules = (
         "mathlib/Mathlib.Algebra.", "mathlib/Mathlib.Data.",
         "mathlib/Mathlib.Logic.", "mathlib/Mathlib.Init.",
     )
+
+    def foundational(node: dict) -> bool:
+        return node.get("locator", "").startswith(foundational_definition_modules)
+
     for node in nodes:
-        declaration = node.get("namespace", node.get("label", ""))
         declaration_kind = node.get("declarationKind", "")
-        last = declaration.rsplit(".", 1)[-1]
-        generated = (
-            declaration_kind in implementation_kinds
-            or last in implementation_suffixes
-            or last.startswith("inst")
-            or "._proof_" in declaration
-            or ".match_" in declaration
-            # Coercion/projection names are useful to the elaborator but are
-            # rarely explanatory landmarks in a mathematical proof. Restrict
-            # this rule to foundational modules so named maps elsewhere stay
-            # visible.
-            or (
-                declaration_kind == "definition"
-                and last.startswith("to")
-                and len(last) > 2
-                and last[2:3].isupper()
-                and node.get("locator", "").startswith(foundational_definition_modules)
-            )
-        )
-        if generated:
+        declaration = node.get("namespace", node.get("label", ""))
+        generated = declaration_kind in {"constructor", "recursor", "quotient"} or "._proof_" in declaration or ".match_" in declaration
+        if generated or node.get("structuralProjection", False):
             category = "implementation"
-            reason = "Lean-generated constructor, recursor, projection, instance, or internal helper."
+            reason = "Kernel-generated declaration or a structure projection identified by Lean's structure metadata."
         elif (
             declaration_kind in {"theorem", "opaque"}
             and node.get("locator", "").endswith(".Defs")
-            and node.get("locator", "").startswith(foundational_definition_modules)
+            and foundational(node)
         ):
             category = "routine"
             reason = "Routine foundational lemma from a definitions module; retained but suppressed in the explanatory view."
         elif node.get("kind") == "proposition" or declaration_kind in {"theorem", "opaque", "axiom", "proposition"}:
             category = "mathematical"
             reason = "Checked mathematical proposition or theorem declaration."
-        elif declaration_kind == "definition" and declaration.startswith(semantic_definition_prefixes):
+        elif declaration_kind == "definition" and not foundational(node) and "->" in node.get("statement", ""):
             category = "mathematical"
             reason = "Named mathematical definition used in the displayed proof landscape."
         else:

@@ -85,7 +85,8 @@
         "verification": { "$ref": "#/$defs/verification" },
         "comparison": { "$ref": "#/$defs/comparison" },
         "importance": { "$ref": "#/$defs/importance" },
-        "presentation": { "$ref": "#/$defs/presentation" }
+        "presentation": { "$ref": "#/$defs/presentation" },
+        "structuralProjection": { "type": "boolean" }
       }
     },
     "verification": {
