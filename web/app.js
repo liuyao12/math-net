@@ -56,6 +56,7 @@ const VERIFICATION = {
   informal: { glyph: "?", label: "Informal", className: "informal" },
 };
 const ROUTE_KIND_LABELS = {
+  local: "local proof",
   "library-complete": "library baseline",
   "pedagogical-narrow": "narrow pedagogical route",
   "foundation-comparison": "foundation comparison",
@@ -610,8 +611,16 @@ function renderProofLegend() {
   const container = $("#proof-legend");
   if (!container || !state.graph) return;
   const labels = proofLabels();
+  const proofMeta = new Map();
+  state.graph.nodes.forEach((node) => (node.proofs || []).forEach((proof) => proofMeta.set(proof.id, proof)));
   const usedProofs = new Set(state.graph.edges.map((edge) => edge.proof).filter(Boolean));
-  const entries = [...usedProofs].map((proofId) => ({ id: proofId, label: labels.get(proofId) || proofId }))
+  const grouped = new Map();
+  [...usedProofs].forEach((proofId) => {
+    const proof = proofMeta.get(proofId);
+    const key = proof?.routeKind || proofId;
+    if (!grouped.has(key)) grouped.set(key, { id: proofId, label: ROUTE_KIND_LABELS[key] || labels.get(proofId) || key });
+  });
+  const entries = [...grouped.values()]
     .sort((left, right) => left.label.localeCompare(right.label));
   container.innerHTML = entries.length
     ? `<span class="legend-heading">Arrow colors · proof routes</span>${entries.map((entry) => `<span class="legend-item"><span class="legend-line" style="background:${escapeHtml(proofColor(entry.id))}"></span><span>${escapeHtml(entry.label)}</span></span>`).join("")}`
