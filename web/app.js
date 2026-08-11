@@ -93,6 +93,7 @@ const state = {
   revealedIds: new Set(),
   layoutPositions: new Map(),
   layoutVelocities: new Map(),
+  pinnedPositions: new Map(),
   expandedDistances: new Map(),
   inspectionAnchor: null,
   revealPaused: false,
@@ -572,6 +573,7 @@ function populateTheoremSelect() {
       state.selectedId = null;
       state.layoutPositions.clear();
       state.layoutVelocities.clear();
+      state.pinnedPositions.clear();
       state.expandedDistances.clear();
       state.inspectionAnchor = null;
       state.revealedIds.clear();
@@ -591,6 +593,7 @@ function populateTheoremSelect() {
     state.selectedProofId = null;
     state.layoutPositions.clear();
     state.layoutVelocities.clear();
+    state.pinnedPositions.clear();
     state.expandedDistances.clear();
     state.inspectionAnchor = null;
     state.revealedIds.clear();
@@ -1066,8 +1069,9 @@ function directedLayout(nodes, edges, width, height) {
   const offsetY = Math.max(28, (height - (maxY - minY) * scale) * 0.68) - minY * scale;
   positions.forEach((position) => {
     const node = nodes.find((item) => item.id === position.id);
-    node.x = position.x * scale + offsetX;
-    node.y = position.y * scale + offsetY;
+    const pinned = state.pinnedPositions.get(node.id);
+    node.x = pinned?.x ?? position.x * scale + offsetX;
+    node.y = pinned?.y ?? position.y * scale + offsetY;
     node.vx = 0;
     node.vy = 0;
     node.targetX = node.x;
@@ -1429,7 +1433,7 @@ function draw() {
     // not turn into a field of tiny overlapping triangles.
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = event.y; item.fx = event.x; item.fy = event.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = event.y; item.fx = event.x; item.fy = event.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
   node.append("circle").attr("class", "node-dot").classed("core", (item) => item.id === coreId).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("landmark", (item) => state.showLandmarks && isLandmark(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.id === coreId ? 12 : item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", declarationColorFor);
   node.append("text").attr("class", "node-label").classed("core", (item) => item.id === coreId).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 16).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (isSuppressedNode(item) && item.id !== state.selectedId && item.id !== state.focusId) || (item.id !== coreId && item.label.length > 31 && nodes.length > 12));
   const expanders = node.append("g").attr("class", "node-expand").attr("transform", "translate(0,-18)")
@@ -1548,6 +1552,7 @@ $("#reset").addEventListener("click", () => {
   state.selectedProofId = null;
   state.layoutPositions.clear();
   state.layoutVelocities.clear();
+  state.pinnedPositions.clear();
   state.expandedDistances.clear();
   state.inspectionAnchor = null;
   state.revealedIds.clear();
@@ -1586,6 +1591,7 @@ $("#clear-selection").addEventListener("click", () => {
   state.selectedProofId = null;
   state.layoutPositions.clear();
   state.layoutVelocities.clear();
+  state.pinnedPositions.clear();
   state.expandedDistances.clear();
   state.inspectionAnchor = null;
   state.revealedIds.clear();
