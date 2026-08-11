@@ -320,6 +320,20 @@ function isExpansionBoundary(node) {
   return declarationKindFor(node) === "inductive";
 }
 
+function ambientNodesForFocus(nodes) {
+  const focus = nodes.find((node) => node.id === state.focusId);
+  if (focus?.comparison?.registry === "irrational-sqrt-two" || focus?.namespace === "MathNetwork.SqrtTwo.irrational") {
+    return new Set(nodes.filter((node) => node.namespace === "Real" || node.label === "Real").map((node) => node.id));
+  }
+  return new Set();
+}
+
+function displayLabelFor(node) {
+  if (node?.namespace === "irrational_sqrt_ratCast_iff_of_nonneg") return "√q irrational ↔ q is not a rational square";
+  if (node?.namespace === "Real" || node?.label === "Real") return "ℝ · real numbers";
+  return node?.label || "unnamed declaration";
+}
+
 function availableDeclarationKinds() {
   return [...new Set((state.graph?.nodes || []).map(declarationKindFor))].sort((left, right) => {
     const order = ["theorem", "opaque", "conjecture", "definition", "quotient", "inductive", "constructor", "recursor"];
@@ -519,9 +533,11 @@ function visibleGraph() {
   const coreDependencies = coreId
     ? new Set([...upstreamDependencies(coreId, edgeData)].filter((id) => isMathematicalNode(nodesById.get(id))))
     : new Set();
-  const forcedIds = new Set([...corePath, ...coreDependencies]);
+  const ambientIds = ambientNodesForFocus(state.graph.nodes);
+  const forcedIds = new Set([...corePath, ...coreDependencies, ...ambientIds]);
+  const manuallyExpandedIds = new Set(state.expandedDistances.keys());
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(declarationKindFor(node)) &&
-    (!isSuppressedNode(node) || node.id === state.focusId || node.id === state.selectedId || forcedIds.has(node.id)));
+    (!isSuppressedNode(node) || node.id === state.focusId || node.id === state.selectedId || forcedIds.has(node.id) || manuallyExpandedIds.has(node.id)));
   state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData, 5) : new Map();
   state.expandedDistances.forEach((distance, id) => {
     if (!state.focusDistances.has(id) || distance < state.focusDistances.get(id)) state.focusDistances.set(id, distance);
@@ -578,7 +594,10 @@ function visibleGraph() {
   }
   const connected = new Set();
   visibleEdges.forEach((edge) => { connected.add(edge.source.id); connected.add(edge.target.id); });
-  const connectedNodes = visibleNodes.filter((node) => node.id === state.focusId || connected.has(node.id));
+  // Ambient boundary nodes, such as ℝ in the √2 view, are deliberately
+  // retained even when their immediate implementation bridge is collapsed.
+  // They name the mathematical object in play without opening its foundation.
+  const connectedNodes = visibleNodes.filter((node) => node.id === state.focusId || forcedIds.has(node.id) || connected.has(node.id));
   const connectedIds = new Set(connectedNodes.map((node) => node.id));
   return { nodes: connectedNodes, edges: visibleEdges.filter((edge) => connectedIds.has(edge.source.id) && connectedIds.has(edge.target.id)) };
 }
@@ -819,7 +838,8 @@ function resumeRevealIfVisible() {
 }
 
 function labelFor(node) {
-  return node.label.length > 29 ? `${node.label.slice(0, 27)}…` : node.label;
+  const label = displayLabelFor(node);
+  return label.length > 29 ? `${label.slice(0, 27)}…` : label;
 }
 
 function verificationFor(node) {
@@ -923,7 +943,7 @@ function selectProof(proofId) {
 
 function expandNodeDependencies(nodeId, redraw = true) {
   const node = nodeMap().get(nodeId);
-  if (!node || isExpansionBoundary(node)) return;
+  if (!node) return;
   if (Number.isFinite(node.x) && Number.isFinite(node.y)) {
     state.inspectionAnchor = { id: nodeId, x: node.x, y: node.y };
   }
@@ -957,7 +977,6 @@ function scheduleSimulationStop(delay = 900) {
 }
 
 function hasHiddenDependencies(nodeId, visibleNodes) {
-  if (isExpansionBoundary(nodeMap().get(nodeId))) return false;
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
   return state.graph.edges.some((edge) => edge.relation === "used-in-proof" && edge.target.id === nodeId &&
     !visibleIds.has(edge.source.id) && state.kinds.has(declarationKindFor(nodeMap().get(edge.source.id))));
@@ -1003,7 +1022,7 @@ function renderInspector() {
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
   const relationRows = (entries, label) => entries.length
-    ? `<div class="detail-label">${label} · ${entries.length}</div>${entries.map(({ node: neighbor, proofs: proofIds }) => `<div class="relation-row"><span class="relation-name">${proofIds.length > 1 ? `${proofIds.length} proof routes` : "direct use"}</span><button class="neighbor" data-neighbor="${escapeHtml(neighbor.id)}">${escapeHtml(neighbor.label)}</button></div>`).join("")}`
+    ? `<div class="detail-label">${label} · ${entries.length}</div>${entries.map(({ node: neighbor, proofs: proofIds }) => `<div class="relation-row"><span class="relation-name">${proofIds.length > 1 ? `${proofIds.length} proof routes` : "direct use"}</span><button class="neighbor" data-neighbor="${escapeHtml(neighbor.id)}">${escapeHtml(displayLabelFor(neighbor))}</button></div>`).join("")}`
     : "";
   const neighborRows = [
     relationRows(incoming, "Direct proof dependencies"),
@@ -1022,7 +1041,7 @@ function renderInspector() {
   content.innerHTML = `
     <span class="node-kind ${escapeHtml(declarationClassFor(node))}" style="color:${escapeHtml(declarationColorFor(node))};background:${escapeHtml(declarationBackgroundFor(node))}">${escapeHtml(declarationKindFor(node))}</span>
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
-    <h2>${escapeHtml(node.label)}</h2>
+    <h2>${escapeHtml(displayLabelFor(node))}</h2>
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
@@ -1426,6 +1445,7 @@ function draw() {
   const topologyRanks = dependencyRanks(nodes, edges);
   const routeSides = proofRouteSides(nodes, edges, state.focusId);
   const coreId = state.coreId && nodes.some((node) => node.id === state.coreId) ? state.coreId : coreNodeFor(nodes);
+  const ambientIds = ambientNodesForFocus(state.graph.nodes);
   const focusDependencyIds = new Set(edges
     .filter((edge) => edge.target.id === state.focusId)
     .map((edge) => edge.source.id));
@@ -1519,13 +1539,13 @@ function draw() {
     // not turn into a field of tiny overlapping triangles.
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("focus-node", (item) => item.id === state.focusId).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = event.y; item.fx = event.x; item.fy = event.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
-  node.append("circle").attr("class", "node-dot").classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("landmark", (item) => state.showLandmarks && isLandmark(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.id === state.focusId ? 13 : item.id === coreId ? 12 : item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", declarationColorFor);
-  node.append("text").attr("class", "node-label").classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 16).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (isSuppressedNode(item) && item.id !== state.selectedId && item.id !== state.focusId) || (item.id !== coreId && item.label.length > 31 && nodes.length > 12));
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => displayLabelFor(item)).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("focus-node", (item) => item.id === state.focusId).classed("ambient-node", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = event.y; item.fx = event.x; item.fy = event.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
+  node.append("circle").attr("class", "node-dot").classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("landmark", (item) => state.showLandmarks && isLandmark(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.id === state.focusId ? 13 : item.id === coreId ? 12 : ambientIds.has(item.id) ? 8 : item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", declarationColorFor);
+  node.append("text").attr("class", "node-label").classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 16).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (isSuppressedNode(item) && item.id !== state.selectedId && item.id !== state.focusId && !ambientIds.has(item.id)) || (item.id !== coreId && !ambientIds.has(item.id) && displayLabelFor(item).length > 31 && nodes.length > 12));
   const expanders = node.append("g").attr("class", "node-expand").attr("transform", "translate(0,-18)")
     .classed("hidden", (item) => item.id !== state.selectedId || !hasHiddenDependencies(item.id, nodes))
     .attr("role", "button")
-    .attr("aria-label", (item) => `Expand dependencies of ${item.label}`)
+    .attr("aria-label", (item) => `Expand dependencies of ${displayLabelFor(item)}`)
     .on("click", (event, item) => { event.stopPropagation(); expandNodeDependencies(item.id); });
   expanders.append("circle").attr("r", 7);
   expanders.append("text").text("+");

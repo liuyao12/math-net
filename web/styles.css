@@ -236,6 +236,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-label.dimmed { opacity: 0.16; }
 .node-dot.implementation { opacity: 0.14; }
 .node-dot.supporting { opacity: 0.42; }
+.node-dot.ambient { opacity: 0.84; stroke: var(--plum); stroke-width: 2.75; }
 .node-dot.landmark { stroke: var(--gold); stroke-width: 3; }
 .node-dot.core { stroke: var(--gold); stroke-width: 4; filter: drop-shadow(0 0 3px rgba(182, 130, 28, 0.48)); }
 .node-dot.focus { stroke: var(--ink); stroke-width: 4; filter: drop-shadow(0 0 5px rgba(54, 107, 128, 0.34)); }
@@ -247,6 +248,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-label.implementation { color: var(--faint); font-size: 10px; }
 .node-label.routine { color: var(--faint); font-size: 10px; }
 .node-label.supporting { fill: var(--faint); font-size: 10px; }
+.node-label.ambient { fill: var(--plum); font-size: 11px; font-weight: 650; }
 .node-label.core { fill: var(--ink); font-size: 12px; font-weight: 700; stroke-width: 6px; }
 .node-label.focus { fill: var(--ink); font-size: 13px; font-weight: 700; stroke-width: 6px; }
 .node-label.direct-dependency { font-weight: 650; }
