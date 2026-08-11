@@ -903,10 +903,11 @@ function curvedLinkPath(edge) {
   return `M${x1},${y1} C${x1},${y1 + dy * 0.42} ${x2},${y2 - dy * 0.42} ${x2},${y2}`;
 }
 
-function topDownForce(edges, gap = 26) {
+function topDownForce(edges, ranks, gap = 26) {
   const force = () => {
     edges.forEach((edge) => {
       if (edge.source === edge.target) return;
+      if ((ranks.get(edge.source.id) || 0) >= (ranks.get(edge.target.id) || 0)) return;
       const overlap = edge.source.y + gap - edge.target.y;
       if (overlap > 0) {
         const shift = overlap * 0.45;
@@ -923,6 +924,7 @@ function enforceTopDown(nodes, edges, ranks, focusId, gap = 26) {
   for (let pass = 0; pass < ordered.length; pass += 1) {
     edges.forEach((edge) => {
       if (edge.source === edge.target) return;
+      if ((ranks.get(edge.source.id) || 0) >= (ranks.get(edge.target.id) || 0)) return;
       const overlap = edge.source.y + gap - edge.target.y;
       if (overlap <= 0) return;
       if (edge.target.id === focusId) {
@@ -1102,7 +1104,7 @@ function draw() {
   // Focused neighborhoods should settle organically.  The rank calculation
   // supplies only a soft vertical preference; it must not turn the graph into
   // a stack of quantized horizontal bands.
-  const staticLayout = true;
+  const staticLayout = nodes.length > 500;
   if (staticLayout) {
     link.attr("d", curvedLinkPath);
     node.attr("transform", (item) => state.inspectionAnchor?.id === item.id
@@ -1120,11 +1122,11 @@ function draw() {
     state.simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(edges).id((item) => item.id).distance(state.focusId ? 104 : 82).strength(state.focusId ? 0.34 : 0.22))
       .force("y", d3.forceY((item) => item.id === state.focusId ? height * 0.74 : graphTop + (ranks.get(item.id) || 0) * layerGap).strength((item) => item.id === state.focusId ? 0.92 : state.focusId ? 0.08 : 1.2))
-      .force("x", d3.forceX((item) => item.id === state.focusId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId ? 0.76 : routeSides.has(item.id) && routeSides.get(item.id) !== 0 ? 0.22 : 0.12))
+      .force("x", d3.forceX((item) => item.id === state.focusId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId ? 0.76 : routeSides.has(item.id) && routeSides.get(item.id) !== 0 ? 0.42 : 0.12))
       .force("charge", d3.forceManyBody().strength(state.focusId ? -230 : -180))
       .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
       .force("labels", labelCollisionForce(nodes))
-      .force("top-down", topDownForce(edges))
+      .force("top-down", topDownForce(edges, ranks))
       .alpha(0.22)
       .alphaDecay(0.16)
       .velocityDecay(0.72)
