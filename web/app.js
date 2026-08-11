@@ -454,7 +454,10 @@ function visibleGraph() {
   const allEdgeData = state.graph.edges
     .filter((edge) => edge.relation === "used-in-proof")
     .map((edge) => ({ ...edge, source: nodesById.get(edge.source.id), target: nodesById.get(edge.target.id) }))
-    .filter((edge) => edge.source && edge.target);
+    // Canonicalization can merge two declarations with the same displayed
+    // identity.  Their extraction edge then becomes a self-loop, which says
+    // nothing useful in a dependency view and cannot be top-down.
+    .filter((edge) => edge.source && edge.target && edge.source.id !== edge.target.id);
   const edgeData = proofRouteEdges(allEdgeData, state.focusId, state.selectedProofId);
   const coreId = coreNodeFor(state.graph.nodes);
   state.coreId = coreId;
@@ -1445,6 +1448,10 @@ function draw() {
         focusNode.vx = 0;
         focusNode.vy = 0;
       }
+      // Anchoring the selected theorem changes its y-coordinate after the
+      // simulation forces have run.  Apply the hard ordering last, so an
+      // anchor can never leave an incoming or outgoing proof edge reversed.
+      enforceTopDown(nodes, edges, ranks, state.focusId, coreId);
       nodes.forEach((item) => {
         state.layoutPositions.set(item.id, { x: item.x, y: item.y });
         state.layoutVelocities.set(item.id, { x: item.vx || 0, y: item.vy || 0 });
