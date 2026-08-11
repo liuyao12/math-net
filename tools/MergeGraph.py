@@ -18,23 +18,23 @@ from collections import defaultdict
 def proof_record(node: dict) -> dict:
     declaration = node.get("namespace", node["label"])
     if node.get("locator", "").startswith("mathlib/"):
-        label = "Mathlib · library proof"
-        route_kind = "library-complete"
+        label = "mathlib · library proof"
+        route_kind = "mathlib"
         color = "#3f7f8f"
     elif node.get("locator", "").startswith("computable-analysis/"):
         label = "computable-analysis · imported proof"
         route_kind = "computable-analysis"
         color = "#a45b38"
-    elif "gaussian" in declaration.lower():
-        label = "Mathlib · Gaussian-Euclidean"
+    elif declaration == "MathNetwork.SqrtTwo.irrational":
+        label = "mathlib · local adapter"
         route_kind = "mathlib"
         color = "#3f7f8f"
-    elif "zagier" in declaration.lower() or "involution" in declaration.lower():
-        label = "Zagier · involution"
-        route_kind = "zagier"
-        color = "#b27a2d"
+    elif declaration == "MathNetwork.SqrtTwo.irrational_descent":
+        label = "computable-analysis · infinite-descent adapter"
+        route_kind = "computable-analysis"
+        color = "#a45b38"
     else:
-        label = declaration
+        label = "math-net · local proof"
         route_kind = "local"
         color = "#7a6397"
     return {

@@ -56,7 +56,8 @@ const VERIFICATION = {
   informal: { glyph: "?", label: "Informal", className: "informal" },
 };
 const ROUTE_KIND_LABELS = {
-  local: "local proof",
+  local: "math-net",
+  mathlib: "mathlib",
   "library-complete": "library baseline",
   "pedagogical-narrow": "narrow pedagogical route",
   "foundation-comparison": "foundation comparison",
