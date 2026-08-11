@@ -60,8 +60,8 @@ explicit heuristic for reading the graph, never a Lean-level classification.
 Generated constructors/recursors and parent-structure projections are
 implementation details; the latter are detected from Lean's own structure
 metadata (not from a list of projection names). Small theorems from
-foundational `*.Defs` modules are routine details (for example `mul_one` and
-`Nat.prime_two`). Routine and implementation nodes are suppressed by default
+foundational algebra/data modules are routine details (for example `mul_one`,
+`Nat.prime_two`, and generic cast lemmas). Routine and implementation nodes are suppressed by default
 and visually contracted, but remain in the extracted graph and can be revealed
 with the background-details control.
 

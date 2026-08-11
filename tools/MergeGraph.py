@@ -154,11 +154,10 @@ def annotate_presentation(nodes: list[dict]) -> None:
             reason = "Kernel-generated declaration or a structure projection identified by Lean's structure metadata."
         elif (
             declaration_kind in {"theorem", "opaque"}
-            and node.get("locator", "").endswith(".Defs")
             and foundational(node)
         ):
             category = "routine"
-            reason = "Routine foundational lemma from a definitions module; retained but suppressed in the explanatory view."
+            reason = "Routine algebraic/data-foundation lemma; retained but suppressed in the explanatory view."
         elif node.get("kind") == "proposition" or declaration_kind in {"theorem", "opaque", "axiom", "proposition"}:
             category = "mathematical"
             reason = "Checked mathematical proposition or theorem declaration."
