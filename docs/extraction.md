@@ -49,6 +49,11 @@ definitions are concept nodes, and imported declarations are source nodes.
 The only generated edge is `used-in-proof`, from a declaration used by
 another included declaration to the declaration that contains it.
 
+Each node also receives a structural-importance annotation. It reports direct
+proof reuse and the number of downstream declarations reachable from the node.
+This is a navigation heuristic, not a measure of proof difficulty or
+mathematical depth; the UI labels it as such.
+
 `tools/MergeGraph.py` then merges proposition nodes only when their elaborated
 statements are identical. The comparison registry and `CheckComparison.lean`
 provide the kernel-backed check for comparison units; the merger does not infer

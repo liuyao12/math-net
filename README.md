@@ -15,7 +15,8 @@ The first network browser is in [`web/`](web/). By default it reads the
 generated project-wide Lean declaration graph, currently containing 2,087
 nodes and 20,351 checked dependency edges. It supports theorem selection,
 multi-level neighborhood fading, proposition search, strict proof-dependency
-edges, and click-to-inspect Lean source. The theorem-centred index is
+edges, structural-landmark highlighting, and click-to-inspect Lean source.
+The theorem-centred index is
 [`theorem-catalogue.json`](MathNetwork/Graph/theorem-catalogue.json). Run
 `python3 -m http.server 4173` from the repository root and open
 <http://localhost:4173/web/>.

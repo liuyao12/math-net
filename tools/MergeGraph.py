@@ -11,6 +11,7 @@ records and every dependency edge retains the proof record that produced it.
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 from collections import defaultdict
@@ -69,6 +70,63 @@ def comparison_manifest(path: str | None) -> dict[str, dict]:
         for comparison in data.get("comparisons", [])
         for route in comparison.get("routes", [])
     }
+
+
+def annotate_importance(nodes: list[dict], edges: list[dict]) -> None:
+    """Add reuse/reach signals without pretending they are proof difficulty.
+
+    Edge direction is declaration-used-by-proof, so downstream reach measures
+    how much of the indexed landscape can reuse a declaration. This is a
+    structural landmark signal, not a claim that the node is mathematically
+    more profound.
+    """
+    adjacency = {node["id"]: set() for node in nodes}
+    direct_uses = {node["id"]: set() for node in nodes}
+    for edge in edges:
+        source = edge["source"]["id"]
+        target = edge["target"]["id"]
+        if source not in adjacency or target not in adjacency:
+            continue
+        adjacency[source].add(target)
+        direct_uses[source].add((target, edge.get("proof") or ""))
+
+    raw_scores = {}
+    reach_counts = {}
+    for node in nodes:
+        seen = set()
+        frontier = list(adjacency[node["id"]])
+        while frontier:
+            current = frontier.pop()
+            if current in seen:
+                continue
+            seen.add(current)
+            frontier.extend(adjacency.get(current, ()))
+        direct = len(direct_uses[node["id"]])
+        downstream = len(seen)
+        proposition_bonus = 1.5 if node.get("kind") == "proposition" else 0.0
+        raw_scores[node["id"]] = 2 * math.log1p(direct) + math.log1p(downstream) + proposition_bonus
+        reach_counts[node["id"]] = (direct, downstream)
+
+    maximum = max(raw_scores.values(), default=1.0)
+    for node in nodes:
+        direct, downstream = reach_counts[node["id"]]
+        raw = raw_scores[node["id"]]
+        score = round(100 * raw / maximum, 1) if maximum else 0.0
+        signals = []
+        if direct:
+            signals.append("reused directly in indexed proofs")
+        if downstream:
+            signals.append("has downstream dependents")
+        if node.get("kind") == "proposition":
+            signals.append("proposition/theorem declaration")
+        node["importance"] = {
+            "score": score,
+            "directUses": direct,
+            "downstreamNodes": downstream,
+            "landmark": score >= 65 and (direct >= 2 or downstream >= 8),
+            "signals": signals,
+            "method": "reuse and downstream reach; not proof-length difficulty",
+        }
 
 
 def merge(graph: dict, manifest_path: str | None = None) -> dict:
@@ -193,6 +251,7 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
     result = dict(graph)
     result["nodes"] = merged_nodes
     result["edges"] = edges
+    annotate_importance(result["nodes"], result["edges"])
     result["merge"] = {
         "key": "exact elaborated proposition statement across local and imported declarations",
         "definitions": "one node per declaration",

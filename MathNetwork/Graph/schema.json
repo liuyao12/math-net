@@ -83,7 +83,8 @@
           "description": { "type": "string" },
         "tags": { "$ref": "#/$defs/stringList" },
         "verification": { "$ref": "#/$defs/verification" },
-        "comparison": { "$ref": "#/$defs/comparison" }
+        "comparison": { "$ref": "#/$defs/comparison" },
+        "importance": { "$ref": "#/$defs/importance" }
       }
     },
     "verification": {
@@ -124,6 +125,19 @@
           "uniqueItems": true
         },
         "note": { "type": "string" }
+      }
+    },
+    "importance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["score", "directUses", "downstreamNodes", "landmark", "method"],
+      "properties": {
+        "score": { "type": "number", "minimum": 0, "maximum": 100 },
+        "directUses": { "type": "integer", "minimum": 0 },
+        "downstreamNodes": { "type": "integer", "minimum": 0 },
+        "landmark": { "type": "boolean" },
+        "signals": { "$ref": "#/$defs/stringList" },
+        "method": { "$ref": "#/$defs/nonEmptyString" }
       }
     },
     "proposition": {

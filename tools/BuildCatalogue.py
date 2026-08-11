@@ -70,6 +70,7 @@ def build(graph: dict) -> dict:
             "formalizations": node.get("formalizations", []),
             "proofs": node.get("proofs", []),
             "comparison": node.get("comparison"),
+            "importance": node.get("importance"),
             "dependencies": {
                 "uses": uses[node["id"]],
                 "usedBy": used_by[node["id"]],
