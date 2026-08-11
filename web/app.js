@@ -72,6 +72,7 @@ const state = {
   theorems: [],
   theoremNumber: requestedTheorem || theoremForGraph() || "1",
   focusId: null,
+  coreId: null,
   selectedId: null,
   selectedProofId: null,
   search: "",
@@ -81,6 +82,7 @@ const state = {
   sourceRequest: 0,
   focusDistances: new Map(),
   showImplementation: false,
+  showSupporting: false,
   showLandmarks: true,
   revealDepth: Infinity,
   revealLimit: Infinity,
@@ -301,6 +303,13 @@ function isBackgroundNode(node) {
   return ["routine", "implementation"].includes(presentationCategory(node));
 }
 
+function isSuppressedNode(node) {
+  const category = presentationCategory(node);
+  if (category === "supporting") return !state.showSupporting;
+  if (category === "routine" || category === "implementation") return !state.showImplementation;
+  return false;
+}
+
 function isLandmark(node) {
   return Boolean(node?.importance?.landmark);
 }
@@ -395,6 +404,30 @@ function proofRouteEdges(edges, focusId, proofId) {
   return result;
 }
 
+function upstreamPath(focusId, targetId, edges) {
+  if (!focusId || !targetId) return new Set();
+  const incoming = new Map();
+  edges.forEach((edge) => {
+    if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
+    incoming.get(edge.target.id).push(edge.source.id);
+  });
+  const queue = [focusId];
+  const previous = new Map([[focusId, null]]);
+  while (queue.length) {
+    const current = queue.shift();
+    if (current === targetId) break;
+    (incoming.get(current) || []).forEach((sourceId) => {
+      if (previous.has(sourceId)) return;
+      previous.set(sourceId, current);
+      queue.push(sourceId);
+    });
+  }
+  if (!previous.has(targetId)) return new Set();
+  const path = new Set();
+  for (let current = targetId; current !== null; current = previous.get(current)) path.add(current);
+  return path;
+}
+
 function visibleGraph() {
   const nodesById = nodeMap();
   const allEdgeData = state.graph.edges
@@ -403,15 +436,18 @@ function visibleGraph() {
     .filter((edge) => edge.source && edge.target);
   const edgeData = proofRouteEdges(allEdgeData, state.focusId, state.selectedProofId);
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(declarationKindFor(node)) &&
-    (state.showImplementation || !isBackgroundNode(node) || node.id === state.focusId || node.id === state.selectedId));
+    (!isSuppressedNode(node) || node.id === state.focusId || node.id === state.selectedId));
   state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData, 5) : new Map();
   state.expandedDistances.forEach((distance, id) => {
     if (!state.focusDistances.has(id) || distance < state.focusDistances.get(id)) state.focusDistances.set(id, distance);
   });
+  const coreId = coreNodeFor(state.graph.nodes);
+  state.coreId = coreId;
+  const corePath = coreId ? upstreamPath(state.focusId, coreId, edgeData) : new Set();
   const focus = searchFocus(candidateNodes, edgeData);
   const visibleNodes = candidateNodes.filter((node) => {
     if (state.focusId && !state.focusDistances.has(node.id)) return false;
-    if (state.focusId && state.revealDepth !== Infinity && !state.revealedIds.has(node.id)) return false;
+    if (state.focusId && state.revealDepth !== Infinity && !state.revealedIds.has(node.id) && !corePath.has(node.id)) return false;
     if (state.search && !focus.has(node.id)) return false;
     return true;
   }).filter((node, index) => !state.focusId && state.revealLimit !== Infinity ? index < state.revealLimit : true);
@@ -420,7 +456,7 @@ function visibleGraph() {
   // Contract suppressed routine/implementation nodes. The visual graph stays
   // connected without pretending that the omitted declarations vanished from
   // Lean's actual proof term.
-  if (!state.showImplementation) {
+  if (candidateNodes.length < state.graph.nodes.length) {
     const incoming = new Map();
     edgeData.forEach((edge) => {
       if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
@@ -1040,19 +1076,22 @@ function theoremLike(node) {
 }
 
 function coreNodeFor(nodes) {
-  if (!state.selectedProofId || !state.focusId) return null;
+  if (!state.focusId) return null;
   const focus = nodes.find((node) => node.id === state.focusId);
   if (!focus) return null;
   const focusWords = new Set((`${focus.namespace || ""} ${focus.label || ""}`.toLowerCase().match(/[a-z][a-z0-9]+/g) || []).filter((word) => word.length > 3));
   const candidates = nodes.filter((node) => {
     const distance = state.focusDistances.get(node.id);
-    return node.id !== state.focusId && theoremLike(node) && distance >= 2 && distance <= 3;
+    return node.id !== state.focusId && isMathematicalNode(node) && theoremLike(node) && distance >= 1 && distance <= 4;
   });
   return candidates.sort((left, right) => {
     const rank = (node) => {
       const words = `${node.namespace || ""} ${node.label || ""}`.toLowerCase().match(/[a-z][a-z0-9]+/g) || [];
       const overlap = words.filter((word) => focusWords.has(word)).length;
-      return (state.focusDistances.get(node.id) || 0) * 100 + overlap * 20 + (node.importance?.score || 0);
+      const distance = state.focusDistances.get(node.id) || 0;
+      const bridge = /\bIff\b|\bEq\b/.test(node.statement || "") ? 90 : 0;
+      const directUse = node.importance?.directUses || 0;
+      return bridge + overlap * 34 + Math.log1p(directUse) * 10 + (node.importance?.score || 0) * 0.18 - Math.abs(distance - 2) * 12;
     };
     return rank(right) - rank(left);
   })[0]?.id || null;
@@ -1110,7 +1149,7 @@ function routedLinkPath(edge, nodes = []) {
   return `M${x1},${y1} C${x1},${y1 + dy * 0.28} ${detourX},${beforeY - 18} ${detourX},${beforeY} C${detourX},${afterY} ${x2},${y2 - dy * 0.28} ${x2},${y2}`;
 }
 
-function topDownForce(edges, ranks, gap = 26) {
+function topDownForce(edges, ranks, coreId, gap = 26) {
   const force = () => {
     edges.forEach((edge) => {
       if (edge.source === edge.target) return;
@@ -1118,15 +1157,19 @@ function topDownForce(edges, ranks, gap = 26) {
       const overlap = edge.source.y + gap - edge.target.y;
       if (overlap > 0) {
         const shift = overlap * 0.45;
-        edge.source.y -= shift;
-        edge.target.y += shift;
+        if (edge.target.id === coreId) edge.source.y -= shift * 2;
+        else if (edge.source.id === coreId) edge.target.y += shift * 2;
+        else {
+          edge.source.y -= shift;
+          edge.target.y += shift;
+        }
       }
     });
   };
   return force;
 }
 
-function enforceTopDown(nodes, edges, ranks, focusId, gap = 26) {
+function enforceTopDown(nodes, edges, ranks, focusId, coreId, gap = 26) {
   const ordered = nodes.slice().sort((a, b) => (ranks.get(a.id) || 0) - (ranks.get(b.id) || 0));
   for (let pass = 0; pass < ordered.length; pass += 1) {
     edges.forEach((edge) => {
@@ -1134,9 +1177,9 @@ function enforceTopDown(nodes, edges, ranks, focusId, gap = 26) {
       if ((ranks.get(edge.source.id) || 0) >= (ranks.get(edge.target.id) || 0)) return;
       const overlap = edge.source.y + gap - edge.target.y;
       if (overlap <= 0) return;
-      if (edge.target.id === focusId) {
+      if (edge.target.id === focusId || edge.target.id === coreId) {
         edge.source.y -= overlap;
-      } else if (edge.source.id === focusId) {
+      } else if (edge.source.id === focusId || edge.source.id === coreId) {
         edge.target.y += overlap;
       } else {
         edge.source.y -= overlap * 0.5;
@@ -1215,7 +1258,8 @@ function draw() {
   // into one horizontal band.
   const topologyRanks = dependencyRanks(nodes, edges);
   const routeSides = proofRouteSides(nodes, edges, state.focusId);
-  const coreId = coreNodeFor(nodes);
+  const coreId = state.coreId && nodes.some((node) => node.id === state.coreId) ? state.coreId : coreNodeFor(nodes);
+  state.coreId = coreId;
   const maxFocusDistance = Math.max(0, ...nodes.map((node) => state.focusDistances.get(node.id) || 0));
   const rawRanks = new Map(nodes.map((item) => {
     // Distance supplies the main top-to-bottom dependency hierarchy. The
@@ -1244,7 +1288,7 @@ function draw() {
   const laneOffset = Math.min(150, Math.max(78, width * 0.16));
   nodesByRank.forEach((layer, rank) => layer.forEach((item) => {
     const lane = lanePositions.get(item.id) || { side: 0, index: 0, size: 1 };
-    const targetX = item.id === state.focusId
+    const targetX = item.id === state.focusId || item.id === coreId
       ? width / 2
       : width / 2 + lane.side * laneOffset + (lane.index - (lane.size - 1) / 2) * columnGap * 0.72;
     const targetY = item.id === coreId
@@ -1253,7 +1297,7 @@ function draw() {
       ? height * 0.74
       : graphTop + rank * layerGap;
     const previous = state.layoutPositions.get(item.id);
-    if (previous) {
+    if (previous && item.id !== coreId) {
       item.x = previous.x;
       item.y = previous.y;
       const velocity = state.layoutVelocities.get(item.id);
@@ -1286,6 +1330,13 @@ function draw() {
     }
     item.targetX = targetX;
     item.targetY = targetY;
+    if (item.id === coreId) {
+      // The core is an orientation point, not merely another particle in the
+      // force simulation. Keep it centered until the reader deliberately
+      // drags it.
+      item.fx = targetX;
+      item.fy = targetY;
+    }
   }));
   const link = root.append("g").attr("aria-hidden", "true").selectAll("path").data(edges, (edge) => edge.id).join("path")
     .attr("class", "graph-link used-in-proof")
@@ -1297,9 +1348,9 @@ function draw() {
     // not turn into a field of tiny overlapping triangles.
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = event.y; item.fx = event.x; item.fy = event.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
-  node.append("circle").attr("class", "node-dot").classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("landmark", (item) => state.showLandmarks && isLandmark(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", declarationColorFor);
-  node.append("text").attr("class", "node-label").classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 13).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (!state.showImplementation && isBackgroundNode(item)) || (item.label.length > 31 && nodes.length > 12));
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => item.label).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = event.y; item.fx = event.x; item.fy = event.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
+  node.append("circle").attr("class", "node-dot").classed("core", (item) => item.id === coreId).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("landmark", (item) => state.showLandmarks && isLandmark(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => item.id === coreId ? 12 : item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4).attr("fill", declarationColorFor);
+  node.append("text").attr("class", "node-label").classed("core", (item) => item.id === coreId).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 16).attr("y", 4).text((item) => `${item.id === coreId ? "◎ core · " : verificationFor(item).glyph + " "}${labelFor(item)}`).classed("hidden", (item) => (isSuppressedNode(item) && item.id !== state.selectedId && item.id !== state.focusId) || (item.id !== coreId && item.label.length > 31 && nodes.length > 12));
   const expanders = node.append("g").attr("class", "node-expand").attr("transform", "translate(0,-18)")
     .classed("hidden", (item) => item.id !== state.selectedId || !hasHiddenDependencies(item.id, nodes))
     .attr("role", "button")
@@ -1332,16 +1383,16 @@ function draw() {
     state.simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(edges).id((item) => item.id).distance(state.focusId ? 104 : 82).strength(state.focusId ? 0.34 : 0.22))
       .force("y", d3.forceY((item) => item.id === coreId ? height * 0.5 : item.id === state.focusId ? height * 0.74 : graphTop + (ranks.get(item.id) || 0) * layerGap).strength((item) => item.id === state.focusId || item.id === coreId ? 0.92 : state.focusId ? 0.08 : 1.2))
-      .force("x", d3.forceX((item) => item.id === state.focusId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId ? 0.76 : routeSides.has(item.id) && routeSides.get(item.id) !== 0 ? 0.42 : 0.12))
+      .force("x", d3.forceX((item) => item.id === state.focusId || item.id === coreId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId || item.id === coreId ? 0.94 : routeSides.has(item.id) && routeSides.get(item.id) !== 0 ? 0.42 : 0.12))
       .force("charge", d3.forceManyBody().strength(state.focusId ? -230 : -180))
       .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
       .force("labels", labelCollisionForce(nodes))
-      .force("top-down", topDownForce(edges, ranks))
+      .force("top-down", topDownForce(edges, ranks, coreId))
       .alpha(0.22)
       .alphaDecay(0.16)
       .velocityDecay(0.72)
       .on("tick", () => {
-      enforceTopDown(nodes, edges, ranks, state.focusId);
+      enforceTopDown(nodes, edges, ranks, state.focusId, coreId);
       const focusNode = nodes.find((item) => item.id === state.focusId);
       if (focusNode && !Number.isFinite(focusNode.fy)) {
         // The focus is an anchor for the whole progressive layout. Keep it
@@ -1424,8 +1475,10 @@ $("#reset").addEventListener("click", () => {
   $("#theorem-select").value = "";
   document.querySelectorAll("#kind-filters input[type=checkbox]").forEach((input) => { input.checked = true; });
   state.showImplementation = false;
+  state.showSupporting = false;
   state.showLandmarks = true;
   $("#show-implementation").checked = false;
+  $("#show-supporting").checked = false;
   $("#show-landmarks").checked = true;
   state.kinds = new Set(availableDeclarationKinds());
   const next = new URL(window.location.href);
@@ -1465,6 +1518,7 @@ $("#back-to-theorem").addEventListener("click", () => {
   if (state.focusId) selectNode(state.focusId);
 });
 $("#show-implementation").addEventListener("change", (event) => { state.showImplementation = event.target.checked; draw(); });
+$("#show-supporting").addEventListener("change", (event) => { state.showSupporting = event.target.checked; draw(); });
 $("#show-landmarks").addEventListener("change", (event) => { state.showLandmarks = event.target.checked; draw(); });
 $("#focus-status").addEventListener("click", () => state.resumeReveal?.());
 window.addEventListener("resize", () => draw());

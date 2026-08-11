@@ -221,12 +221,14 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-dot.implementation { opacity: 0.14; }
 .node-dot.supporting { opacity: 0.42; }
 .node-dot.landmark { stroke: var(--gold); stroke-width: 3; }
+.node-dot.core { stroke: var(--gold); stroke-width: 4; filter: drop-shadow(0 0 3px rgba(182, 130, 28, 0.48)); }
 .node-dot.implementation.landmark { opacity: 0.34; }
 .filter-dot.landmark { background: var(--gold); }
 .muted-note { color: var(--muted); font-size: 11px; }
 .node-label.implementation { color: var(--faint); font-size: 10px; }
 .node-label.routine { color: var(--faint); font-size: 10px; }
 .node-label.supporting { fill: var(--faint); font-size: 10px; }
+.node-label.core { fill: var(--ink); font-size: 12px; font-weight: 700; stroke-width: 6px; }
 .node-dot[data-focus-distance="2"], .node-label[data-focus-distance="2"] { opacity: 0.62; }
 .node-dot[data-focus-distance="3"], .node-label[data-focus-distance="3"] { opacity: 0.3; }
 .node-dot.implementation[data-focus-distance="2"], .node-label.implementation[data-focus-distance="2"] { opacity: 0.1; }

@@ -16,7 +16,10 @@ generated project-wide Lean declaration graph, currently containing 2,087
 nodes and 20,351 checked dependency edges. It supports theorem selection,
 multi-level neighborhood fading, proposition search, strict proof-dependency
 edges, structural-landmark highlighting, background-detail suppression, and
-click-to-inspect Lean source.
+click-to-inspect Lean source. The default theorem view shows mathematical
+declarations only; supporting foundations and implementation details can be
+revealed independently. When the focus is a corollary or adapter, the explorer
+places the strongest upstream bridge theorem at the center of the view.
 The theorem-centred index is
 [`theorem-catalogue.json`](MathNetwork/Graph/theorem-catalogue.json). Run
 `python3 -m http.server 4173` from the repository root and open

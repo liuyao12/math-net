@@ -65,6 +65,11 @@ foundational `*.Defs` modules are routine details (for example `mul_one` and
 and visually contracted, but remain in the extracted graph and can be revealed
 with the background-details control.
 
+The explorer's default filter shows only `mathematical` nodes. Supporting
+foundations are a separate opt-in layer; routine and implementation details
+are a second opt-in layer. Hidden declarations are contracted only for visual
+navigation—the full extracted Lean dependency graph remains unchanged.
+
 `tools/MergeGraph.py` then merges proposition nodes only when their elaborated
 statements are identical. The comparison registry and `CheckComparison.lean`
 provide the kernel-backed check for comparison units; the merger does not infer
