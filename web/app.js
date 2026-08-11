@@ -1373,17 +1373,19 @@ function coreNodeFor(nodes) {
 }
 
 function straightLinkPath(edge) {
-  const x1 = edge.source.x;
+  const offset = edge.parallelOffset || 0;
+  const x1 = edge.source.x + offset;
   const y1 = edge.source.y;
-  const x2 = edge.target.x;
+  const x2 = edge.target.x + offset;
   const y2 = edge.target.y;
   return `M${x1},${y1} L${x2},${y2}`;
 }
 
 function curvedLinkPath(edge) {
-  const x1 = edge.source.x;
+  const offset = edge.parallelOffset || 0;
+  const x1 = edge.source.x + offset;
   const y1 = edge.source.y;
-  const x2 = edge.target.x;
+  const x2 = edge.target.x + offset;
   const y2 = edge.target.y;
   const dy = y2 - y1;
   const handle = Math.max(18, Math.abs(dy) * 0.42) * Math.sign(dy || 1);
@@ -1391,9 +1393,10 @@ function curvedLinkPath(edge) {
 }
 
 function routedLinkPath(edge, nodes = []) {
-  const x1 = edge.source.x;
+  const offset = edge.parallelOffset || 0;
+  const x1 = edge.source.x + offset;
   const y1 = edge.source.y;
-  const x2 = edge.target.x;
+  const x2 = edge.target.x + offset;
   const y2 = edge.target.y;
   const dy = y2 - y1;
   if (Math.abs(dy) < 1) return curvedLinkPath(edge);
@@ -1420,6 +1423,18 @@ function routedLinkPath(edge, nodes = []) {
   const beforeY = node.y - halfHeight - 7;
   const afterY = node.y + halfHeight + 7;
   return `M${x1},${y1} C${x1},${y1 + dy * 0.28} ${detourX},${beforeY - 18} ${detourX},${beforeY} C${detourX},${afterY} ${x2},${y2 - dy * 0.28} ${x2},${y2}`;
+}
+
+function separateParallelProofEdges(edges) {
+  const byEndpoints = d3.group(edges, (edge) => `${edge.source.id}→${edge.target.id}`);
+  byEndpoints.forEach((parallel) => {
+    const byRepository = d3.group(parallel, (edge) => proofColor(edge.proof));
+    const coloredRoutes = [...byRepository.entries()].sort(([left], [right]) => left.localeCompare(right));
+    coloredRoutes.forEach(([, routeEdges], index) => {
+      const offset = (index - (coloredRoutes.length - 1) / 2) * 8;
+      routeEdges.forEach((edge) => { edge.parallelOffset = offset; });
+    });
+  });
 }
 
 function topDownForce(edges, ranks, coreId, gap = 26) {
@@ -1539,7 +1554,7 @@ function enforceRouteLaneBounds(nodes, routeSides, width) {
   });
 }
 
-function rankLockedLayout(nodes, ranks, width, height, coreId, routeSides) {
+function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides) {
   const focusRank = ranks.get(state.focusId) || Math.max(0, ...ranks.values());
   const rankGap = 52;
   nodes.forEach((node) => {
@@ -1554,13 +1569,27 @@ function rankLockedLayout(nodes, ranks, width, height, coreId, routeSides) {
   });
   applyProofRouteLanes(nodes, routeSides, width, coreId);
   nodes.forEach((node) => { node.x = node.targetX; });
-  // Within a rank, resolve only horizontal label collisions. This preserves
-  // the mathematical dependency height as an invariant.
-  const separateLabels = horizontalLabelCollisionForce(nodes);
-  for (let pass = 0; pass < 8; pass += 1) separateLabels();
+  // Run forces only within each fixed rank. `fy` prevents the simulation
+  // from changing proof height, while charge, link tension, and collision
+  // make siblings and neighboring routes separate horizontally.
+  nodes.forEach((node) => {
+    node.fy = node.rankY;
+    const pinned = state.pinnedPositions.get(node.id);
+    node.fx = pinned ? pinned.x : null;
+  });
+  d3.forceSimulation(nodes)
+    .force("x", d3.forceX((node) => node.targetX).strength((node) => routeSides.get(node.id) ? 0.24 : 0.13))
+    .force("link", d3.forceLink(edges).id((node) => node.id).distance(92).strength(0.12))
+    .force("charge", d3.forceManyBody().strength(-150))
+    .force("collide", d3.forceCollide().radius((node) => Math.max(18, Math.min(52, labelFor(node).length * 3.3 + 14))).strength(0.9))
+    .force("labels", horizontalLabelCollisionForce(nodes))
+    .stop()
+    .tick(120);
   enforceRouteLaneBounds(nodes, routeSides, width);
   nodes.forEach((node) => {
     node.y = node.rankY;
+    node.fx = null;
+    node.fy = null;
     state.layoutPositions.set(node.id, { x: node.x, y: node.y });
     state.layoutVelocities.set(node.id, { x: 0, y: 0 });
   });
@@ -1604,6 +1633,7 @@ function draw() {
   const focusDependencyIds = new Set(edges
     .filter((edge) => edge.target.id === state.focusId)
     .map((edge) => edge.source.id));
+  separateParallelProofEdges(edges);
   state.coreId = coreId;
   const maxFocusDistance = Math.max(0, ...nodes.map((node) => state.focusDistances.get(node.id) || 0));
   const rawRanks = new Map(nodes.map((item) => {
@@ -1725,7 +1755,7 @@ function draw() {
   state.simulation = null;
   if (state.focusId) {
     directedLayout(nodes, edges, width, height);
-    rankLockedLayout(nodes, ranks, width, height, coreId, routeSides);
+    rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     link.attr("d", (edge) => routedLinkPath(edge, nodes))
       .attr("marker-end", (edge) => isMajorNode(edge.source) || isMajorNode(edge.target) ? "url(#arrow-used-in-proof)" : null);
