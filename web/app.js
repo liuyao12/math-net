@@ -1524,6 +1524,21 @@ function applyProofRouteLanes(nodes, routeSides, width, coreId) {
   }
 }
 
+function enforceRouteLaneBounds(nodes, routeSides, width) {
+  const sides = [...new Set(routeSides.values())].filter((side) => side !== 0);
+  if (!sides.length) return;
+  const center = width / 2;
+  const laneGap = Math.min(290, Math.max(130, width / (Math.max(...sides.map(Math.abs)) * 2 + 2)));
+  nodes.forEach((node) => {
+    if (state.pinnedPositions.has(node.id)) return;
+    const side = routeSides.get(node.id) || 0;
+    // A route-specific declaration may spread within its lane, but it cannot
+    // drift through the shared middle and visually merge with another proof.
+    if (side < 0) node.x = Math.min(node.x, center + side * laneGap * 0.58);
+    if (side > 0) node.x = Math.max(node.x, center + side * laneGap * 0.58);
+  });
+}
+
 function rankLockedLayout(nodes, ranks, width, height, coreId, routeSides) {
   const focusRank = ranks.get(state.focusId) || Math.max(0, ...ranks.values());
   const rankGap = 52;
@@ -1543,6 +1558,7 @@ function rankLockedLayout(nodes, ranks, width, height, coreId, routeSides) {
   // the mathematical dependency height as an invariant.
   const separateLabels = horizontalLabelCollisionForce(nodes);
   for (let pass = 0; pass < 8; pass += 1) separateLabels();
+  enforceRouteLaneBounds(nodes, routeSides, width);
   nodes.forEach((node) => {
     node.y = node.rankY;
     state.layoutPositions.set(node.id, { x: node.x, y: node.y });
