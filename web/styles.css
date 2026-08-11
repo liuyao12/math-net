@@ -224,6 +224,9 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-dot.supporting { opacity: 0.42; }
 .node-dot.landmark { stroke: var(--gold); stroke-width: 3; }
 .node-dot.core { stroke: var(--gold); stroke-width: 4; filter: drop-shadow(0 0 3px rgba(182, 130, 28, 0.48)); }
+.node-dot.focus { stroke: var(--ink); stroke-width: 4; filter: drop-shadow(0 0 5px rgba(54, 107, 128, 0.34)); }
+.node-dot.direct-dependency { stroke: var(--teal); stroke-width: 2.75; }
+.node-dot.focus.direct-dependency { stroke: var(--ink); }
 .node-dot.implementation.landmark { opacity: 0.34; }
 .filter-dot.landmark { background: var(--gold); }
 .muted-note { color: var(--muted); font-size: 11px; }
@@ -231,6 +234,8 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-label.routine { color: var(--faint); font-size: 10px; }
 .node-label.supporting { fill: var(--faint); font-size: 10px; }
 .node-label.core { fill: var(--ink); font-size: 12px; font-weight: 700; stroke-width: 6px; }
+.node-label.focus { fill: var(--ink); font-size: 13px; font-weight: 700; stroke-width: 6px; }
+.node-label.direct-dependency { font-weight: 650; }
 .node-dot[data-focus-distance="2"], .node-label[data-focus-distance="2"] { opacity: 0.62; }
 .node-dot[data-focus-distance="3"], .node-label[data-focus-distance="3"] { opacity: 0.3; }
 .node-dot.implementation[data-focus-distance="2"], .node-label.implementation[data-focus-distance="2"] { opacity: 0.1; }
@@ -242,6 +247,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .graph-link.dimmed { opacity: 0.08; }
 .graph-link.implementation-link { opacity: 0.07; }
 .graph-link.selected-edge { opacity: 0.98; stroke-width: 2.4; }
+.graph-link.focus-edge { opacity: 0.9; stroke-width: 2.1; }
 .graph-link.implementation-link.selected-edge { opacity: 0.72; stroke-width: 2; }
 .graph-link.cycle-link { opacity: 0.22; }
 .graph-link.proves { stroke: var(--gold); }
