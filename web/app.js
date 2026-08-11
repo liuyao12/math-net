@@ -1,4 +1,5 @@
 import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+import dagre from "https://cdn.jsdelivr.net/npm/@dagrejs/dagre@1.1.5/+esm";
 
 const query = new URLSearchParams(window.location.search);
 const requestedGraph = query.get("graph");
@@ -1042,6 +1043,40 @@ function dependencyRanks(nodes, edges) {
   return ranks;
 }
 
+function directedLayout(nodes, edges, width, height) {
+  // Unlike a force simulation, Dagre's ranked layout has a hard invariant:
+  // every edge in this acyclic proof graph runs from an earlier (upper) rank
+  // to a later (lower) rank. D3 is only used for interaction and rendering.
+  const graph = new dagre.graphlib.Graph({ multigraph: true });
+  graph.setGraph({ rankdir: "TB", ranksep: 58, nodesep: 42, edgesep: 16, marginx: 18, marginy: 24 });
+  graph.setDefaultEdgeLabel(() => ({}));
+  nodes.forEach((node) => {
+    const labelWidth = Math.min(250, Math.max(56, labelFor(node).length * 6.6 + 32));
+    graph.setNode(node.id, { width: labelWidth, height: 30 });
+  });
+  edges.forEach((edge) => graph.setEdge(edge.source.id, edge.target.id, {}, edge.id));
+  dagre.layout(graph);
+  const positions = nodes.map((node) => ({ id: node.id, ...graph.node(node.id) }));
+  const minX = Math.min(...positions.map((item) => item.x));
+  const maxX = Math.max(...positions.map((item) => item.x));
+  const minY = Math.min(...positions.map((item) => item.y));
+  const maxY = Math.max(...positions.map((item) => item.y));
+  const scale = Math.min(1, (width - 64) / Math.max(1, maxX - minX), (height - 72) / Math.max(1, maxY - minY));
+  const offsetX = (width - (maxX - minX) * scale) / 2 - minX * scale;
+  const offsetY = Math.max(28, (height - (maxY - minY) * scale) * 0.68) - minY * scale;
+  positions.forEach((position) => {
+    const node = nodes.find((item) => item.id === position.id);
+    node.x = position.x * scale + offsetX;
+    node.y = position.y * scale + offsetY;
+    node.vx = 0;
+    node.vy = 0;
+    node.targetX = node.x;
+    node.targetY = node.y;
+    state.layoutPositions.set(node.id, { x: node.x, y: node.y });
+    state.layoutVelocities.set(node.id, { x: 0, y: 0 });
+  });
+}
+
 function proofRouteSides(nodes, edges, focusId) {
   const sides = new Map();
   const focus = nodes.find((node) => node.id === focusId);
@@ -1408,9 +1443,16 @@ function draw() {
   if (state.settleTimer) window.clearTimeout(state.settleTimer);
   state.settleTimer = null;
   state.simulation = null;
-  // Focused neighborhoods should settle organically.  The rank calculation
-  // supplies only a soft vertical preference; it must not turn the graph into
-  // a stack of quantized horizontal bands.
+  if (state.focusId) {
+    directedLayout(nodes, edges, width, height);
+    node.attr("transform", (item) => `translate(${item.x},${item.y})`);
+    link.attr("d", (edge) => routedLinkPath(edge, nodes))
+      .attr("marker-end", (edge) => isMajorNode(edge.source) || isMajorNode(edge.target) ? "url(#arrow-used-in-proof)" : null);
+    updateHighlight();
+    return;
+  }
+  // The unfocused full landscape remains deliberately loose and exploratory;
+  // focused theorem views above use Dagre's strict directed layout.
   const staticLayout = nodes.length > 500;
   if (staticLayout) {
     nodes.forEach((item) => {
