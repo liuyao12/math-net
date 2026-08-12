@@ -25,4 +25,9 @@ elab_rules : command
       throwError s!"declaration types are not definitionally equal: {left.getId} and {right.getId}"
     logInfo s!"definitional equality checked: {left.getId} ≡ {right.getId}"
 
-check_defeq MathNetwork.SqrtTwo.irrational MathNetwork.SqrtTwo.irrational_descent
+/-!
+The current √2 comparison has its Mathlib route registered.  The
+computable-analysis rational-square-root criterion has a different native
+`RealRaw` statement and will be added here once a checked representation
+bridge supplies a literal common proposition.
+-/

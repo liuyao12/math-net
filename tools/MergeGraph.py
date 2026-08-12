@@ -31,8 +31,8 @@ def proof_record(node: dict) -> dict:
         label = "mathlib · local adapter"
         route_kind = "mathlib"
         color = "#3f7f8f"
-    elif declaration == "MathNetwork.SqrtTwo.irrational_descent":
-        label = "computable-analysis · infinite-descent adapter"
+    elif declaration == "MathNetwork.ComputableSqrt.irrational_sqrt_ratCast_iff_of_nonneg":
+        label = "computable-analysis · rational square-root criterion"
         route_kind = "computable-analysis"
         color = "#a45b38"
     else:

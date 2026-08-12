@@ -1,13 +1,12 @@
 import MathNetwork.Comparisons.IrrationalSqrtTwo
-import MathNetwork.Comparisons.IrrationalSqrtTwoDescent
 
 /-!
 # Checked proposition comparisons
 
-This file records the comparison units that math-net hosts itself.  A
-comparison does not duplicate either upstream development: it specializes the
-routes to one common proposition and stores both checked proof terms against
-that proposition.
+This file records comparison units whose routes have literally the same
+checked Lean proposition.  The computable square-root criterion is indexed as
+a separate native-representation declaration until its explicit bridge to
+Mathlib's completed real numbers is formalized.
 -/
 
 namespace MathNetwork.Comparisons
@@ -30,11 +29,6 @@ def irrationalSqrtTwo : CheckedComparison where
       repository := "mathlib"
       declaration := "MathNetwork.SqrtTwo.irrational"
       proof := MathNetwork.SqrtTwo.irrational
-    },
-    {
-      repository := "computable-analysis"
-      declaration := "MathNetwork.SqrtTwo.irrational_descent"
-      proof := MathNetwork.SqrtTwo.irrational_descent
     }
   ]
 

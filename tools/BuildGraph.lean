@@ -3,7 +3,7 @@ import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 import MathNetwork.Comparisons.List100
 import MathNetwork.Comparisons.IrrationalSqrtTwo
-import MathNetwork.Comparisons.IrrationalSqrtTwoDescent
+import MathNetwork.Comparisons.ComputableIrrationalSqrt
 
 /-!
 # Build the project-wide declaration graph
