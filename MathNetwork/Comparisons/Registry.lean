@@ -30,7 +30,7 @@ two declarations can become one Lean proposition. -/
 structure FoundationAlignedComparison where
   id : String
   note : String
-  routes : List (String × String)
+  routes : List (String × String × String)
 
 def irrationalSqrtTwo : CheckedComparison where
   id := "irrational-sqrt-two"
@@ -53,8 +53,8 @@ def irrationalSqrtRat : FoundationAlignedComparison where
   id := "irrational-sqrt-rational"
   note := "Foundation-aligned declarations: Mathlib uses ℝ and computable-analysis uses RealRaw. A checked representation bridge is required before Lean can identify their proposition types."
   routes := [
-    ("mathlib", "MathNetwork.MathlibSqrt.irrational_sqrt_ratCast_iff_of_nonneg"),
-    ("computable-analysis", "MathNetwork.ComputableSqrt.irrational_sqrt_ratCast_iff_of_nonneg")
+    ("mathlib", "MathNetwork.MathlibSqrt.irrational_sqrt_ratCast_iff_of_nonneg", "Real"),
+    ("computable-analysis", "MathNetwork.ComputableSqrt.irrational_sqrt_ratCast_iff_of_nonneg", "ComputableAnalysis.RealRaw")
   ]
 
 def aligned : List FoundationAlignedComparison := [irrationalSqrtRat]

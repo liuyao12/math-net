@@ -21,8 +21,12 @@ private def alignedComparisonJson (comparison : FoundationAlignedComparison) : J
     ("id", comparison.id),
     ("alignment", "foundation-aligned"),
     ("note", comparison.note),
-    ("routes", Json.arr (comparison.routes.map (fun (repository, declaration) =>
-      Json.mkObj [("repository", repository), ("declaration", declaration)]
+    ("routes", Json.arr (comparison.routes.map (fun (repository, declaration, foundation) =>
+      Json.mkObj [
+        ("repository", repository),
+        ("declaration", declaration),
+        ("foundation", foundation)
+      ]
     )).toArray)
   ]
 

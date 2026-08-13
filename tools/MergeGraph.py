@@ -72,6 +72,7 @@ def comparison_manifest(path: str | None) -> dict[str, dict]:
             "repository": route["repository"],
             "alignment": comparison.get("alignment", "exact"),
             "note": comparison.get("note", ""),
+            "foundation": route.get("foundation"),
         }
         for comparison in data.get("comparisons", [])
         for route in comparison.get("routes", [])
@@ -283,6 +284,15 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
                     "elaborated proposition types as definitionally equal."
                 ),
             }
+            if is_foundation_aligned:
+                merged["comparison"]["foundations"] = [
+                    {
+                        "repository": metadata["repository"],
+                        "declaration": metadata["foundation"],
+                    }
+                    for _, metadata in registered
+                    if metadata.get("foundation")
+                ]
             if registered:
                 merged["comparison"]["registry"] = registered[0][1]["id"]
             merged["verification"] = dict(merged.get("verification", {}))

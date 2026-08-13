@@ -532,6 +532,16 @@ function visibleGraph() {
   const coreId = coreNodeFor(state.graph.nodes);
   state.coreId = coreId;
   const corePath = coreId ? upstreamPath(state.focusId, coreId, edgeData) : new Set();
+  const core = coreId ? nodesById.get(coreId) : null;
+  // A foundation-aligned comparison is specifically about how the same
+  // mathematical criterion is expressed over two real-number constructions.
+  // Retain the *actual Lean dependency paths* to those representations; no
+  // explanatory relationship edges are invented here.
+  const foundationPaths = new Set();
+  (core?.comparison?.foundations || []).forEach((foundation) => {
+    const anchor = state.graph.nodes.find((node) => node.namespace === foundation.declaration);
+    if (anchor) upstreamPath(coreId, anchor.id, edgeData).forEach((id) => foundationPaths.add(id));
+  });
   // Keep the core theorem's *direct* inputs in view even when they are
   // normally background declarations. Further foundations stay behind the
   // node's explicit expander; two raw extraction levels can be hundreds of
@@ -540,7 +550,7 @@ function visibleGraph() {
     ? new Set([...upstreamDependencies(coreId, edgeData)].filter((id) => isMathematicalNode(nodesById.get(id))))
     : new Set();
   const ambientIds = ambientNodesForFocus(state.graph.nodes);
-  const forcedIds = new Set([...corePath, ...coreDependencies, ...ambientIds]);
+  const forcedIds = new Set([...corePath, ...coreDependencies, ...foundationPaths, ...ambientIds]);
   const manuallyExpandedIds = new Set(state.expandedDistances.keys());
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(declarationKindFor(node)) &&
     (!isSuppressedNode(node) || node.id === state.focusId || node.id === state.selectedId || forcedIds.has(node.id) || manuallyExpandedIds.has(node.id)));
@@ -1058,6 +1068,11 @@ function renderInspector() {
   const comparisonNote = comparison
     ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : "Checked comparison"}</div><p>${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
     : "";
+  const foundationAnchors = (comparison?.foundations || []).map((foundation) => {
+    const anchor = state.graph.nodes.find((item) => item.namespace === foundation.declaration);
+    const name = anchor ? displayLabelFor(anchor) : foundation.declaration;
+    return `<button class="neighbor" data-neighbor="${escapeHtml(anchor?.id || "")}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(foundation.repository))}"></span>${escapeHtml((REPOSITORIES[foundation.repository] || REPOSITORIES.unknown).label)} · ${escapeHtml(name)}</button>`;
+  }).join("");
   const depthNote = Number.isInteger(node.dependencyDepth)
     ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported declaration · layer ${node.dependencyDepth}.${node.dependencyBoundary ? " Expansion stops here at a Lean structure boundary; click the node’s marker to inspect any indexed dependencies." : ""}</p></div>`
     : "";
@@ -1096,6 +1111,7 @@ function renderInspector() {
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
     ${proofs ? `<div class="detail-block"><div class="detail-label">Proof routes · select one to filter dependencies</div><div class="proof-list">${proofs}</div></div>` : ""}
+    ${foundationAnchors ? `<div class="detail-block"><div class="detail-label">Native real foundations</div><div class="tag-list">${foundationAnchors}</div></div>` : ""}
     ${proofSources || `<div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>`}
     ${neighborRows ? `<div class="detail-block"><div class="neighbor-list">${neighborRows}</div></div>` : ""}
     ${provenance ? `<details class="provenance"><summary>Checked provenance and formalization</summary><div class="provenance-content">${provenance}</div></details>` : ""}
