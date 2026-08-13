@@ -1,1 +1,1 @@
-{"comparisons":[{"id":"irrational-sqrt-two","routes":[{"declaration":"MathNetwork.SqrtTwo.irrational","repository":"mathlib"}]}],"schemaVersion":"1.0"}
+{"comparisons":[{"id":"irrational-sqrt-two","routes":[{"declaration":"MathNetwork.SqrtTwo.irrational","repository":"mathlib"},{"declaration":"MathNetwork.SqrtTwo.irrational_descent","repository":"computable-analysis"}]}],"schemaVersion":"1.0"}
