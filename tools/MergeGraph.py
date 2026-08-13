@@ -27,7 +27,10 @@ def proof_record(node: dict) -> dict:
         label = "computable-analysis · imported proof"
         route_kind = "computable-analysis"
         color = "#a45b38"
-    elif declaration == "MathNetwork.SqrtTwo.irrational":
+    elif declaration in {
+        "MathNetwork.SqrtTwo.irrational",
+        "MathNetwork.MathlibSqrt.irrational_sqrt_ratCast_iff_of_nonneg",
+    }:
         label = "mathlib · local adapter"
         route_kind = "mathlib"
         color = "#3f7f8f"
@@ -49,6 +52,7 @@ def proof_record(node: dict) -> dict:
         "scope": "local-with-imports",
         "closure": "partial",
         "note": "Proof provenance retained from the elaborated Lean declaration.",
+        "statement": node.get("statement", ""),
     }
     module = node.get("module", "")
     if module.startswith("MathNetwork."):
@@ -66,6 +70,8 @@ def comparison_manifest(path: str | None) -> dict[str, dict]:
         route["declaration"]: {
             "id": comparison["id"],
             "repository": route["repository"],
+            "alignment": comparison.get("alignment", "exact"),
+            "note": comparison.get("note", ""),
         }
         for comparison in data.get("comparisons", [])
         for route in comparison.get("routes", [])
@@ -192,7 +198,10 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
             # A proposition is the mathematical statement, not the source
             # file that happens to contain one of its proofs. This lets a
             # Mathlib theorem and a local alternative proof share one node.
-            key = (node.get("statement", ""),)
+            registered = registered_routes.get(node.get("namespace", ""))
+            key = (("foundation-aligned", registered["id"])
+                   if registered and registered.get("alignment") == "foundation-aligned"
+                   else (node.get("statement", ""),))
             groups[key].append(node)
         else:
             passthrough.append(node)
@@ -253,10 +262,23 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
                 }
                 for record in merged["proofs"]
             ]
+            is_foundation_aligned = any(
+                registered_routes.get(record["declaration"], {}).get("alignment") == "foundation-aligned"
+                for record in merged["proofs"]
+            )
             merged["comparison"] = {
-                "identity": "exact elaborated proposition statement",
+                "identity": (
+                    "foundation-aligned criteria over distinct real-number representations"
+                    if is_foundation_aligned else "exact elaborated proposition statement"
+                ),
+                "alignment": "foundation-aligned" if is_foundation_aligned else "exact",
                 "routes": comparison_routes,
                 "note": (
+                    next((registered_routes[record["declaration"]].get("note", "")
+                          for record in merged["proofs"]
+                          if record["declaration"] in registered_routes and
+                          registered_routes[record["declaration"]].get("alignment") == "foundation-aligned"), "")
+                    if is_foundation_aligned else
                     "The declarations are merged only because Lean checked their "
                     "elaborated proposition types as definitionally equal."
                 ),
@@ -266,7 +288,9 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
             merged["verification"] = dict(merged.get("verification", {}))
             merged["verification"]["note"] = (
                 merged["verification"].get("note", "")
-                + f" Merged from {len(group)} declarations with the identical checked statement in the same module."
+                + (f" Foundation-aligned from {len(group)} independently checked declarations; their real-number bridge is not yet formalized."
+                   if is_foundation_aligned else
+                   f" Merged from {len(group)} declarations with the identical checked statement in the same module.")
             ).strip()
         merged_nodes.append(merged)
 

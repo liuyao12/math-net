@@ -1096,12 +1096,12 @@ function renderInspector() {
   }).join("");
   const tags = (node.tags || []).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
   const routes = node.assumptions ? node.assumptions.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("") : "";
-  const mergeNote = node.declarationCount > 1
+  const mergeNote = node.declarationCount > 1 && node.comparison?.alignment !== "foundation-aligned"
     ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations. Each formalization below remains available as a separate proof/source route.</p></div>`
     : "";
   const comparison = node.comparison;
   const comparisonNote = comparison
-    ? `<div class="detail-block comparison-block"><div class="detail-label">Checked comparison</div><p>${escapeHtml(comparison.identity)}. The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node.</p>${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
+    ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : "Checked comparison"}</div><p>${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
     : "";
   const depthNote = Number.isInteger(node.dependencyDepth)
     ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported declaration · layer ${node.dependencyDepth}.${node.dependencyBoundary ? " Expansion stops here at a Lean structure boundary; click the node’s marker to inspect any indexed dependencies." : ""}</p></div>`
@@ -1113,6 +1113,7 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Graph role</div><p><strong>${escapeHtml(node.presentation.category)}</strong> · ${escapeHtml(node.presentation.reason)}</p><p class="muted-note">Presentation heuristic, not a logical distinction in Lean.</p></div>`
     : "";
   const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
+  const proofSources = (node.proofs || []).map((proof) => `<div class="detail-block proof-source-route"><div class="detail-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} · ${escapeHtml(proof.declaration)}</div><pre class="proof-source pending" data-proof-source="${escapeHtml(proof.id)}"><code>Loading declaration…</code></pre></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
   const relationRows = (entries, label) => entries.length
@@ -1140,13 +1141,17 @@ function renderInspector() {
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
     ${proofs ? `<div class="detail-block"><div class="detail-label">Proof routes · select one to filter dependencies</div><div class="proof-list">${proofs}</div></div>` : ""}
-    <div class="detail-block"><div class="detail-label">Lean proof source${activeProof ? ` · ${escapeHtml(activeProof.label)}${state.selectedProofId ? "" : " (default)"}` : ""}</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>
+    ${proofSources || `<div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>`}
     ${neighborRows ? `<div class="detail-block"><div class="neighbor-list">${neighborRows}</div></div>` : ""}
     ${provenance ? `<details class="provenance"><summary>Checked provenance and formalization</summary><div class="provenance-content">${provenance}</div></details>` : ""}
   `;
   content.querySelectorAll("[data-neighbor]").forEach((button) => button.addEventListener("click", () => selectNode(button.dataset.neighbor)));
   content.querySelectorAll("[data-proof]").forEach((button) => button.addEventListener("click", () => selectProof(button.dataset.proof)));
-  loadProofSource(node, content.querySelector("#proof-source"), sourceRequest, activeProof);
+  if (node.proofs?.length) {
+    node.proofs.forEach((proof) => loadProofSource(node, content.querySelector(`[data-proof-source="${proof.id}"]`), sourceRequest, proof));
+  } else {
+    loadProofSource(node, content.querySelector("#proof-source"), sourceRequest, activeProof);
+  }
 }
 
 function updateWorkspaceContext() {

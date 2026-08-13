@@ -16,10 +16,20 @@ private def comparisonJson (comparison : CheckedComparison) : Json :=
     ("routes", Json.arr (comparison.routes.map routeJson).toArray)
   ]
 
+private def alignedComparisonJson (comparison : FoundationAlignedComparison) : Json :=
+  Json.mkObj [
+    ("id", comparison.id),
+    ("alignment", "foundation-aligned"),
+    ("note", comparison.note),
+    ("routes", Json.arr (comparison.routes.map (fun (repository, declaration) =>
+      Json.mkObj [("repository", repository), ("declaration", declaration)]
+    )).toArray)
+  ]
+
 private def manifest : Json :=
   Json.mkObj [
     ("schemaVersion", "1.0"),
-    ("comparisons", Json.arr (all.map comparisonJson).toArray)
+    ("comparisons", Json.arr ((all.map comparisonJson ++ aligned.map alignedComparisonJson).toArray))
   ]
 
 elab "export_checked_comparisons" : command =>
