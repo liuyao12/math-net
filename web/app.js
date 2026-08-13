@@ -337,8 +337,6 @@ function ambientNodesForFocus(nodes) {
 }
 
 function displayLabelFor(node) {
-  if (node?.namespace === "irrational_sqrt_ratCast_iff_of_nonneg") return "√q irrational ↔ q is not a rational square";
-  if (node?.namespace === "Real" || node?.label === "Real") return "ℝ · real numbers";
   return node?.label || "unnamed declaration";
 }
 

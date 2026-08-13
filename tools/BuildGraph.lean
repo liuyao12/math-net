@@ -2,6 +2,7 @@ import Lean
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 import MathNetwork.Comparisons.List100
+import MathNetwork.Comparisons.MathlibIrrationalSqrt
 import MathNetwork.Comparisons.IrrationalSqrtTwo
 import MathNetwork.Comparisons.ComputableIrrationalSqrt
 
