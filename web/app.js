@@ -1455,7 +1455,7 @@ function horizontalLabelCollisionForce(nodes) {
   return force;
 }
 
-function applyProofRouteLanes(nodes, routeSides, width, coreId) {
+function applyProofRouteLanes(nodes, routeSides, width, coreId, establishedIds) {
   const sides = [...new Set(routeSides.values())].filter((side) => side !== 0);
   if (!sides.length) return;
   const center = width / 2;
@@ -1465,8 +1465,12 @@ function applyProofRouteLanes(nodes, routeSides, width, coreId) {
     lane.sort((left, right) => left.targetY - right.targetY || left.id.localeCompare(right.id));
     lane.forEach((node, index) => {
       const pinned = state.pinnedPositions.get(node.id);
-      if (pinned) {
-        node.targetX = pinned.x;
+      if (pinned || establishedIds.has(node.id)) {
+        // Existing nodes keep their horizontal coordinate while a new batch
+        // of prerequisites is revealed. Only the new nodes are placed into
+        // lanes, so an expanding graph never sweeps the established drawing
+        // sideways.
+        node.targetX = pinned ? pinned.x : node.x;
         return;
       }
       const withinLane = Math.max(-laneGap * 0.55, Math.min(laneGap * 0.55, (index - (lane.length - 1) / 2) * 34));
@@ -1486,13 +1490,13 @@ function applyProofRouteLanes(nodes, routeSides, width, coreId) {
   }
 }
 
-function enforceRouteLaneBounds(nodes, routeSides, width) {
+function enforceRouteLaneBounds(nodes, routeSides, width, establishedIds) {
   const sides = [...new Set(routeSides.values())].filter((side) => side !== 0);
   if (!sides.length) return;
   const center = width / 2;
   const laneGap = Math.min(290, Math.max(130, width / (Math.max(...sides.map(Math.abs)) * 2 + 2)));
   nodes.forEach((node) => {
-    if (state.pinnedPositions.has(node.id)) return;
+    if (state.pinnedPositions.has(node.id) || establishedIds.has(node.id)) return;
     const side = routeSides.get(node.id) || 0;
     // A route-specific declaration may spread within its lane, but it cannot
     // drift through the shared middle and visually merge with another proof.
@@ -1502,6 +1506,7 @@ function enforceRouteLaneBounds(nodes, routeSides, width) {
 }
 
 function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides) {
+  const establishedIds = new Set(state.layoutPositions.keys());
   const focusRank = ranks.get(state.focusId) || Math.max(0, ...ranks.values());
   const rankGap = 52;
   nodes.forEach((node) => {
@@ -1514,7 +1519,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     node.fx = null;
     node.fy = null;
   });
-  applyProofRouteLanes(nodes, routeSides, width, coreId);
+  applyProofRouteLanes(nodes, routeSides, width, coreId, establishedIds);
   nodes.forEach((node) => { node.x = node.targetX; });
   // Run forces only within each fixed rank. `fy` prevents the simulation
   // from changing proof height, while charge, link tension, and collision
@@ -1522,7 +1527,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
   nodes.forEach((node) => {
     node.fy = node.rankY;
     const pinned = state.pinnedPositions.get(node.id);
-    node.fx = pinned ? pinned.x : null;
+    node.fx = pinned ? pinned.x : establishedIds.has(node.id) ? node.x : null;
   });
   d3.forceSimulation(nodes)
     .force("x", d3.forceX((node) => node.targetX).strength((node) => routeSides.get(node.id) ? 0.24 : 0.13))
@@ -1532,7 +1537,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     .force("labels", horizontalLabelCollisionForce(nodes))
     .stop()
     .tick(120);
-  enforceRouteLaneBounds(nodes, routeSides, width);
+  enforceRouteLaneBounds(nodes, routeSides, width, establishedIds);
   nodes.forEach((node) => {
     node.y = node.rankY;
     node.fx = null;
