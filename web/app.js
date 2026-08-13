@@ -1016,51 +1016,6 @@ function expandNodeDependencies(nodeId, redraw = true) {
   return true;
 }
 
-function animateRankLockedSettle(nodeSelection, linkSelection, nodes) {
-  const starts = new Map(state.rankSettleStarts || []);
-  if (state.rankTransition) starts.set(state.rankTransition.id, { x: state.rankTransition.x, y: state.rankTransition.y });
-  if (!starts.size) return;
-  const ends = new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
-  const moving = [...starts].filter(([id, start]) => {
-    const end = ends.get(id);
-    return end && (Math.abs(start.x - end.x) > 1 || Math.abs(start.y - end.y) > 1);
-  });
-  if (!moving.length) {
-    state.rankSettleStarts = null;
-    state.rankTransition = null;
-    return;
-  }
-  const startTime = performance.now();
-  const duration = 720;
-  const ease = (time) => (1 - Math.exp(-6 * time)) / (1 - Math.exp(-6));
-  const update = (now) => {
-    const progress = Math.min(1, (now - startTime) / duration);
-    const amount = ease(progress);
-    moving.forEach(([id, start]) => {
-      const node = nodes.find((item) => item.id === id);
-      const end = ends.get(id);
-      node.x = start.x + (end.x - start.x) * amount;
-      node.y = start.y + (end.y - start.y) * amount;
-    });
-    nodeSelection.attr("transform", (item) => `translate(${item.x},${item.y})`);
-    linkSelection.attr("d", (edge) => routedLinkPath(edge, nodes));
-    if (progress < 1) state.rankTransitionFrame = requestAnimationFrame(update);
-    else {
-      moving.forEach(([id]) => {
-        const node = nodes.find((item) => item.id === id);
-        const end = ends.get(id);
-        node.x = end.x;
-        node.y = end.y;
-        state.layoutPositions.set(node.id, end);
-      });
-      state.rankTransition = null;
-      state.rankSettleStarts = null;
-      state.rankTransitionFrame = null;
-    }
-  };
-  update(startTime);
-}
-
 function scheduleSimulationStop(delay = 900) {
   if (state.settleTimer) window.clearTimeout(state.settleTimer);
   if (!state.simulation) return;
@@ -1561,7 +1516,6 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
   });
   applyProofRouteLanes(nodes, routeSides, width, coreId);
   nodes.forEach((node) => { node.x = node.targetX; });
-  const settleStarts = new Map(nodes.map((node) => [node.id, { x: node.x, y: node.y }]));
   // Run forces only within each fixed rank. `fy` prevents the simulation
   // from changing proof height, while charge, link tension, and collision
   // make siblings and neighboring routes separate horizontally.
@@ -1579,10 +1533,6 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     .stop()
     .tick(120);
   enforceRouteLaneBounds(nodes, routeSides, width);
-  state.rankSettleStarts = [...settleStarts.entries()].filter(([id, start]) => {
-    const node = nodes.find((item) => item.id === id);
-    return Math.abs(start.x - node.x) > 1 || Math.abs(start.y - node.y) > 1;
-  });
   nodes.forEach((node) => {
     node.y = node.rankY;
     node.fx = null;
@@ -1751,12 +1701,17 @@ function draw() {
   state.settleTimer = null;
   state.simulation = null;
   if (state.focusId) {
-    directedLayout(nodes, edges, width, height);
+    // Dagre is useful only for an initial seed. Re-running it for every
+    // progressive reveal batch was resetting nodes to a left-biased layout,
+    // after which the constrained layout visibly pulled them right again.
+    // Settled coordinates are now retained across batches.
+    if (!state.layoutPositions.size) directedLayout(nodes, edges, width, height);
     rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     link.attr("d", (edge) => routedLinkPath(edge, nodes))
       .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
-    animateRankLockedSettle(node, link, nodes);
+    state.rankTransition = null;
+    state.rankSettleStarts = null;
     updateHighlight();
     return;
   }
