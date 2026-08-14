@@ -18,6 +18,6 @@ theorem irrational : Irrational (√2) :=
         simp only [Rat.num_ofNat, Rat.den_ofNat, Int.isSquare_ofNat_iff,
           IsSquare.one, and_true]
         exact Nat.prime_two.not_isSquare
-      simpa using hnot)
+      simpa [MathNetwork.RationalSquares.nonsquare] using hnot)
 
 end MathNetwork.SqrtTwo

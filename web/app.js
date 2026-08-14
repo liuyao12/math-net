@@ -529,6 +529,7 @@ function visibleGraph() {
     // nothing useful in a dependency view and cannot be top-down.
     .filter((edge) => edge.source && edge.target && edge.source.id !== edge.target.id);
   const edgeData = proofRouteEdges(allEdgeData, state.focusId, state.selectedProofId);
+  state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData, 5) : new Map();
   const coreId = coreNodeFor(state.graph.nodes);
   state.coreId = coreId;
   const corePath = coreId ? upstreamPath(state.focusId, coreId, edgeData) : new Set();
@@ -554,7 +555,6 @@ function visibleGraph() {
   const manuallyExpandedIds = new Set(state.expandedDistances.keys());
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(declarationKindFor(node)) &&
     (!isSuppressedNode(node) || node.id === state.focusId || node.id === state.selectedId || forcedIds.has(node.id) || manuallyExpandedIds.has(node.id)));
-  state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData, 5) : new Map();
   state.expandedDistances.forEach((distance, id) => {
     if (!state.focusDistances.has(id) || distance < state.focusDistances.get(id)) state.focusDistances.set(id, distance);
   });
@@ -1073,6 +1073,11 @@ function renderInspector() {
     const name = anchor ? displayLabelFor(anchor) : foundation.declaration;
     return `<button class="neighbor" data-neighbor="${escapeHtml(anchor?.id || "")}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(foundation.repository))}"></span>${escapeHtml((REPOSITORIES[foundation.repository] || REPOSITORIES.unknown).label)} · ${escapeHtml(name)}</button>`;
   }).join("");
+  const mathematicalCore = comparison?.mathematicalCore;
+  const mathematicalCoreNode = mathematicalCore && state.graph.nodes.find((item) => item.namespace === mathematicalCore);
+  const mathematicalCoreAnchor = mathematicalCoreNode
+    ? `<div class="detail-block"><div class="detail-label">Shared rational core</div><div class="tag-list"><button class="neighbor" data-neighbor="${escapeHtml(mathematicalCoreNode.id)}">${escapeHtml(displayLabelFor(mathematicalCoreNode))}</button></div></div>`
+    : "";
   const depthNote = Number.isInteger(node.dependencyDepth)
     ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported declaration · layer ${node.dependencyDepth}.${node.dependencyBoundary ? " Expansion stops here at a Lean structure boundary; click the node’s marker to inspect any indexed dependencies." : ""}</p></div>`
     : "";
@@ -1111,6 +1116,7 @@ function renderInspector() {
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
     ${proofs ? `<div class="detail-block"><div class="detail-label">Proof routes · select one to filter dependencies</div><div class="proof-list">${proofs}</div></div>` : ""}
+    ${mathematicalCoreAnchor}
     ${foundationAnchors ? `<div class="detail-block"><div class="detail-label">Native real foundations</div><div class="tag-list">${foundationAnchors}</div></div>` : ""}
     ${proofSources || `<div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>`}
     ${neighborRows ? `<div class="detail-block"><div class="neighbor-list">${neighborRows}</div></div>` : ""}
@@ -1338,6 +1344,14 @@ function coreNodeFor(nodes) {
   const focus = nodes.find((node) => node.id === state.focusId);
   if (!focus) return null;
   const neighborhood = nodes.filter((node) => state.focusDistances.has(node.id) && isMathematicalNode(node));
+  // A foundation-aligned comparison may nominate a real-free proposition as
+  // its mathematical center. It is checked Lean code, not a synthetic edge;
+  // the two implementation-specific criteria remain separate proof routes.
+  const declaredCore = neighborhood
+    .map((node) => node.comparison?.mathematicalCore)
+    .find(Boolean);
+  const declaredCoreNode = declaredCore && nodes.find((node) => node.namespace === declaredCore);
+  if (declaredCoreNode) return declaredCoreNode.id;
   const tokenFrequency = new Map();
   neighborhood.forEach((node) => semanticTokens(`${node.namespace || ""} ${node.statement || ""}`).forEach((token) => {
     tokenFrequency.set(token, (tokenFrequency.get(token) || 0) + 1);

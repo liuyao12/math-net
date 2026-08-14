@@ -21,6 +21,7 @@ private def alignedComparisonJson (comparison : FoundationAlignedComparison) : J
     ("id", comparison.id),
     ("alignment", "foundation-aligned"),
     ("note", comparison.note),
+    ("mathematicalCore", comparison.mathematicalCore),
     ("routes", Json.arr (comparison.routes.map (fun (repository, declaration, foundation) =>
       Json.mkObj [
         ("repository", repository),

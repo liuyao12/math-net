@@ -1,4 +1,5 @@
 import ComputableAnalysis.IrrationalSqrt
+import MathNetwork.Comparisons.RationalSquares
 
 /-!
 # Computable rational square-root criterion
@@ -16,7 +17,8 @@ namespace MathNetwork.ComputableSqrt
 MathNet declaration so its actual proof dependencies enter the landscape. -/
 theorem irrational_sqrt_ratCast_iff_of_nonneg {q : Rat} (hq : 0 <= q) :
     ComputableAnalysis.RealRaw.Irrational (ComputableAnalysis.sqrtRat q hq) ↔
-      ¬ ComputableAnalysis.Rat.IsSquare q := by
-  exact ComputableAnalysis.irrational_sqrt_ratCast_iff_of_nonneg hq
+      MathNetwork.RationalSquares.nonsquare q := by
+  rw [ComputableAnalysis.irrational_sqrt_ratCast_iff_of_nonneg hq]
+  exact (MathNetwork.RationalSquares.nonsquare_iff_computableNonsquare q).symm
 
 end MathNetwork.ComputableSqrt

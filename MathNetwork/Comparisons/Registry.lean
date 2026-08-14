@@ -30,6 +30,7 @@ two declarations can become one Lean proposition. -/
 structure FoundationAlignedComparison where
   id : String
   note : String
+  mathematicalCore : String
   routes : List (String × String × String)
 
 def irrationalSqrtTwo : CheckedComparison where
@@ -51,7 +52,8 @@ The graph keeps their routes together while making the missing real-number
 bridge explicit. -/
 def irrationalSqrtRat : FoundationAlignedComparison where
   id := "irrational-sqrt-rational"
-  note := "Foundation-aligned declarations: Mathlib uses ℝ and computable-analysis uses RealRaw. A checked representation bridge is required before Lean can identify their proposition types."
+  note := "The shared mathematical core is the rational-square criterion. Mathlib uses ℝ and computable-analysis uses RealRaw for the two analytic branches; a checked representation bridge is still required before Lean can identify their irrationality predicates."
+  mathematicalCore := "MathNetwork.RationalSquares.isSquare_iff_computableIsSquare"
   routes := [
     ("mathlib", "MathNetwork.MathlibSqrt.irrational_sqrt_ratCast_iff_of_nonneg", "Real"),
     ("computable-analysis", "MathNetwork.ComputableSqrt.irrational_sqrt_ratCast_iff_of_nonneg", "ComputableAnalysis.RealRaw")

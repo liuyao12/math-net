@@ -1,4 +1,5 @@
 import Mathlib.NumberTheory.Real.Irrational
+import MathNetwork.Comparisons.RationalSquares
 
 /-!
 # Mathlib rational square-root criterion
@@ -13,7 +14,8 @@ namespace MathNetwork.MathlibSqrt
 /-- A nonnegative rational has an irrational square root in Mathlib's real
 numbers exactly when it is not a rational square. -/
 theorem irrational_sqrt_ratCast_iff_of_nonneg {q : Rat} (hq : 0 ≤ q) :
-    Irrational (√(q : ℝ)) ↔ ¬ IsSquare q := by
-  exact _root_.irrational_sqrt_ratCast_iff_of_nonneg hq
+    Irrational (√(q : ℝ)) ↔ MathNetwork.RationalSquares.nonsquare q := by
+  simpa [MathNetwork.RationalSquares.nonsquare] using
+    (_root_.irrational_sqrt_ratCast_iff_of_nonneg hq)
 
 end MathNetwork.MathlibSqrt
