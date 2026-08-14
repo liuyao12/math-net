@@ -121,7 +121,8 @@ private def structuralProjectionNames (env : Environment) : NameSet :=
     | none => names
 
 private def projectNode (env : Environment) (projections : NameSet) (ci : ConstantInfo) (name : Name) (index : Nat) : Json :=
-  let (declarationKind, role) := declarationKind ci
+  let (declarationKind, rawRole) := declarationKind ci
+  let role := if isStructure env name then "structure" else rawRole
   Json.mkObj [
     ("id", s!"decl-{index}"),
     ("kind", graphKind ci),
@@ -145,9 +146,10 @@ private def projectNode (env : Environment) (projections : NameSet) (ci : Consta
   ]
 
 private def dependencyNode (env : Environment) (projections : NameSet) (name : Name) (index : Nat) (module : String) (depth : Nat) : Json :=
-  let (kind, role, statement) := match env.find? name with
+  let (kind, rawRole, statement) := match env.find? name with
     | some ci => let (kind, role) := declarationKind ci; (kind, role, toString ci.type)
     | none => ("definition", "definition", s!"Lean declaration {name}")
+  let role := if isStructure env name then "structure" else rawRole
   Json.mkObj [
     ("id", s!"const-{index}"),
     ("kind", "source"),
@@ -160,7 +162,7 @@ private def dependencyNode (env : Environment) (projections : NameSet) (name : N
     ("locator", if module.startsWith "Mathlib." then s!"mathlib/{module}" else s!"computable-analysis/{module}"),
     ("citation", name.toString),
     ("dependencyDepth", toJson depth),
-    ("dependencyBoundary", if depth >= maxDependencyDepth then Json.bool true else Json.bool false),
+    ("dependencyBoundary", if depth >= maxDependencyDepth || isStructure env name then Json.bool true else Json.bool false),
     ("verification", Json.mkObj [
       ("state", "imported-checked"),
       ("scope", "imported"),

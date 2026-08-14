@@ -325,7 +325,11 @@ function isLandmark(node) {
 }
 
 function isExpansionBoundary(node) {
-  return declarationKindFor(node) === "inductive";
+  return node?.role === "structure" || declarationKindFor(node) === "inductive";
+}
+
+function isStructureNode(node) {
+  return node?.role === "structure";
 }
 
 function ambientNodesForFocus(nodes) {
@@ -939,7 +943,7 @@ function renderProofLegend() {
 }
 
 function nodeRadius(item, coreId, ambientIds) {
-  return item.id === state.focusId ? 13 : item.id === coreId ? 12 : ambientIds.has(item.id) ? 8 : item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4;
+  return isStructureNode(item) ? 16 : item.id === state.focusId ? 13 : item.id === coreId ? 12 : ambientIds.has(item.id) ? 8 : item.kind === "proof-family" ? 10 : isMajorNode(item) && declarationKindFor(item) === "theorem" ? 8 : isMajorNode(item) ? 6 : 4;
 }
 
 function pieSlicePath(index, count, radius) {
@@ -1151,6 +1155,7 @@ function updateHighlight() {
   // neighboring node is inspected.
   const neighborhood = state.focusId ? new Set(state.focusDistances.keys()) : new Set();
   svg.selectAll(".node-dot").classed("selected", (node) => node.id === state.selectedId).classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
+  svg.selectAll(".node-structure").classed("selected", (node) => node.id === state.selectedId).classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
   svg.selectAll(".node-pie").classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
   svg.selectAll(".node-label").classed("dimmed", (node) => state.focusId && !neighborhood.has(node.id));
   svg.selectAll(".graph-link")
@@ -1262,16 +1267,38 @@ function directedLayout(nodes, edges, width, height) {
 function proofRouteSides(nodes, edges, focusId) {
   const sides = new Map();
   const focus = nodes.find((node) => node.id === focusId);
-  if (!focus || !(focus.proofs || []).length) return sides;
+  if (!focus) return sides;
+  const incoming = new Map();
+  edges.forEach((edge) => {
+    if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
+    incoming.get(edge.target.id).push(edge);
+  });
+  // A focused corollary can have only one local route while a multi-proof
+  // comparison sits upstream. That comparison, not the corollary, is where
+  // provenance lanes must split.
+  const visited = new Set([focusId]);
+  const search = [focusId];
+  let comparisonFocus = null;
+  while (search.length && !comparisonFocus) {
+    const targetId = search.shift();
+    const target = nodes.find((node) => node.id === targetId);
+    if (target?.comparison?.routes?.length > 1) {
+      comparisonFocus = target;
+      break;
+    }
+    (incoming.get(targetId) || []).forEach((edge) => {
+      if (!visited.has(edge.source.id)) {
+        visited.add(edge.source.id);
+        search.push(edge.source.id);
+      }
+    });
+  }
+  const laneFocus = comparisonFocus || focus;
+  if (!(laneFocus.proofs || []).length) return sides;
   if (state.selectedProofId) {
     // Once one proof is selected, its upstream closure is the subject of the
     // view. Keep that route on the central spine; repository lanes are useful
     // only while comparing multiple routes at the merged proposition.
-    const incoming = new Map();
-    edges.forEach((edge) => {
-      if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
-      incoming.get(edge.target.id).push(edge);
-    });
     const queue = [focusId];
     sides.set(focusId, 0);
     while (queue.length) {
@@ -1286,8 +1313,8 @@ function proofRouteSides(nodes, edges, focusId) {
   }
   const groupForProof = new Map();
   const groups = [];
-  (focus.proofs || []).forEach((proof) => {
-    const key = proof.routeKind === "local" ? "local" : proof.routeKind || proof.id;
+  (laneFocus.proofs || []).forEach((proof) => {
+    const key = repositoryForProof(proof);
     if (!groups.includes(key)) groups.push(key);
     groupForProof.set(proof.id, key);
   });
@@ -1295,17 +1322,15 @@ function proofRouteSides(nodes, edges, focusId) {
   // this is left/right; with three or more, the lanes remain evenly spaced
   // instead of collapsing the middle alternatives onto the shared spine.
   const groupSide = new Map(groups.map((group, index) => [group, index - (groups.length - 1) / 2]));
-  const incoming = new Map();
-  edges.forEach((edge) => {
-    if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
-    incoming.get(edge.target.id).push(edge);
-  });
-  const queue = [focusId];
+  // The segment from the corollary to the comparison is shared. Above the
+  // comparison, dependencies occupy their repository's lane.
+  const queue = [laneFocus.id];
   sides.set(focusId, 0);
+  sides.set(laneFocus.id, 0);
   while (queue.length) {
     const targetId = queue.shift();
     (incoming.get(targetId) || []).forEach((edge) => {
-      const edgeSide = targetId === focusId ? groupSide.get(groupForProof.get(edge.proof)) ?? 0 : sides.get(targetId) ?? 0;
+      const edgeSide = targetId === laneFocus.id ? groupSide.get(groupForProof.get(edge.proof)) ?? 0 : sides.get(targetId) ?? 0;
       if (!sides.has(edge.source.id)) {
         sides.set(edge.source.id, edgeSide);
         queue.push(edge.source.id);
@@ -1707,6 +1732,13 @@ function draw() {
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
   const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => displayLabelFor(item)).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("focus-node", (item) => item.id === state.focusId).classed("ambient-node", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).on("dblclick", (event, item) => { event.stopPropagation(); if (hasHiddenDependencies(item.id, nodes)) expandNodeDependencies(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.rankY ?? item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = item.rankY ?? item.y; item.fx = event.x; item.fy = item.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.rankY ?? item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
+  // Lean encodes structures as inductives internally. Their rounded cards
+  // mark a representation boundary: they are substantial objects, but their
+  // fields and construction details remain collapsed until expanded.
+  node.append("rect").attr("class", "node-structure")
+    .classed("hidden", (item) => !isStructureNode(item))
+    .attr("x", -16).attr("y", -12).attr("width", 32).attr("height", 24).attr("rx", 6)
+    .attr("fill", (item) => repositoryColor(repositoriesForNode(item)[0]));
   // A merged declaration can have checked proof terms from more than one
   // repository. Render its disk as a pie, rather than assigning it a fourth
   // misleading color; single-source declarations remain solid repository color.
@@ -1719,11 +1751,11 @@ function draw() {
       .attr("d", (_, index) => pieSlicePath(index, repositories.length, radius))
       .attr("fill", (repository) => repositoryColor(repository));
   });
-  node.append("circle").attr("class", "node-dot").classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("landmark", (item) => state.showLandmarks && isLandmark(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => nodeRadius(item, coreId, ambientIds)).attr("fill", (item) => {
+  node.append("circle").attr("class", "node-dot").classed("structure", isStructureNode).classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("landmark", (item) => state.showLandmarks && isLandmark(item)).attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("r", (item) => nodeRadius(item, coreId, ambientIds)).attr("fill", (item) => {
     const repositories = repositoriesForNode(item);
     return repositories.length === 1 ? repositoryColor(repositories[0]) : "transparent";
   });
-  node.append("text").attr("class", "node-label").classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", 16).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (isSuppressedNode(item) && item.id !== state.selectedId && item.id !== state.focusId && !ambientIds.has(item.id)) || (item.id !== coreId && !ambientIds.has(item.id) && displayLabelFor(item).length > 31 && nodes.length > 12));
+  node.append("text").attr("class", "node-label").classed("structure", isStructureNode).classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", (item) => isStructureNode(item) ? 22 : 16).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (isSuppressedNode(item) && item.id !== state.selectedId && item.id !== state.focusId && !ambientIds.has(item.id)) || (item.id !== coreId && !ambientIds.has(item.id) && displayLabelFor(item).length > 31 && nodes.length > 12));
   const expanders = node.append("g").attr("class", "node-expand").attr("transform", "translate(0,-18)")
     .classed("hidden", (item) => item.id !== state.selectedId || !hasHiddenDependencies(item.id, nodes))
     .attr("role", "button")
