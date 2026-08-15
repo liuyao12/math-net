@@ -1197,8 +1197,6 @@ function renderInspector() {
     relationRows(outgoing, "Used by direct proof targets"),
   ].join("");
   const provenance = [
-    mergeNote,
-    comparisonNote,
     structureNote,
     depthNote,
     presentation,
@@ -1212,6 +1210,7 @@ function renderInspector() {
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(displayLabelFor(node))}</h2>
     <div class="detail-block declaration-signature"><div class="detail-label">${formalStatementHeading}</div>${allRouteStatement || `<pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre>`}</div>
+    ${mergeNote}${comparisonNote}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
