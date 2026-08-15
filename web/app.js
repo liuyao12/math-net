@@ -1379,6 +1379,15 @@ function proofRouteSides(nodes, edges, focusId) {
   ownership.forEach((clustersForNode, nodeId) => {
     sides.set(nodeId, clustersForNode.size === 1 ? coordinate.get([...clustersForNode][0]) : 0);
   });
+  // A comparison registry may designate a checked, representation-free
+  // mathematical core. It is a neutral reading anchor even when one route
+  // happens to use the bridge theorem and another reaches the same condition
+  // definitionally. This changes placement only; no relationship edge is
+  // added to the Lean dependency graph.
+  const declaredCore = anchor.comparison?.mathematicalCore;
+  if (declaredCore) {
+    nodes.filter((node) => node.namespace === declaredCore).forEach((node) => sides.set(node.id, 0));
+  }
   return sides;
 }
 
