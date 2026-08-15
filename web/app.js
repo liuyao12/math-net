@@ -245,6 +245,36 @@ function compactLeanSource(source, { maxLines = 32, maxLineLength = 260 } = {}) 
   ].join("\n");
 }
 
+function declarationSignature(source) {
+  const proofStart = source.search(/:=\s*(?:by\b|\n)/);
+  const signature = proofStart >= 0 ? source.slice(0, proofStart).trimEnd() : source;
+  return compactLeanSource(signature, { maxLines: 12, maxLineLength: 220 });
+}
+
+async function loadDeclarationSignature(node, container, request, selectedProof = null) {
+  const proof = selectedProof || (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
+  const file = sourceFileFor(node, proof);
+  const formalization = proof
+    ? { file: proof.file, name: proof.declaration }
+    : (node.formalizations || []).find((item) => item.file);
+  if (!file) {
+    container.textContent = "Lean source is unavailable for this generated declaration.";
+    container.classList.remove("pending");
+    return;
+  }
+  try {
+    const response = await fetch(sourceUrlFor(node, proof));
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const source = declarationSource(await response.text(), formalization?.name || proof?.declaration || node.namespace || node.label);
+    if (request !== state.sourceRequest) return;
+    container.innerHTML = `<code>${highlightLean(source ? declarationSignature(source) : `-- ${node.label}: declaration signature could not be isolated from ${file}`)}</code>`;
+  } catch (_) {
+    if (request !== state.sourceRequest) return;
+    container.textContent = `Source unavailable for ${file}.`;
+  }
+  container.classList.remove("pending");
+}
+
 async function loadProofSource(node, container, request, selectedProof = null) {
   const proof = selectedProof || (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
   const file = sourceFileFor(node, proof);
@@ -1152,6 +1182,7 @@ function renderInspector() {
     <span class="node-kind ${escapeHtml(declarationClassFor(node))}" style="color:${escapeHtml(declarationColorFor(node))};background:${escapeHtml(declarationBackgroundFor(node))}">${escapeHtml(declarationKindFor(node))}</span>
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(displayLabelFor(node))}</h2>
+    <div class="detail-block declaration-signature"><div class="detail-label">Formal statement${activeProof ? ` · ${escapeHtml((REPOSITORIES[repositoryForProof(activeProof)] || REPOSITORIES.unknown).label)} route` : ""}</div><pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre></div>
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
@@ -1169,6 +1200,7 @@ function renderInspector() {
   } else {
     loadProofSource(node, content.querySelector("#proof-source"), sourceRequest, activeProof);
   }
+  loadDeclarationSignature(node, content.querySelector("#declaration-signature"), sourceRequest, activeProof);
 }
 
 function updateWorkspaceContext() {
