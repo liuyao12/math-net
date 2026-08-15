@@ -5,8 +5,13 @@ const query = new URLSearchParams(window.location.search);
 const requestedGraph = query.get("graph");
 const requestedTheorem = query.get("theorem");
 const REPO_ROOT = window.location.pathname.includes("/web/") ? "../" : "./";
-const THEOREMS_URL = "./theorems.json";
-const DATA_URLS = [`${REPO_ROOT}MathNetwork/Graph/project.json`];
+// The HTML entry point versions this module on every publish. Reuse that
+// revision for graph assets so the interface and its extracted Lean data can
+// never be served from different deployments by a CDN cache.
+const APP_REVISION = new URL(import.meta.url).searchParams.get("v") || "dev";
+const versionedAsset = (url) => `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(APP_REVISION)}`;
+const THEOREMS_URL = versionedAsset("./theorems.json");
+const DATA_URLS = [versionedAsset(`${REPO_ROOT}MathNetwork/Graph/project.json`)];
 const DECLARATION_LABELS = {
   theorem: "Theorems",
   opaque: "Opaque declarations",
