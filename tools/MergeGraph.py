@@ -19,27 +19,28 @@ from collections import defaultdict
 
 def proof_record(node: dict) -> dict:
     declaration = node.get("namespace", node["label"])
+    short_declaration = declaration.rsplit(".", 1)[-1]
     if node.get("locator", "").startswith("mathlib/"):
-        label = "mathlib · library proof"
+        label = f"mathlib · {short_declaration}"
         route_kind = "mathlib"
         color = "#3f7f8f"
     elif node.get("locator", "").startswith("computable-analysis/"):
-        label = "computable-analysis · imported proof"
+        label = f"computable-analysis · {short_declaration}"
         route_kind = "computable-analysis"
         color = "#a45b38"
     elif declaration in {
         "MathNetwork.SqrtTwo.irrational",
         "MathNetwork.MathlibSqrt.irrational_sqrt_ratCast_iff_of_nonneg",
     }:
-        label = "mathlib · local adapter"
+        label = f"mathlib · {short_declaration}"
         route_kind = "mathlib"
         color = "#3f7f8f"
     elif declaration == "MathNetwork.ComputableSqrt.irrational_sqrt_ratCast_iff_of_nonneg":
-        label = "computable-analysis · rational square-root criterion"
+        label = f"computable-analysis · {short_declaration}"
         route_kind = "computable-analysis"
         color = "#a45b38"
     else:
-        label = "math-net · local proof"
+        label = f"math-net · {short_declaration}"
         route_kind = "local"
         color = "#7a6397"
     record = {

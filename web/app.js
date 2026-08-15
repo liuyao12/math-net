@@ -1284,7 +1284,9 @@ function renderInspector() {
   const proofs = proofList.map((proof) => {
     const summary = proofDependencies.get(proof.id);
     const delegated = (delegations.get(proof.id) || []).map((delegation) => delegation.declaration).join(", ");
-    const routeLabel = delegated ? proof.label.replace(/local proof$/, "adapter") : proof.label;
+    const routeLabel = delegated
+      ? `${(REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label} · adapter`
+      : proof.label;
     const directInputs = summary && proofList.length > 1
       ? `<small class="proof-dependency-summary">${summary.total} direct inputs · ${summary.routeOnly} route-only · ${summary.shared} shared</small>`
       : "";
