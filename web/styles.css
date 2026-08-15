@@ -314,6 +314,10 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
   .inspector-controls { padding-left: 16px; padding-right: 16px; }
 }
 .proof-list { display: grid; gap: 7px; }
+.proof-all { display: flex; align-items: center; gap: 7px; width: 100%; padding: 7px 8px; border: 1px dashed var(--line); border-radius: 8px; background: rgba(255,255,255,.2); color: var(--muted); font: 11px var(--sans); text-align: left; cursor: pointer; }
+.proof-all.selected { border-style: solid; border-color: var(--ink); background: rgba(255,255,255,.7); color: var(--ink); }
+.proof-all small { color: var(--muted); font: 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.proof-all-glyph { color: var(--teal); font-size: 15px; line-height: 1; }
 .proof-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.34); }
 .proof-row.selected { border-color: var(--ink); background: rgba(255,255,255,.7); }
 .proof-select { display: flex; align-items: flex-start; gap: 7px; border: 0; padding: 0; background: transparent; color: var(--ink); text-align: left; font: inherit; cursor: pointer; }

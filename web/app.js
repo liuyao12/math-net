@@ -1063,6 +1063,12 @@ function selectProof(proofId) {
   draw();
 }
 
+function selectAllProofs() {
+  state.selectedProofId = null;
+  renderInspector();
+  draw();
+}
+
 function expandNodeDependencies(nodeId, redraw = true) {
   const node = nodeMap().get(nodeId);
   if (!node) return;
@@ -1118,7 +1124,8 @@ function renderInspector() {
   const sourceRequest = ++state.sourceRequest;
   const neighbors = nodeNeighbors(node.id);
   const github = githubUrlFor(node);
-  const activeProof = (node.proofs || []).find((item) => item.id === state.selectedProofId) || node.proofs?.[0] || null;
+  const selectedProof = (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
+  const activeProof = selectedProof || (node.proofs?.length === 1 ? node.proofs[0] : null);
   const formalizations = (node.formalizations || []).map((item) => {
     const file = item.file ? `<br><span>${escapeHtml(item.file)}${item.anchor ? ` · ${escapeHtml(item.anchor)}` : ""}</span>` : "";
     const github = githubUrlFor(node, item);
@@ -1156,7 +1163,11 @@ function renderInspector() {
   const presentation = node.presentation
     ? `<div class="detail-block"><div class="detail-label">Graph role</div><p><strong>${escapeHtml(node.presentation.category)}</strong> · ${escapeHtml(node.presentation.reason)}</p><p class="muted-note">Presentation heuristic, not a logical distinction in Lean.</p></div>`
     : "";
-  const proofs = (node.proofs || []).map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
+  const proofList = node.proofs || [];
+  const allProofsControl = proofList.length > 1
+    ? `<button class="proof-all ${state.selectedProofId ? "" : "selected"}" data-all-proofs><span class="proof-all-glyph">◎</span>All routes <small>merged comparison</small></button>`
+    : "";
+  const proofs = proofList.map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
   const proofSources = (node.proofs || []).map((proof) => `<div class="detail-block proof-source-route"><div class="detail-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} · ${escapeHtml(proof.declaration)}</div><pre class="proof-source pending" data-proof-source="${escapeHtml(proof.id)}"><code>Loading declaration…</code></pre></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
@@ -1182,11 +1193,11 @@ function renderInspector() {
     <span class="node-kind ${escapeHtml(declarationClassFor(node))}" style="color:${escapeHtml(declarationColorFor(node))};background:${escapeHtml(declarationBackgroundFor(node))}">${escapeHtml(declarationKindFor(node))}</span>
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(displayLabelFor(node))}</h2>
-    <div class="detail-block declaration-signature"><div class="detail-label">Formal statement${activeProof ? ` · ${escapeHtml((REPOSITORIES[repositoryForProof(activeProof)] || REPOSITORIES.unknown).label)} route` : ""}</div><pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre></div>
+    <div class="detail-block declaration-signature"><div class="detail-label">Formal statement${activeProof ? ` · ${escapeHtml((REPOSITORIES[repositoryForProof(activeProof)] || REPOSITORIES.unknown).label)} route` : proofList.length > 1 ? " · all routes" : ""}</div><pre class="proof-source pending" id="declaration-signature"><code>${proofList.length > 1 && !activeProof ? "Select a route below to inspect its Lean declaration here. All checked source declarations remain available below." : "Loading Lean declaration…"}</code></pre></div>
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
-    ${proofs ? `<div class="detail-block"><div class="detail-label">Proof routes · select one to filter dependencies</div><div class="proof-list">${proofs}</div></div>` : ""}
+    ${proofs ? `<div class="detail-block"><div class="detail-label">Proof routes · select one to filter dependencies</div><div class="proof-list">${allProofsControl}${proofs}</div></div>` : ""}
     ${mathematicalCoreAnchor}
     ${foundationAnchors ? `<div class="detail-block"><div class="detail-label">Native real foundations</div><div class="tag-list">${foundationAnchors}</div></div>` : ""}
     ${proofSources || `<div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>`}
@@ -1195,12 +1206,14 @@ function renderInspector() {
   `;
   content.querySelectorAll("[data-neighbor]").forEach((button) => button.addEventListener("click", () => selectNode(button.dataset.neighbor)));
   content.querySelectorAll("[data-proof]").forEach((button) => button.addEventListener("click", () => selectProof(button.dataset.proof)));
+  content.querySelector("[data-all-proofs]")?.addEventListener("click", selectAllProofs);
   if (node.proofs?.length) {
     node.proofs.forEach((proof) => loadProofSource(node, content.querySelector(`[data-proof-source="${proof.id}"]`), sourceRequest, proof));
   } else {
     loadProofSource(node, content.querySelector("#proof-source"), sourceRequest, activeProof);
   }
-  loadDeclarationSignature(node, content.querySelector("#declaration-signature"), sourceRequest, activeProof);
+  if (activeProof) loadDeclarationSignature(node, content.querySelector("#declaration-signature"), sourceRequest, activeProof);
+  else content.querySelector("#declaration-signature")?.classList.remove("pending");
 }
 
 function updateWorkspaceContext() {
