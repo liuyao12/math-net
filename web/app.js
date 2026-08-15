@@ -1680,6 +1680,71 @@ function horizontalLabelCollisionForce(nodes) {
   return force;
 }
 
+function structuralRankPositions(nodesByRank, edges, ranks, width, allNodes) {
+  // This is the coordinate-assignment half of a Sugiyama-style drawing.
+  // Dagre provides the first order, then alternating barycentric sweeps order
+  // every rank from its *actual* neighbours.  In particular there is no
+  // notion of a repository, a proof family, or a preferred left/right side
+  // here: independent proof branches separate because their incidences in
+  // the dependency graph are different.
+  const neighbours = new Map(allNodes.map((node) => [node.id, []]));
+  edges.forEach((edge) => {
+    neighbours.get(edge.source.id)?.push(edge.target.id);
+    neighbours.get(edge.target.id)?.push(edge.source.id);
+  });
+  const rankValues = [...nodesByRank.keys()].sort((left, right) => left - right);
+  const order = new Map();
+  rankValues.forEach((rank) => {
+    nodesByRank.get(rank).slice().sort((left, right) =>
+      (left.x ?? 0) - (right.x ?? 0) || left.id.localeCompare(right.id),
+    ).forEach((node, index) => order.set(node.id, index));
+  });
+  const rankOf = (id) => ranks.get(id) || 0;
+  const barycenter = (node, rank, direction) => {
+    const adjacent = (neighbours.get(node.id) || [])
+      .filter((id) => direction * (rankOf(id) - rank) > 0)
+      .map((id) => order.get(id))
+      .filter(Number.isFinite);
+    if (!adjacent.length) return null;
+    return d3.mean(adjacent);
+  };
+  // Alternating upward/downward passes substantially reduce crossings while
+  // retaining a deterministic answer when two nodes have the same neighbours.
+  for (let pass = 0; pass < 6; pass += 1) {
+    const direction = pass % 2 === 0 ? -1 : 1;
+    const orderedRanks = direction < 0 ? rankValues.slice().reverse() : rankValues;
+    orderedRanks.forEach((rank) => {
+      const layer = nodesByRank.get(rank);
+      layer.sort((left, right) => {
+        const leftBarycenter = barycenter(left, rank, direction);
+        const rightBarycenter = barycenter(right, rank, direction);
+        if (leftBarycenter != null && rightBarycenter != null && leftBarycenter !== rightBarycenter) {
+          return leftBarycenter - rightBarycenter;
+        }
+        if (leftBarycenter != null && rightBarycenter == null) return -1;
+        if (rightBarycenter != null && leftBarycenter == null) return 1;
+        return (left.x ?? 0) - (right.x ?? 0) || left.id.localeCompare(right.id);
+      });
+      layer.forEach((node, index) => order.set(node.id, index));
+    });
+  }
+  const positions = new Map();
+  rankValues.forEach((rank) => {
+    const layer = nodesByRank.get(rank);
+    const gaps = 18;
+    const widths = layer.map((node) => Math.max(34, Math.min(220, labelFor(node, allNodes).length * 6.4 + 28)));
+    const totalWidth = widths.reduce((sum, item) => sum + item, 0) + gaps * Math.max(0, layer.length - 1);
+    const scale = totalWidth > width - 44 ? (width - 44) / totalWidth : 1;
+    let cursor = (width - totalWidth * scale) / 2;
+    layer.forEach((node, index) => {
+      const nodeWidth = widths[index] * scale;
+      positions.set(node.id, cursor + nodeWidth / 2);
+      cursor += nodeWidth + gaps * scale;
+    });
+  });
+  return positions;
+}
+
 function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
   // `directedLayout` supplies a stable seed before this constrained pass.
   // Later reveal batches retain that seed as a suggestion, but never freeze
@@ -1688,7 +1753,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
   const focusRank = ranks.get(state.focusId) || Math.max(0, ...ranks.values());
   const rankGap = 52;
   nodes.forEach((node) => {
-    node.targetX = node.id === coreId || node.id === state.focusId ? width / 2 : node.x;
+    node.targetX = node.id === coreId || node.id === state.focusId ? width / 2 : node.targetX ?? node.x;
     node.targetY = height * FOCUS_Y_FRACTION - (focusRank - (ranks.get(node.id) || 0)) * rankGap;
     node.rankY = node.targetY;
     node.y = node.rankY;
@@ -1788,22 +1853,15 @@ function draw() {
   const occupiedHeight = maxRank * layerGap + 40;
   const graphTop = Math.max(32, (height - occupiedHeight) / 2);
   const nodesByRank = d3.group(nodes, (item) => ranks.get(item.id) || 0);
-  const maxLayerSize = Math.max(1, ...Array.from(nodesByRank.values()).map((layer) => layer.length));
-  const columnGap = Math.min(112, Math.max(72, (width - 80) / Math.max(1, maxLayerSize)));
-  // Seed each rank from the directed graph. Dagre supplies an initial
-  // crossing-minimising order; later node and label forces remain agnostic
-  // about repositories and proof-route identities.
-  const rankPositions = new Map();
-  nodesByRank.forEach((layer) => {
-    layer.slice().sort((left, right) => left.id.localeCompare(right.id)).forEach((item, index) => {
-      rankPositions.set(item.id, { index, size: layer.length });
-    });
-  });
+  // Derive a horizontal position from graph incidence, not declaration names
+  // or route provenance. This preserves the structure found by Dagre and
+  // refines it as further dependency batches are revealed.
+  const rankPositions = structuralRankPositions(nodesByRank, edges, ranks, width, nodes);
   nodesByRank.forEach((layer, rank) => layer.forEach((item) => {
-    const position = rankPositions.get(item.id) || { index: 0, size: 1 };
+    const position = rankPositions.get(item.id) ?? width / 2;
     const targetX = item.id === state.focusId || item.id === coreId
       ? width / 2
-      : width / 2 + (position.index - (position.size - 1) / 2) * columnGap * 0.72;
+      : position;
     const targetY = item.id === coreId
       ? height * 0.5
       : item.id === state.focusId
