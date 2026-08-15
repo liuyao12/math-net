@@ -1222,6 +1222,8 @@ function renderInspector() {
   const sourceRequest = ++state.sourceRequest;
   const neighbors = nodeNeighbors(node.id);
   const github = githubUrlFor(node);
+  const focusedTheorem = state.focusId ? nodeMap().get(state.focusId) : null;
+  const focusedRoute = focusedTheorem && (focusedTheorem.proofs || []).find((proof) => proof.id === state.selectedProofId);
   const proofList = node.proofs || [];
   const proofDependencies = proofDependencySummaries(node.id, proofList);
   const proofDifference = proofDependencyDifference(node.id, proofList);
@@ -1256,6 +1258,9 @@ function renderInspector() {
       : proofList.length > 1
         ? "Shared formal statement · exact checked merge"
         : "Formal statement";
+  const routeContext = focusedTheorem && focusedRoute && node.id !== focusedTheorem.id
+    ? `<div class="route-context"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(focusedRoute)))}"></span><span>Viewing a dependency of <button class="route-context-theorem" data-neighbor="${escapeHtml(focusedTheorem.id)}">${escapeHtml(displayLabelFor(focusedTheorem))}</button> via <strong>${escapeHtml(focusedRoute.label)}</strong>.</span></div>`
+    : "";
   const comparisonNote = comparison
     ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : "Checked comparison"}</div><p>${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
     : "";
@@ -1328,6 +1333,7 @@ function renderInspector() {
     <span class="node-kind ${escapeHtml(declarationClassFor(node))}" style="color:${escapeHtml(declarationColorFor(node))};background:${escapeHtml(declarationBackgroundFor(node))}">${escapeHtml(declarationKindFor(node))}</span>
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(displayLabelFor(node))}</h2>
+    ${routeContext}
     <div class="detail-block declaration-signature"><div class="detail-label">${formalStatementHeading}</div>${allRouteStatement || `<pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre>`}</div>
     ${mergeNote}${comparisonNote}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}

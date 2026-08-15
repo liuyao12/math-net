@@ -334,6 +334,10 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .proof-select .proof-dependency-summary { margin-top: 4px; color: var(--muted); font-size: 9px; letter-spacing: 0; text-transform: none; }
 .proof-select .proof-delegation { margin-top: 4px; color: var(--plum); font-size: 9px; letter-spacing: 0; text-transform: none; }
 .proof-status { color: var(--muted); font: 10px var(--mono); white-space: nowrap; }
+.route-context { display: flex; align-items: flex-start; gap: 7px; margin: 3px 0 13px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--muted); background: rgba(255,255,255,.42); font-size: 11px; line-height: 1.45; }
+.route-context .proof-color { width: 14px; margin-top: 6px; }
+.route-context strong { color: var(--ink); font-weight: 600; }
+.route-context-theorem { padding: 0; border: 0; color: var(--blue); background: transparent; font: inherit; font-weight: 650; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
 .route-difference { display: grid; gap: 9px; }
 .route-difference-row { display: grid; grid-template-columns: minmax(86px, 116px) 1fr; align-items: start; gap: 8px; }
 .route-difference-name { display: flex; align-items: center; gap: 6px; padding-top: 5px; color: var(--muted); font: 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
