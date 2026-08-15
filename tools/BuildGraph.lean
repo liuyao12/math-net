@@ -126,12 +126,14 @@ private def dependencyDepths (env : Environment) (targets : Array Name) : Array 
 private def dependencyNames (env : Environment) (targets : Array Name) : Array Name :=
   (dependencyDepths env targets).map (·.1) |>.qsort Name.lt
 
-private def structuralProjectionNames (env : Environment) : NameSet :=
-  env.constants.fold (init := ({} : NameSet)) fun names structureName _ =>
-    match getStructureInfo? env structureName with
-    | some info => info.fieldInfo.foldl (init := names) fun names field =>
-        names.insert field.projFn
-    | none => names
+private def structuralProjectionNames (env : Environment) (included : Array Name) : NameSet :=
+  /- Scanning all Mathlib declarations here is needlessly expensive: the
+  graph contains only project declarations and their bounded dependency
+  closure.  Restricting the structural-metadata pass to that closure keeps
+  the extractor usable on a standard CI runner without changing any node or
+  edge that can appear in the graph. -/
+  included.foldl (init := ({} : NameSet)) fun names name =>
+    if (env.getProjectionFnInfo? name).isSome then names.insert name else names
 
 private def projectNode (env : Environment) (projections : NameSet) (ci : ConstantInfo) (name : Name) (index : Nat) : Json :=
   let (declarationKind, rawRole) := declarationKind ci
@@ -217,9 +219,9 @@ elab_rules : command
   | `(build_project_graph) => do
     let env ← getEnv
     let targets := projectNames env
-    let projections := structuralProjectionNames env
     let depths := dependencyDepths env targets
     let dependencies := depths.map (·.1) |>.qsort Name.lt
+    let projections := structuralProjectionNames env (targets ++ dependencies)
     let nodes := targets.mapIdx (fun i name =>
       match env.find? name with
       | some ci => projectNode env projections ci name i

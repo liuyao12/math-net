@@ -11,7 +11,14 @@ tools/export-comparisons.sh > "$manifest"
 # BuildGraph constructs the full elaborated environment.  Keeping its JSON in
 # a temporary file before starting Python avoids a large Lean process and a
 # JSON parser competing for peak memory on a fresh CI runner.
+set +e
 lake env lean tools/BuildGraph.lean > "$raw_graph_tmp"
+extract_status=$?
+set -e
+if [[ $extract_status -ne 0 ]]; then
+  echo "BuildGraph.lean failed with exit status $extract_status" >&2
+  exit "$extract_status"
+fi
 if [[ ! -s "$raw_graph_tmp" ]]; then
   echo "BuildGraph.lean produced no graph JSON" >&2
   exit 1
