@@ -951,7 +951,7 @@ function repositoryForProof(proof) {
 
 function repositoryForFormalization(formalization) {
   if (formalization?.repository === "mathlib4" || formalization?.locator?.startsWith("mathlib/")) return "mathlib";
-  if (formalization?.repository === "computable-analysis") return "computable-analysis";
+  if (formalization?.repository === "computable-analysis" || formalization?.locator?.startsWith("computable-analysis/")) return "computable-analysis";
   if (formalization?.name?.startsWith("MathNetwork.")) return "math-net";
   return null;
 }
@@ -960,6 +960,7 @@ function repositoriesForNode(node) {
   const repositories = new Set((node.proofs || []).map(repositoryForProof));
   if (!repositories.size) (node.formalizations || []).map(repositoryForFormalization).filter(Boolean).forEach((repository) => repositories.add(repository));
   if (!repositories.size && node.locator?.startsWith("mathlib/")) repositories.add("mathlib");
+  if (!repositories.size && node.locator?.startsWith("computable-analysis/")) repositories.add("computable-analysis");
   if (!repositories.size && node.file?.startsWith("MathNetwork/")) repositories.add("math-net");
   if (!repositories.size && node.namespace?.startsWith("MathNetwork.")) repositories.add("math-net");
   if (!repositories.size) repositories.add("unknown");
