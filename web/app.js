@@ -83,6 +83,7 @@ const state = {
   focusId: null,
   coreId: null,
   provenanceAnchorId: null,
+  provenanceClusters: [],
   selectedId: null,
   selectedProofId: null,
   search: "",
@@ -1302,6 +1303,7 @@ function directedLayout(nodes, edges, width, height) {
 function proofRouteSides(nodes, edges, focusId) {
   const sides = new Map();
   state.provenanceAnchorId = null;
+  state.provenanceClusters = [];
   const focus = nodes.find((node) => node.id === focusId);
   if (!focus) return sides;
   const incoming = new Map();
@@ -1359,6 +1361,7 @@ function proofRouteSides(nodes, edges, focusId) {
   const clusterForProof = new Map(anchor.proofs.map((proof) => [proof.id, repositoryForProof(proof)]));
   const scale = Math.max(1, (clusters.length - 1) / 2);
   const coordinate = new Map(clusters.map((cluster, index) => [cluster, (index - (clusters.length - 1) / 2) / scale]));
+  state.provenanceClusters = clusters.map((cluster) => ({ repository: cluster, coordinate: coordinate.get(cluster) }));
   const ownership = new Map([[anchor.id, new Set()]]);
   const queue = [anchor.id];
   sides.set(focusId, 0);
@@ -1657,6 +1660,16 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     .stop()
     .tick(120);
   enforceRouteLaneBounds(nodes, routeSides, width, establishedIds);
+  const topMargin = 34;
+  const minY = Math.min(...nodes.map((node) => node.y));
+  if (minY < topMargin) {
+    const shift = topMargin - minY;
+    nodes.forEach((node) => {
+      node.y += shift;
+      node.rankY += shift;
+      node.targetY += shift;
+    });
+  }
   nodes.forEach((node) => {
     node.y = node.rankY;
     node.fx = null;
@@ -1706,6 +1719,19 @@ function draw() {
     .map((edge) => edge.source.id));
   separateParallelProofEdges(edges);
   state.coreId = coreId;
+  if (state.focusId && state.provenanceClusters.length > 1) {
+    const laneGap = Math.min(290, Math.max(130, width / 4));
+    const laneGuide = root.append("g").attr("class", "provenance-lanes").attr("aria-hidden", "true");
+    laneGuide.append("text").attr("class", "provenance-lane shared").attr("x", width / 2).attr("y", 17).text("shared declarations");
+    state.provenanceClusters.forEach((cluster) => {
+      laneGuide.append("text")
+        .attr("class", "provenance-lane")
+        .attr("x", width / 2 + cluster.coordinate * laneGap)
+        .attr("y", 17)
+        .attr("fill", repositoryColor(cluster.repository))
+        .text((REPOSITORIES[cluster.repository] || REPOSITORIES.unknown).label);
+    });
+  }
   const maxFocusDistance = Math.max(0, ...nodes.map((node) => state.focusDistances.get(node.id) || 0));
   const rawRanks = new Map(nodes.map((item) => {
     // Distance supplies the main top-to-bottom dependency hierarchy. The

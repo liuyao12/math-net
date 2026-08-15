@@ -154,6 +154,8 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .graph-orientation { position: absolute; z-index: 1; top: 15px; left: 17px; display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); background: rgba(251, 250, 247, 0.9); font: 10px "DM Mono", ui-monospace, monospace; pointer-events: none; }
 .graph-orientation strong { color: var(--blue); font-size: 14px; line-height: 0.7; }
 .graph-hint { position: absolute; right: 17px; bottom: 14px; padding: 6px 8px; color: var(--faint); background: rgba(251, 250, 247, 0.8); border: 1px solid var(--line); border-radius: 5px; font-size: 11px; }
+.provenance-lane { text-anchor: middle; font: 600 10px "DM Mono", ui-monospace, monospace; letter-spacing: .04em; text-transform: uppercase; paint-order: stroke; stroke: var(--paper); stroke-width: 4px; }
+.provenance-lane.shared { fill: var(--muted); font-weight: 500; }
 .fit-layout { padding: 5px 7px; border: 1px solid var(--line-strong); border-radius: 5px; color: var(--blue); background: var(--blue-soft); font: 10px "DM Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: 0.04em; }
 .fit-layout:hover { color: var(--ink); border-color: var(--blue); }
 .loading-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: var(--muted); }
