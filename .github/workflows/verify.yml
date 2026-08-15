@@ -38,6 +38,7 @@ jobs:
       - name: Rebuild and verify the dependency landscape
         run: |
           lake --version
+          lake exe cache get
           lake build
           tools/build-graph.sh
           tools/check-comparisons.sh
