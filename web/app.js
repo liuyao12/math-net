@@ -914,13 +914,30 @@ function beginProgressiveReveal() {
         state.revealTimer = null;
         return;
       }
-      state.revealSteps[state.revealCursor].nodeIds.forEach((id) => state.revealedIds.add(id));
+      const step = state.revealSteps[state.revealCursor];
+      step.nodeIds.forEach((id) => state.revealedIds.add(id));
       state.revealCursor += 1;
     } else {
       if (state.revealLimit >= state.graph.nodes.length) { state.revealTimer = null; return; }
       state.revealLimit = Math.min(state.graph.nodes.length, state.revealLimit + 220);
     }
     draw();
+    // A new parent batch can introduce an extra rank which moves the already
+    // visible top layer upward.  Treat the addition as provisional: do not
+    // leave half-visible declarations beyond the viewport merely because the
+    // previous frontier happened to fit.  The same batch resumes naturally
+    // once panning or zooming provides room.
+    if (focused && viewportHasEdgeNode()) {
+      const step = state.revealSteps[state.revealCursor - 1];
+      step?.nodeIds.forEach((id) => state.revealedIds.delete(id));
+      state.revealCursor -= 1;
+      state.revealPaused = true;
+      state.revealPauseReason = "viewport";
+      draw();
+      state.revealTimer = null;
+      updateHighlight();
+      return;
+    }
     state.revealTimer = window.setTimeout(advance, focused ? 260 : 280);
   };
   state.resumeReveal = () => {
@@ -1751,7 +1768,12 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
   // ordinary declarations horizontally: the graph may still settle into a
   // less crossed and less crowded arrangement.
   const focusRank = ranks.get(state.focusId) || Math.max(0, ...ranks.values());
-  const rankGap = 52;
+  // The focused theorem is deliberately placed low in the viewport so its
+  // prerequisites read upward.  Compress only as much as necessary to keep
+  // the already-selected mathematical spine in view; otherwise a comparison
+  // with several genuine intermediate lemmas would begin above the canvas.
+  const rankGap = Math.max(24, Math.min(52,
+    (height * FOCUS_Y_FRACTION - 42) / Math.max(1, focusRank)));
   nodes.forEach((node) => {
     node.targetX = node.id === coreId || node.id === state.focusId ? width / 2 : node.targetX ?? node.x;
     node.targetY = height * FOCUS_Y_FRACTION - (focusRank - (ranks.get(node.id) || 0)) * rankGap;
