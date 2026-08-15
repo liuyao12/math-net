@@ -82,6 +82,10 @@ const ROUTE_KIND_LABELS = {
 };
 const GITHUB_REPO = "https://github.com/liuyao12/math-net";
 const COMPUTABLE_ANALYSIS_REPO = "https://github.com/liuyao12/computable-analysis";
+// Focused views read from prerequisites above toward a theorem below. Keep
+// that theorem in the lower-middle, not on the viewport edge, so it remains
+// visible while additional prerequisite layers are revealed.
+const FOCUS_Y_FRACTION = 0.62;
 
 const state = {
   graph: null,
@@ -1669,7 +1673,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
   const rankGap = 52;
   nodes.forEach((node) => {
     node.targetX = node.id === coreId || node.id === state.focusId ? width / 2 : node.x;
-    node.targetY = height * 0.72 - (focusRank - (ranks.get(node.id) || 0)) * rankGap;
+    node.targetY = height * FOCUS_Y_FRACTION - (focusRank - (ranks.get(node.id) || 0)) * rankGap;
     node.rankY = node.targetY;
     node.y = node.rankY;
     node.vx = 0;
@@ -1697,16 +1701,10 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
     .force("labels", horizontalLabelCollisionForce(nodes))
     .stop()
     .tick(120);
-  const topMargin = 34;
-  const minY = Math.min(...nodes.map((node) => node.y));
-  if (minY < topMargin) {
-    const shift = topMargin - minY;
-    nodes.forEach((node) => {
-      node.y += shift;
-      node.rankY += shift;
-      node.targetY += shift;
-    });
-  }
+  // Do not shift the whole diagram down merely to fit a newly discovered
+  // prerequisite layer. The focus theorem is a reading anchor. Layers that
+  // would leave the viewport are handled by progressive-reveal pausing,
+  // rather than pushing the theorem out of sight.
   nodes.forEach((node) => {
     node.y = node.rankY;
     node.fx = null;
@@ -1793,7 +1791,7 @@ function draw() {
     const targetY = item.id === coreId
       ? height * 0.5
       : item.id === state.focusId
-      ? height * 0.74
+      ? height * FOCUS_Y_FRACTION
       : graphTop + rank * layerGap;
     const previous = state.layoutPositions.get(item.id);
     if (previous && item.id !== coreId) {
@@ -1804,7 +1802,7 @@ function draw() {
       item.vy = velocity?.y ?? 0;
       if (item.id === state.focusId && (item.y < 40 || item.y > height - 40)) {
         item.x = width / 2;
-        item.y = height * 0.74;
+        item.y = height * FOCUS_Y_FRACTION;
         item.vx = 0;
         item.vy = 0;
       }
@@ -1920,7 +1918,7 @@ function draw() {
   } else {
     state.simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(edges).id((item) => item.id).distance(state.focusId ? 104 : 82).strength(state.focusId ? 0.34 : 0.22))
-      .force("y", d3.forceY((item) => item.id === coreId ? height * 0.5 : item.id === state.focusId ? height * 0.74 : graphTop + (ranks.get(item.id) || 0) * layerGap).strength((item) => item.id === state.focusId || item.id === coreId ? 0.92 : state.focusId ? 0.08 : 1.2))
+      .force("y", d3.forceY((item) => item.id === coreId ? height * 0.5 : item.id === state.focusId ? height * FOCUS_Y_FRACTION : graphTop + (ranks.get(item.id) || 0) * layerGap).strength((item) => item.id === state.focusId || item.id === coreId ? 0.92 : state.focusId ? 0.08 : 1.2))
       .force("x", d3.forceX((item) => item.id === state.focusId || item.id === coreId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId || item.id === coreId ? 0.94 : 0.12))
       .force("charge", d3.forceManyBody().strength(state.focusId ? -230 : -180))
       .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
@@ -1938,7 +1936,7 @@ function draw() {
         // prerequisites above it; otherwise a new frontier can briefly push
         // the theorem below the visible stage.
         focusNode.x = width / 2;
-        focusNode.y = Math.max(height * 0.6, Math.min(height * 0.82, focusNode.y));
+        focusNode.y = Math.max(height * 0.52, Math.min(height * 0.74, focusNode.y));
         focusNode.vx = 0;
         focusNode.vy = 0;
       }

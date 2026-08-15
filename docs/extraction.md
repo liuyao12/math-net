@@ -42,12 +42,17 @@ sorted by declaration name for reproducibility.
 `MathNetwork/Graph/project.json`. It includes every non-internal
 `MathNetwork.*` declaration loaded by the project and a bounded three-level
 dependency closure of declarations defined in `Mathlib.*` or
-`ComputableAnalysis.*` modules. The extractor inspects both the declaration
-type and the elaborated value, so local adapter proofs expose the imported
-theorems and definitions they actually call. Theorems are proposition nodes,
-definitions are concept nodes, and imported declarations are source nodes.
-The only generated edge is `used-in-proof`, from a declaration used by
-another included declaration to the declaration that contains it.
+`ComputableAnalysis.*` modules. For the navigable graph, it reads each
+elaborated declaration body and subtracts constants already occurring in the
+declaration type. Thus names used merely to *state* a theorem—such as `sqrt`,
+`Irrational`, or `IsSquare`—do not masquerade as proof prerequisites. Local
+adapter proofs still expose the imported theorem they actually call.
+Theorems are proposition nodes, definitions are concept nodes, and imported
+declarations are source nodes. The only generated edge is `used-in-proof`,
+from a declaration used by another included declaration's checked body to the
+declaration that contains it. An opaque declaration with no inspectable body
+is retained as a verified boundary rather than given synthetic arrows from its
+statement.
 
 Each node also receives a structural-importance annotation. It reports direct
 proof reuse and the number of downstream declarations reachable from the node.

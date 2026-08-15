@@ -60,17 +60,30 @@ private def isTrackedDependency (env : Environment) (name : Name) : Bool :=
 
 private def maxDependencyDepth : Nat := 3
 
-private def directConstants (ci : ConstantInfo) : Array Name :=
-  -- `ConstantInfo.getUsedConstantsAsSet` is the declaration-type surface.
-  -- For a proof graph we must also inspect the value: a local adapter often
-  -- has a small type but its proof term calls an imported theorem.
-  let used := ci.type.getUsedConstantsAsSet.toArray.foldl
-    (init := ({} : NameSet)) fun used name => NameSet.insert used name
-  let used := match ci.value? (allowOpaque := true) with
-    | some value => value.getUsedConstantsAsSet.toArray.foldl
-        (init := used) fun used name => NameSet.insert used name
-    | none => used
-  used.toArray.qsort Name.lt
+private def bodyConstants (ci : ConstantInfo) : Array Name :=
+  /- A declaration's type is its *statement*, not evidence that the listed
+  constants were used to establish it.  In particular, `sqrt`, `Irrational`,
+  and `IsSquare` occur in the type of the square-root criterion, but showing
+  them as arrows into the theorem confuses its vocabulary with its proof.
+
+  The landscape therefore follows constants in the elaborated declaration
+  body only.  For a theorem this is its checked proof term; for a definition
+  it is its checked implementation.  Axioms and opaque imported declarations
+  without an inspectable body become honest boundary nodes rather than
+  receiving invented statement-reference arrows.
+  -/
+  match ci.value? (allowOpaque := true) with
+  | some value =>
+    -- Proof terms are lambdas over the theorem's binders.  Lean therefore
+    -- stores the binder types inside `value` as well.  Remove every constant
+    -- already present in `ci.type`: those name the proposition being proved,
+    -- not a fact used to prove it.  What remains is the proof-specific body
+    -- dependency set.
+    let statementConstants := ci.type.getUsedConstantsAsSet
+    value.getUsedConstantsAsSet.toArray
+      |>.filter (fun name => !statementConstants.contains name)
+      |>.qsort Name.lt
+  | none => #[]
 
 private def indexOf (name : Name) (names : Array Name) : Nat :=
   let rec go (xs : List Name) (i : Nat) : Nat :=
@@ -97,7 +110,7 @@ private def dependencyDepths (env : Environment) (targets : Array Name) : Array 
         else
           match env.find? name with
           | some ci =>
-            let (next, seen) := (directConstants ci).foldl
+            let (next, seen) := (bodyConstants ci).foldl
               (init := (rest.toArray, seen)) fun (next, seen) dependency =>
                 if isTrackedDependency env dependency && !isInternal dependency &&
                     !seen.contains dependency then
@@ -183,7 +196,7 @@ private def dependencyEdges (env : Environment) (targets dependencies : Array Na
   included.foldl (init := #[]) fun edges target =>
     match env.find? target with
     | some ci =>
-      (directConstants ci).foldl (init := edges) fun edges dependency =>
+      (bodyConstants ci).foldl (init := edges) fun edges dependency =>
         if included.contains dependency && dependency != target then
           let (targetId, targetKind) := idFor target
           let (sourceId, sourceKind) := idFor dependency
@@ -193,7 +206,7 @@ private def dependencyEdges (env : Environment) (targets dependencies : Array Na
             ("proof", if targetKind == "proposition" then targetId else ""),
             ("source", Json.mkObj [("id", sourceId), ("kind", sourceKind)]),
             ("target", Json.mkObj [("id", targetId), ("kind", targetKind)]),
-            ("description", s!"{dependency} is a direct Lean dependency of {target}.")
+            ("description", s!"{dependency} occurs in the elaborated Lean body of {target}.")
           ]
         else edges
     | none => edges
