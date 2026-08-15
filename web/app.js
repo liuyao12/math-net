@@ -1042,6 +1042,24 @@ function nodeNeighbors(nodeId) {
     .sort((left, right) => Number(isMajorNode(right.node)) - Number(isMajorNode(left.node)) || left.node.label.localeCompare(right.node.label));
 }
 
+function proofDependencySummaries(nodeId, proofs) {
+  if (!proofs?.length || !state.graph) return new Map();
+  const dependencies = new Map(proofs.map((proof) => [proof.id, new Set()]));
+  state.graph.edges.forEach((edge) => {
+    if (edge.relation === "used-in-proof" && edge.target.id === nodeId && dependencies.has(edge.proof)) {
+      dependencies.get(edge.proof).add(edge.source.id);
+    }
+  });
+  const useCount = new Map();
+  dependencies.forEach((ids) => ids.forEach((id) => useCount.set(id, (useCount.get(id) || 0) + 1)));
+  return new Map(proofs.map((proof) => {
+    const ids = dependencies.get(proof.id) || new Set();
+    const shared = [...ids].filter((id) => useCount.get(id) === proofs.length).length;
+    const routeOnly = [...ids].filter((id) => useCount.get(id) === 1).length;
+    return [proof.id, { total: ids.size, shared, routeOnly }];
+  }));
+}
+
 function selectNode(nodeId, redraw = false) {
   const hadFocus = Boolean(state.focusId);
   if (hadFocus) {
@@ -1136,6 +1154,7 @@ function renderInspector() {
   const neighbors = nodeNeighbors(node.id);
   const github = githubUrlFor(node);
   const proofList = node.proofs || [];
+  const proofDependencies = proofDependencySummaries(node.id, proofList);
   const selectedProof = (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
   const activeProof = selectedProof || (proofList.length === 1 ? proofList[0] : null);
   const formalizations = (node.formalizations || []).map((item) => {
@@ -1190,7 +1209,13 @@ function renderInspector() {
   const allProofsControl = proofList.length > 1
     ? `<button class="proof-all ${state.selectedProofId ? "" : "selected"}" data-all-proofs><span class="proof-all-glyph">◎</span>All routes <small>merged comparison</small></button>`
     : "";
-  const proofs = proofList.map((proof) => `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}</button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`).join("");
+  const proofs = proofList.map((proof) => {
+    const summary = proofDependencies.get(proof.id);
+    const directInputs = summary && proofList.length > 1
+      ? `<small class="proof-dependency-summary">${summary.total} direct inputs · ${summary.routeOnly} route-only · ${summary.shared} shared</small>`
+      : "";
+    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span><span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}${directInputs}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
+  }).join("");
   const proofSources = (node.proofs || []).map((proof) => `<div class="detail-block proof-source-route"><div class="detail-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} · ${escapeHtml(proof.declaration)}</div><pre class="proof-source pending" data-proof-source="${escapeHtml(proof.id)}"><code>Loading declaration…</code></pre></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
