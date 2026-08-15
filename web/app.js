@@ -1046,7 +1046,7 @@ function proofDependencySummaries(nodeId, proofs) {
   if (!proofs?.length || !state.graph) return new Map();
   const dependencies = new Map(proofs.map((proof) => [proof.id, new Set()]));
   state.graph.edges.forEach((edge) => {
-    if (edge.relation === "used-in-proof" && edge.target.id === nodeId && dependencies.has(edge.proof)) {
+    if (edge.relation === "used-in-proof" && edge.target.id === nodeId && edge.source.id !== nodeId && dependencies.has(edge.proof)) {
       dependencies.get(edge.proof).add(edge.source.id);
     }
   });
@@ -1064,7 +1064,7 @@ function proofDependencyDifference(nodeId, proofs) {
   if (!proofs?.length || !state.graph) return null;
   const dependencies = new Map(proofs.map((proof) => [proof.id, new Set()]));
   state.graph.edges.forEach((edge) => {
-    if (edge.relation === "used-in-proof" && edge.target.id === nodeId && dependencies.has(edge.proof)) {
+    if (edge.relation === "used-in-proof" && edge.target.id === nodeId && edge.source.id !== nodeId && dependencies.has(edge.proof)) {
       dependencies.get(edge.proof).add(edge.source.id);
     }
   });
@@ -1179,6 +1179,11 @@ function renderInspector() {
   const proofList = node.proofs || [];
   const proofDependencies = proofDependencySummaries(node.id, proofList);
   const proofDifference = proofDependencyDifference(node.id, proofList);
+  const delegations = new Map();
+  (node.proofDelegations || []).forEach((delegation) => {
+    if (!delegations.has(delegation.proof)) delegations.set(delegation.proof, []);
+    delegations.get(delegation.proof).push(delegation);
+  });
   const selectedProof = (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
   const activeProof = selectedProof || (proofList.length === 1 ? proofList[0] : null);
   const formalizations = (node.formalizations || []).map((item) => {
@@ -1238,7 +1243,9 @@ function renderInspector() {
     const directInputs = summary && proofList.length > 1
       ? `<small class="proof-dependency-summary">${summary.total} direct inputs · ${summary.routeOnly} route-only · ${summary.shared} shared</small>`
       : "";
-    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span><span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}${directInputs}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
+    const delegated = (delegations.get(proof.id) || []).map((delegation) => delegation.declaration).join(", ");
+    const delegationNote = delegated ? `<small class="proof-delegation">delegates to ${escapeHtml(delegated)}</small>` : "";
+    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span><span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}${directInputs}${delegationNote}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
   }).join("");
   const dependencyButtons = (nodes) => {
     const shown = nodes.slice(0, 5);

@@ -319,6 +319,7 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
 
     merged_node_by_id = {node["id"]: node for node in merged_nodes}
     edges = []
+    delegation_keys: set[tuple[str, str, str]] = set()
     for index, edge in enumerate(graph["edges"]):
         source_old = edge["source"]["id"]
         target_old = edge["target"]["id"]
@@ -340,6 +341,22 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
             # declaration is merged into a proposition, recover its proof
             # provenance from the original target declaration.
             rewritten["proof"] = proof_for_old[target_old]
+        if source_new == target_new:
+            # A local adapter can invoke an imported theorem with exactly the
+            # same proposition.  After statement merging that call would be a
+            # self-loop, which is not a prerequisite of the proposition and
+            # makes a directed dependency drawing falsely look circular.
+            # Preserve the useful fact as route metadata for the inspector.
+            source_declaration = node_by_id[source_old].get("namespace", node_by_id[source_old].get("label", ""))
+            key = (target_new, rewritten.get("proof", ""), source_declaration)
+            if rewritten.get("proof") and key not in delegation_keys:
+                delegation_keys.add(key)
+                merged_node_by_id[target_new].setdefault("proofDelegations", []).append({
+                    "proof": rewritten["proof"],
+                    "declaration": source_declaration,
+                    "locator": node_by_id[source_old].get("locator", ""),
+                })
+            continue
         edges.append(rewritten)
 
     result = dict(graph)
