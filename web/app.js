@@ -1626,7 +1626,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
   const focusRank = ranks.get(state.focusId) || Math.max(0, ...ranks.values());
   const rankGap = 52;
   nodes.forEach((node) => {
-    node.targetX = node.x;
+    node.targetX = node.id === coreId || node.id === state.focusId ? width / 2 : node.x;
     node.targetY = height * 0.72 - (focusRank - (ranks.get(node.id) || 0)) * rankGap;
     node.rankY = node.targetY;
     node.y = node.rankY;
@@ -1643,7 +1643,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
   nodes.forEach((node) => {
     node.fy = node.rankY;
     const pinned = state.pinnedPositions.get(node.id);
-    node.fx = pinned ? pinned.x : establishedIds.has(node.id) ? node.x : null;
+    node.fx = pinned ? pinned.x : node.id === coreId ? width / 2 : establishedIds.has(node.id) ? node.x : null;
   });
   d3.forceSimulation(nodes)
     .force("x", d3.forceX((node) => node.targetX).strength((node) => routeSides.get(node.id) ? 0.62 : 0.13))
