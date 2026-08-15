@@ -1060,6 +1060,29 @@ function proofDependencySummaries(nodeId, proofs) {
   }));
 }
 
+function proofDependencyDifference(nodeId, proofs) {
+  if (!proofs?.length || !state.graph) return null;
+  const dependencies = new Map(proofs.map((proof) => [proof.id, new Set()]));
+  state.graph.edges.forEach((edge) => {
+    if (edge.relation === "used-in-proof" && edge.target.id === nodeId && dependencies.has(edge.proof)) {
+      dependencies.get(edge.proof).add(edge.source.id);
+    }
+  });
+  const useCount = new Map();
+  dependencies.forEach((ids) => ids.forEach((id) => useCount.set(id, (useCount.get(id) || 0) + 1)));
+  const readable = (ids) => [...ids]
+    .map((id) => nodeMap().get(id))
+    .filter((node) => node && (isMathematicalNode(node) || isStructureNode(node)))
+    .sort((left, right) => readingPriority(right) - readingPriority(left) || displayLabelFor(left).localeCompare(displayLabelFor(right)));
+  return {
+    shared: readable([...useCount].filter(([, count]) => count === proofs.length).map(([id]) => id)),
+    routes: proofs.map((proof) => ({
+      proof,
+      routeOnly: readable([...(dependencies.get(proof.id) || [])].filter((id) => useCount.get(id) === 1)),
+    })),
+  };
+}
+
 function selectNode(nodeId, redraw = false) {
   const hadFocus = Boolean(state.focusId);
   if (hadFocus) {
@@ -1155,6 +1178,7 @@ function renderInspector() {
   const github = githubUrlFor(node);
   const proofList = node.proofs || [];
   const proofDependencies = proofDependencySummaries(node.id, proofList);
+  const proofDifference = proofDependencyDifference(node.id, proofList);
   const selectedProof = (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
   const activeProof = selectedProof || (proofList.length === 1 ? proofList[0] : null);
   const formalizations = (node.formalizations || []).map((item) => {
@@ -1216,6 +1240,15 @@ function renderInspector() {
       : "";
     return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span><span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}${directInputs}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
   }).join("");
+  const dependencyButtons = (nodes) => {
+    const shown = nodes.slice(0, 5);
+    const more = nodes.length > shown.length ? `<span class="route-more">+${nodes.length - shown.length} more</span>` : "";
+    return `${shown.map((dependency) => `<button class="neighbor" data-neighbor="${escapeHtml(dependency.id)}">${escapeHtml(displayLabelFor(dependency))}</button>`).join("")}${more}`;
+  };
+  const routeDifference = proofDifference && proofList.length > 1 &&
+    (proofDifference.shared.length || proofDifference.routes.some((route) => route.routeOnly.length))
+    ? `<div class="detail-block route-difference"><div class="detail-label">Where proof routes diverge · direct mathematical inputs</div>${proofDifference.shared.length ? `<div class="route-difference-row"><span class="route-difference-name">Shared</span><div class="tag-list">${dependencyButtons(proofDifference.shared)}</div></div>` : ""}${proofDifference.routes.map(({ proof, routeOnly }) => routeOnly.length ? `<div class="route-difference-row"><span class="route-difference-name"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} only</span><div class="tag-list">${dependencyButtons(routeOnly)}</div></div>` : "").join("")}</div>`
+    : "";
   const proofSources = (node.proofs || []).map((proof) => `<div class="detail-block proof-source-route"><div class="detail-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} · ${escapeHtml(proof.declaration)}</div><pre class="proof-source pending" data-proof-source="${escapeHtml(proof.id)}"><code>Loading declaration…</code></pre></div>`).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
@@ -1245,6 +1278,7 @@ function renderInspector() {
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
     ${proofs ? `<div class="detail-block"><div class="detail-label">Proof routes · select one to filter dependencies</div><div class="proof-list">${allProofsControl}${proofs}</div></div>` : ""}
+    ${routeDifference}
     ${mathematicalCoreAnchor}
     ${foundationAnchors ? `<div class="detail-block"><div class="detail-label">Native real foundations</div><div class="tag-list">${foundationAnchors}</div></div>` : ""}
     ${proofSources || `<div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>`}

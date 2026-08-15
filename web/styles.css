@@ -329,3 +329,8 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .proof-select small { display: block; margin-top: 2px; color: var(--muted); font: 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
 .proof-select .proof-dependency-summary { margin-top: 4px; color: var(--muted); font-size: 9px; letter-spacing: 0; text-transform: none; }
 .proof-status { color: var(--muted); font: 10px var(--mono); white-space: nowrap; }
+.route-difference { display: grid; gap: 9px; }
+.route-difference-row { display: grid; grid-template-columns: minmax(86px, 116px) 1fr; align-items: start; gap: 8px; }
+.route-difference-name { display: flex; align-items: center; gap: 6px; padding-top: 5px; color: var(--muted); font: 10px var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+.route-difference-name .proof-color { width: 13px; margin-top: 0; }
+.route-more { align-self: center; color: var(--muted); font: 10px var(--mono); white-space: nowrap; }
