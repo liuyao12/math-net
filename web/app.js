@@ -1584,6 +1584,14 @@ function applyProofRouteLanes(nodes, routeSides, width, coreId, establishedIds) 
       node.targetX = node.targetX * 0.05 + laneX * 0.95;
     });
   });
+  // Nodes with several provenance owners are the genuine joins of the proof
+  // graph. Pull them to the common spine instead of leaving their x-position
+  // to the incidental order produced by the initial layered layout.
+  nodes.forEach((node) => {
+    if (routeSides.has(node.id) && routeSides.get(node.id) === 0 && !state.pinnedPositions.has(node.id) && !establishedIds.has(node.id)) {
+      node.targetX = node.targetX * 0.08 + center * 0.92;
+    }
+  });
   const coreSide = routeSides.get(coreId);
   if (coreSide) {
     const core = nodes.find((node) => node.id === coreId);
