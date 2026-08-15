@@ -1307,17 +1307,19 @@ function proofRouteSides(nodes, edges, focusId) {
     if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
     incoming.get(edge.target.id).push(edge);
   });
-  // A focused corollary can have only one local route while a multi-proof
-  // comparison sits upstream. That comparison, not the corollary, is where
-  // provenance lanes must split.
+  // Find the nearest declaration with independently sourced proof terms.
+  // This is deliberately generic: the graph supplies the route provenance;
+  // no theorem name, repository pair, or expected number of proofs appears
+  // in the layout rule.
   const visited = new Set([focusId]);
   const search = [focusId];
-  let comparisonFocus = null;
-  while (search.length && !comparisonFocus) {
+  let provenanceAnchor = null;
+  while (search.length && !provenanceAnchor) {
     const targetId = search.shift();
     const target = nodes.find((node) => node.id === targetId);
-    if (target?.comparison?.routes?.length > 1) {
-      comparisonFocus = target;
+    const repositories = new Set((target?.proofs || []).map(repositoryForProof));
+    if (repositories.size > 1) {
+      provenanceAnchor = target;
       break;
     }
     (incoming.get(targetId) || []).forEach((edge) => {
@@ -1327,8 +1329,8 @@ function proofRouteSides(nodes, edges, focusId) {
       }
     });
   }
-  const laneFocus = comparisonFocus || focus;
-  if (!(laneFocus.proofs || []).length) return sides;
+  const anchor = provenanceAnchor || focus;
+  if (!(anchor.proofs || []).length) return sides;
   if (state.selectedProofId) {
     // Once one proof is selected, its upstream closure is the subject of the
     // view. Keep that route on the central spine; repository lanes are useful
@@ -1345,37 +1347,38 @@ function proofRouteSides(nodes, edges, focusId) {
     }
     return sides;
   }
-  const groupForProof = new Map();
-  const groups = [];
-  (laneFocus.proofs || []).forEach((proof) => {
-    const key = repositoryForProof(proof);
-    if (!groups.includes(key)) groups.push(key);
-    groupForProof.set(proof.id, key);
-  });
-  // Proof families occupy evenly spaced horizontal lanes. With two routes
-  // this is left/right; with three or more, the lanes remain evenly spaced
-  // instead of collapsing the middle alternatives onto the shared spine.
-  // Normalize the outer proof routes to full left/right lanes. Previously
-  // two routes sat at ±½ lane-width, visually mixing at the shared spine.
-  const laneScale = Math.max(1, (groups.length - 1) / 2);
-  const groupSide = new Map(groups.map((group, index) => [group, (index - (groups.length - 1) / 2) / laneScale]));
-  // The segment from the corollary to the comparison is shared. Above the
-  // comparison, dependencies occupy their repository's lane.
-  const queue = [laneFocus.id];
+  // Assign each proof term to a provenance cluster. The cluster positions
+  // are an evenly spaced one-dimensional embedding of however many routes
+  // occur; declarations reached by several clusters are shared and remain
+  // on the center spine.
+  const clusters = [...new Set(anchor.proofs.map((proof) => repositoryForProof(proof)))].sort();
+  if (clusters.length < 2) return sides;
+  const clusterForProof = new Map(anchor.proofs.map((proof) => [proof.id, repositoryForProof(proof)]));
+  const scale = Math.max(1, (clusters.length - 1) / 2);
+  const coordinate = new Map(clusters.map((cluster, index) => [cluster, (index - (clusters.length - 1) / 2) / scale]));
+  const ownership = new Map([[anchor.id, new Set()]]);
+  const queue = [anchor.id];
   sides.set(focusId, 0);
-  sides.set(laneFocus.id, 0);
   while (queue.length) {
     const targetId = queue.shift();
     (incoming.get(targetId) || []).forEach((edge) => {
-      const edgeSide = targetId === laneFocus.id ? groupSide.get(groupForProof.get(edge.proof)) ?? 0 : sides.get(targetId) ?? 0;
-      if (!sides.has(edge.source.id)) {
-        sides.set(edge.source.id, edgeSide);
+      const inherited = ownership.get(targetId) || new Set();
+      const edgeCluster = targetId === anchor.id ? clusterForProof.get(edge.proof) : null;
+      const nextOwnership = edgeCluster ? new Set([edgeCluster]) : new Set(inherited);
+      if (!ownership.has(edge.source.id)) {
+        ownership.set(edge.source.id, nextOwnership);
         queue.push(edge.source.id);
-      } else if (sides.get(edge.source.id) !== edgeSide) {
-        sides.set(edge.source.id, 0);
+      } else {
+        const existing = ownership.get(edge.source.id);
+        const size = existing.size;
+        nextOwnership.forEach((cluster) => existing.add(cluster));
+        if (existing.size > size) queue.push(edge.source.id);
       }
     });
   }
+  ownership.forEach((clustersForNode, nodeId) => {
+    sides.set(nodeId, clustersForNode.size === 1 ? coordinate.get([...clustersForNode][0]) : 0);
+  });
   return sides;
 }
 
