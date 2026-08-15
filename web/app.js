@@ -1355,7 +1355,10 @@ function proofRouteSides(nodes, edges, focusId) {
   // Proof families occupy evenly spaced horizontal lanes. With two routes
   // this is left/right; with three or more, the lanes remain evenly spaced
   // instead of collapsing the middle alternatives onto the shared spine.
-  const groupSide = new Map(groups.map((group, index) => [group, index - (groups.length - 1) / 2]));
+  // Normalize the outer proof routes to full left/right lanes. Previously
+  // two routes sat at ±½ lane-width, visually mixing at the shared spine.
+  const laneScale = Math.max(1, (groups.length - 1) / 2);
+  const groupSide = new Map(groups.map((group, index) => [group, (index - (groups.length - 1) / 2) / laneScale]));
   // The segment from the corollary to the comparison is shared. Above the
   // comparison, dependencies occupy their repository's lane.
   const queue = [laneFocus.id];
@@ -1566,7 +1569,7 @@ function applyProofRouteLanes(nodes, routeSides, width, coreId, establishedIds) 
       const laneX = center + side * laneGap + withinLane;
       // Dagre determines local order; the lane is a strong geometric cue,
       // not an artificial disconnection of genuine cross-route edges.
-      node.targetX = node.targetX * 0.22 + laneX * 0.78;
+      node.targetX = node.targetX * 0.05 + laneX * 0.95;
     });
   });
   const coreSide = routeSides.get(coreId);
@@ -1589,8 +1592,8 @@ function enforceRouteLaneBounds(nodes, routeSides, width, establishedIds) {
     const side = routeSides.get(node.id) || 0;
     // A route-specific declaration may spread within its lane, but it cannot
     // drift through the shared middle and visually merge with another proof.
-    if (side < 0) node.x = Math.min(node.x, center + side * laneGap * 0.58);
-    if (side > 0) node.x = Math.max(node.x, center + side * laneGap * 0.58);
+    if (side < 0) node.x = Math.min(node.x, center + side * laneGap * 0.82);
+    if (side > 0) node.x = Math.max(node.x, center + side * laneGap * 0.82);
   });
 }
 
@@ -1619,7 +1622,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     node.fx = pinned ? pinned.x : establishedIds.has(node.id) ? node.x : null;
   });
   d3.forceSimulation(nodes)
-    .force("x", d3.forceX((node) => node.targetX).strength((node) => routeSides.get(node.id) ? 0.24 : 0.13))
+    .force("x", d3.forceX((node) => node.targetX).strength((node) => routeSides.get(node.id) ? 0.62 : 0.13))
     .force("link", d3.forceLink(edges).id((node) => node.id).distance(92).strength(0.12))
     .force("charge", d3.forceManyBody().strength(-150))
     .force("collide", d3.forceCollide().radius((node) => Math.max(18, Math.min(52, labelFor(node).length * 3.3 + 14))).strength(0.9))
