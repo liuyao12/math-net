@@ -4,6 +4,7 @@ import dagre from "https://cdn.jsdelivr.net/npm/@dagrejs/dagre@1.1.5/+esm";
 const query = new URLSearchParams(window.location.search);
 const requestedGraph = query.get("graph");
 const requestedTheorem = query.get("theorem");
+const requestedDeclaration = query.get("declaration");
 const REPO_ROOT = window.location.pathname.includes("/web/") ? "../" : "./";
 // The HTML entry point versions this module on every publish. Reuse that
 // revision for graph assets so the interface and its extracted Lean data can
@@ -453,7 +454,8 @@ function renderSearchResults() {
 }
 
 function focusDeclaration(nodeId) {
-  if (!nodeMap().has(nodeId)) return;
+  const node = nodeMap().get(nodeId);
+  if (!node) return;
   state.focusId = nodeId;
   state.selectedId = nodeId;
   state.selectedProofId = null;
@@ -472,6 +474,7 @@ function focusDeclaration(nodeId) {
   const next = new URL(window.location.href);
   next.searchParams.delete("theorem");
   next.searchParams.delete("graph");
+  next.searchParams.set("declaration", node.namespace || node.id);
   history.replaceState(null, "", next);
   updateTheoremNote();
   renderInspector();
@@ -727,6 +730,7 @@ function populateTheoremSelect() {
     if (!number) {
       const next = new URL(window.location.href);
       next.searchParams.delete("theorem");
+      next.searchParams.delete("declaration");
       history.replaceState(null, "", next);
       state.theoremNumber = null;
       state.focusId = null;
@@ -746,6 +750,7 @@ function populateTheoremSelect() {
     const next = new URL(window.location.href);
     next.searchParams.set("theorem", number);
     next.searchParams.delete("graph");
+    next.searchParams.delete("declaration");
     history.pushState(null, "", next);
     state.theoremNumber = number;
     state.focusId = null;
@@ -2077,7 +2082,9 @@ async function load() {
     populateComparisonSelect();
     kindControls();
     renderProofLegend();
-    selectTheoremNode();
+    const declaration = requestedDeclaration && state.graph.nodes.find((node) => node.namespace === requestedDeclaration || node.id === requestedDeclaration);
+    if (declaration) focusDeclaration(declaration.id);
+    else selectTheoremNode();
     updateWorkspaceContext();
   } catch (error) {
     const loading = $("#loading-state");
@@ -2148,6 +2155,7 @@ $("#reset").addEventListener("click", () => {
   const next = new URL(window.location.href);
   next.searchParams.delete("theorem");
   next.searchParams.delete("graph");
+  next.searchParams.delete("declaration");
   history.replaceState(null, "", next);
   updateTheoremNote();
   renderInspector();
@@ -2174,6 +2182,7 @@ $("#clear-selection").addEventListener("click", () => {
   $("#comparison-select").value = "";
   const next = new URL(window.location.href);
   next.searchParams.delete("theorem");
+  next.searchParams.delete("declaration");
   history.replaceState(null, "", next);
   updateTheoremNote();
   renderInspector();
