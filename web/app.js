@@ -467,6 +467,8 @@ function focusDeclaration(nodeId) {
   $("#search").value = "";
   $("#search-results").replaceChildren();
   $("#theorem-select").value = "";
+  const comparisonSelect = $("#comparison-select");
+  if (comparisonSelect) comparisonSelect.value = nodeId;
   const next = new URL(window.location.href);
   next.searchParams.delete("theorem");
   next.searchParams.delete("graph");
@@ -721,6 +723,7 @@ function populateTheoremSelect() {
   updateTheoremNote();
   select.addEventListener("change", (event) => {
     const number = event.target.value;
+    $("#comparison-select").value = "";
     if (!number) {
       const next = new URL(window.location.href);
       next.searchParams.delete("theorem");
@@ -758,6 +761,26 @@ function populateTheoremSelect() {
     state.revealTimer = null;
     updateTheoremNote();
     selectTheoremNode();
+  });
+}
+
+function populateComparisonSelect() {
+  const select = $("#comparison-select");
+  if (!select || !state.graph) return;
+  const comparisons = state.graph.nodes
+    .filter((node) => node.namespace?.startsWith("MathNetwork.") && node.comparison && (node.proofs || []).length > 1)
+    .sort((left, right) => displayLabelFor(left).localeCompare(displayLabelFor(right)));
+  comparisons.forEach((node) => {
+    const option = document.createElement("option");
+    option.value = node.id;
+    const alignment = node.comparison.alignment === "foundation-aligned"
+      ? "foundation-aligned"
+      : `${node.proofs.length} exact routes`;
+    option.textContent = `${displayLabelFor(node)} · ${alignment}`;
+    select.append(option);
+  });
+  select.addEventListener("change", (event) => {
+    if (event.target.value) focusDeclaration(event.target.value);
   });
 }
 
@@ -2051,6 +2074,7 @@ async function load() {
     $(".data-source code").textContent = DATA_URLS.map((url) => url.split("/").pop()).join(" + ");
     $("#loading-state").remove();
     populateTheoremSelect();
+    populateComparisonSelect();
     kindControls();
     renderProofLegend();
     selectTheoremNode();
@@ -2112,6 +2136,7 @@ $("#reset").addEventListener("click", () => {
   $("#search").value = "";
   $("#search-results").replaceChildren();
   $("#theorem-select").value = "";
+  $("#comparison-select").value = "";
   document.querySelectorAll("#kind-filters input[type=checkbox]").forEach((input) => { input.checked = true; });
   state.showImplementation = false;
   state.showSupporting = false;
@@ -2146,6 +2171,7 @@ $("#clear-selection").addEventListener("click", () => {
   state.resumeReveal = null;
   state.theoremNumber = null;
   $("#theorem-select").value = "";
+  $("#comparison-select").value = "";
   const next = new URL(window.location.href);
   next.searchParams.delete("theorem");
   history.replaceState(null, "", next);

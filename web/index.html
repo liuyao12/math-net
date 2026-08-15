@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="./styles.css?v=adapter-labels-1" />
+<link rel="stylesheet" href="./styles.css?v=comparison-picker-1" />
 
 <div class="app-shell" id="app">
   <header class="topbar">
@@ -26,6 +26,12 @@
             <span class="field-label">List of 100</span>
             <select id="theorem-select" aria-describedby="theorem-note">
               <option value="">Choose a theorem…</option>
+            </select>
+          </label>
+          <label class="graph-control">
+            <span class="field-label">Proof comparisons</span>
+            <select id="comparison-select" aria-label="Choose a checked proof comparison">
+              <option value="">Choose a comparison…</option>
             </select>
           </label>
           <label class="graph-control graph-search">
@@ -87,4 +93,4 @@
   </main>
 </div>
 
-<script type="module" src="./app.js?v=adapter-labels-1"></script>
+<script type="module" src="./app.js?v=comparison-picker-1"></script>
