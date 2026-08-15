@@ -1240,12 +1240,13 @@ function renderInspector() {
     : "";
   const proofs = proofList.map((proof) => {
     const summary = proofDependencies.get(proof.id);
+    const delegated = (delegations.get(proof.id) || []).map((delegation) => delegation.declaration).join(", ");
+    const routeLabel = delegated ? proof.label.replace(/local proof$/, "adapter") : proof.label;
     const directInputs = summary && proofList.length > 1
       ? `<small class="proof-dependency-summary">${summary.total} direct inputs · ${summary.routeOnly} route-only · ${summary.shared} shared</small>`
       : "";
-    const delegated = (delegations.get(proof.id) || []).map((delegation) => delegation.declaration).join(", ");
     const delegationNote = delegated ? `<small class="proof-delegation">delegates to ${escapeHtml(delegated)}</small>` : "";
-    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span><span>${escapeHtml(proof.label)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}${directInputs}${delegationNote}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
+    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span><span>${escapeHtml(routeLabel)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}${directInputs}${delegationNote}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
   }).join("");
   const dependencyButtons = (nodes) => {
     const shown = nodes.slice(0, 5);
