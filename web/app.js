@@ -1066,13 +1066,18 @@ function selectNode(nodeId, redraw = false) {
 function selectProof(proofId) {
   state.selectedProofId = proofId;
   renderInspector();
-  draw();
+  // A route has a different upstream closure. Rebuild the progressive
+  // neighborhood from the selected proof rather than retaining reveal steps
+  // calculated for the previous, merged view.
+  if (state.focusId) beginProgressiveReveal();
+  else draw();
 }
 
 function selectAllProofs() {
   state.selectedProofId = null;
   renderInspector();
-  draw();
+  if (state.focusId) beginProgressiveReveal();
+  else draw();
 }
 
 function expandNodeDependencies(nodeId, redraw = true) {
