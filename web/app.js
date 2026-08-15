@@ -20,6 +20,7 @@ const DECLARATION_LABELS = {
   proposition: "Propositions",
   concept: "Definitions",
   source: "Imported declarations",
+  structure: "Structures",
 };
 const DECLARATION_COLORS = {
   theorem: "#366b80",
@@ -34,6 +35,7 @@ const DECLARATION_COLORS = {
   proposition: "#366b80",
   concept: "#4c7d74",
   source: "#795a76",
+  structure: "#795a76",
 };
 const DECLARATION_BACKGROUNDS = {
   theorem: "#dbecee",
@@ -47,6 +49,7 @@ const DECLARATION_BACKGROUNDS = {
   proposition: "#dbecee",
   concept: "#dcebe5",
   source: "#eadfe8",
+  structure: "#eadfe8",
 };
 const REPOSITORIES = {
   mathlib: { label: "mathlib", color: "#3f7f8f" },
@@ -332,6 +335,16 @@ function isStructureNode(node) {
   return node?.role === "structure";
 }
 
+function readingPriority(node) {
+  if (!node) return -Infinity;
+  if (isStructureNode(node)) return 10000;
+  if (node.comparison?.routes?.length > 1) return 9000;
+  if (node.importance?.landmark) return 8000 + (node.importance?.score || 0);
+  if (isMathematicalNode(node)) return 4000 + (node.importance?.score || 0);
+  if (presentationCategory(node) === "supporting") return 1000 + (node.importance?.score || 0);
+  return node.importance?.score || 0;
+}
+
 function ambientNodesForFocus(nodes) {
   const focus = nodes.find((node) => node.id === state.focusId);
   if (focus?.comparison?.registry === "irrational-sqrt-two" || focus?.namespace === "MathNetwork.SqrtTwo.irrational") {
@@ -552,13 +565,18 @@ function visibleGraph() {
   // node's explicit expander; two raw extraction levels can be hundreds of
   // typeclass/projection details rather than mathematical content.
   const coreDependencies = coreId
-    ? new Set([...upstreamDependencies(coreId, edgeData)].filter((id) => isMathematicalNode(nodesById.get(id))))
+    ? new Set([...upstreamDependencies(coreId, edgeData)].filter((id) => isMajorNode(nodesById.get(id))))
     : new Set();
+  // A structure used directly by the focus is part of the mathematical
+  // statement readers need first; its construction details stay collapsed.
+  const focusStructures = new Set(state.focusId
+    ? edgeData.filter((edge) => edge.target.id === state.focusId && isStructureNode(edge.source)).map((edge) => edge.source.id)
+    : []);
   const ambientIds = ambientNodesForFocus(state.graph.nodes);
-  const forcedIds = new Set([...corePath, ...coreDependencies, ...foundationPaths, ...ambientIds]);
+  const forcedIds = new Set([...corePath, ...coreDependencies, ...foundationPaths, ...focusStructures, ...ambientIds]);
   const manuallyExpandedIds = new Set(state.expandedDistances.keys());
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(declarationKindFor(node)) &&
-    (!isSuppressedNode(node) || node.id === state.focusId || node.id === state.selectedId || forcedIds.has(node.id) || manuallyExpandedIds.has(node.id)));
+    (!isSuppressedNode(node) || isStructureNode(node) || node.id === state.focusId || node.id === state.selectedId || forcedIds.has(node.id) || manuallyExpandedIds.has(node.id)));
   state.expandedDistances.forEach((distance, id) => {
     if (!state.focusDistances.has(id) || distance < state.focusDistances.get(id)) state.focusDistances.set(id, distance);
   });
@@ -646,12 +664,21 @@ function theoremForGraph() {
 
 function populateTheoremSelect() {
   const select = $("#theorem-select");
+  const indexed = document.createElement("optgroup");
+  indexed.label = "Indexed theorem neighborhoods";
+  const catalogued = document.createElement("optgroup");
+  catalogued.label = "Catalogue only — graph not yet imported";
   state.theorems.forEach((theorem) => {
     const option = document.createElement("option");
     option.value = String(theorem.number);
     option.textContent = `${String(theorem.number).padStart(2, "0")} · ${theorem.title}`;
-    select.append(option);
+    if (theorem.graph) indexed.append(option);
+    else {
+      option.disabled = true;
+      catalogued.append(option);
+    }
   });
+  select.append(indexed, catalogued);
   state.theoremNumber = state.theoremNumber || "1";
   if (state.theoremNumber) select.value = String(state.theoremNumber);
   updateTheoremNote();
@@ -705,7 +732,7 @@ function updateTheoremNote() {
     return;
   }
   note.innerHTML = theorem.graph
-    ? `<span class="theorem-ready">✓ included in project graph</span> · focus available`
+    ? `<span class="theorem-ready">✓ indexed Lean dependency neighborhood</span> · choose it to inspect the mathematical spine`
     : "catalogued · dependency graph not imported yet";
 }
 
@@ -754,7 +781,7 @@ function beginProgressiveReveal() {
     const steps = [];
     const seen = new Set([state.focusId]);
     const visibleSeen = new Set([state.focusId]);
-    const maxFocusNodes = 80;
+    const maxFocusNodes = 48;
     const queue = [{ id: state.focusId, depth: 0 }];
     state.revealCapped = false;
     while (queue.length) {
@@ -763,15 +790,18 @@ function beginProgressiveReveal() {
       if (isExpansionBoundary(parentNode)) continue;
       const children = [];
       const existing = [];
-      (adjacency.get(parent.id) || []).slice().sort().forEach((neighbor) => {
+      const branchBudget = parent.depth === 0 ? 16 : 12;
+      (adjacency.get(parent.id) || []).slice()
+        .sort((left, right) => readingPriority(nodeMap().get(right)) - readingPriority(nodeMap().get(left)) || left.localeCompare(right))
+        .forEach((neighbor) => {
         if (!nodeIds.has(neighbor)) return;
         if (seen.has(neighbor)) {
-          if (!isSuppressedNode(nodeMap().get(neighbor))) existing.push(neighbor);
+          if (!isSuppressedNode(nodeMap().get(neighbor)) || isStructureNode(nodeMap().get(neighbor))) existing.push(neighbor);
           return;
         }
         const neighborNode = nodeMap().get(neighbor);
-        const visibleNeighbor = !isSuppressedNode(neighborNode);
-        if (visibleNeighbor && visibleSeen.size >= maxFocusNodes) {
+        const visibleNeighbor = !isSuppressedNode(neighborNode) || isStructureNode(neighborNode);
+        if (visibleNeighbor && (visibleSeen.size >= maxFocusNodes || children.length >= branchBudget)) {
           state.revealCapped = true;
           return;
         }
@@ -875,7 +905,7 @@ function verificationText(node) {
 }
 
 function isMajorNode(node) {
-  return isMathematicalNode(node);
+  return isMathematicalNode(node) || isStructureNode(node);
 }
 
 function repositoryForProof(proof) {
@@ -1083,7 +1113,10 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Shared rational core</div><div class="tag-list"><button class="neighbor" data-neighbor="${escapeHtml(mathematicalCoreNode.id)}">${escapeHtml(displayLabelFor(mathematicalCoreNode))}</button></div></div>`
     : "";
   const depthNote = Number.isInteger(node.dependencyDepth)
-    ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported declaration · layer ${node.dependencyDepth}.${node.dependencyBoundary ? " Expansion stops here at a Lean structure boundary; click the node’s marker to inspect any indexed dependencies." : ""}</p></div>`
+    ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported declaration · layer ${node.dependencyDepth}.${node.dependencyBoundary ? " Expansion stops at this boundary; use the + marker or double-click to inspect its indexed dependencies." : ""}</p></div>`
+    : "";
+  const structureNote = isStructureNode(node)
+    ? `<div class="detail-block structure-note"><div class="detail-label">Structure boundary</div><p>This is a Lean <code>structure</code> (kernel representation: an inductive declaration). Its fields and construction details are intentionally collapsed in the mathematical view.</p></div>`
     : "";
   const importance = node.importance
     ? `<div class="detail-block"><div class="detail-label">Structural importance</div><p><strong>${escapeHtml(node.importance.score)}</strong>/100 · ${escapeHtml(node.importance.directUses)} direct proof uses · ${escapeHtml(node.importance.downstreamNodes)} downstream declarations.</p><p class="muted-note">Heuristic based on reuse and downstream reach, not proof length. ${escapeHtml(node.importance.landmark ? "Marked as a structural landmark." : "Not currently marked as a landmark.")}</p></div>`
@@ -1105,6 +1138,7 @@ function renderInspector() {
   const provenance = [
     mergeNote,
     comparisonNote,
+    structureNote,
     depthNote,
     presentation,
     importance,
