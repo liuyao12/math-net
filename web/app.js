@@ -1355,6 +1355,7 @@ function renderInspector() {
 function updateWorkspaceContext() {
   const context = $("#workspace-context");
   const back = $("#back-to-theorem");
+  const copyLink = $("#copy-link");
   if (!context || !back) return;
   const map = nodeMap();
   const focus = state.focusId ? map.get(state.focusId) : null;
@@ -1364,6 +1365,7 @@ function updateWorkspaceContext() {
   if (title) title.textContent = focus ? `${focus.label} · dependency neighborhood` : "Mathematical landscape";
   back.hidden = !focus || !selected || selected.id === focus.id;
   back.setAttribute("aria-label", focus ? `Return to theorem ${focus.label}` : "Return to theorem");
+  if (copyLink) copyLink.hidden = !focus;
 }
 
 function updateHighlight() {
@@ -2211,6 +2213,17 @@ $("#clear-selection").addEventListener("click", () => {
 });
 $("#back-to-theorem").addEventListener("click", () => {
   if (state.focusId) selectNode(state.focusId);
+});
+$("#copy-link").addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  const original = "Copy link";
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    button.textContent = "Copied";
+  } catch (_) {
+    button.textContent = "Copy unavailable";
+  }
+  window.setTimeout(() => { button.textContent = original; }, 1500);
 });
 $("#show-implementation").addEventListener("change", (event) => { state.showImplementation = event.target.checked; draw(); });
 $("#show-supporting").addEventListener("change", (event) => { state.showSupporting = event.target.checked; draw(); });

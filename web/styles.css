@@ -179,6 +179,8 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .close-button { width: 26px; height: 26px; border: 0; color: var(--muted); background: transparent; font-size: 21px; line-height: 1; }
 .back-button { margin-left: auto; margin-right: 8px; padding: 5px 7px; border: 1px solid var(--line-strong); border-radius: 5px; color: var(--blue); background: var(--blue-soft); font-size: 11px; }
 .back-button:hover { color: var(--ink); }
+.share-button { margin-right: 8px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 5px; color: var(--muted); background: transparent; font-size: 11px; }
+.share-button:hover { color: var(--ink); border-color: var(--line-strong); }
 .inspector-content { padding: 20px; }
 .empty-inspector { display: grid; justify-items: start; gap: 11px; padding-top: 44px; }
 .empty-glyph { color: var(--line-strong); font-size: 42px; line-height: 1; }
