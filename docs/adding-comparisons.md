@@ -49,11 +49,11 @@ tools/build-graph.sh
 tools/check-comparisons.sh
 ```
 
-The first command extracts actual `used-in-proof` edges, merges only proposed
-exact statements, and generates Lean `isDefEq` checks for every exact
-multi-route node. It fails if any claimed exact merge is rejected by the Lean
-kernel. The second command reruns the representative and generated checks
-against the committed graph.
+The first command extracts actual `used-in-proof` edges, rejects dangling or
+collapsed self-dependencies, merges only proposed exact statements, and
+generates Lean `isDefEq` checks for every exact multi-route node. It fails if
+any claimed exact merge is rejected by the Lean kernel. The second command
+reruns the representative and generated checks against the committed graph.
 
 ## 5. Inspect the result
 

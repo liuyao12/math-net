@@ -10,6 +10,7 @@ tools/export-comparisons.sh > "$manifest"
 lake env lean tools/BuildGraph.lean \
   | python3 tools/MergeGraph.py --comparisons "$manifest" \
   > "$project_tmp"
+python3 tools/ValidateGraph.py "$project_tmp"
 python3 tools/GenerateExactMergeChecks.py "$project_tmp" > "$checks_tmp"
 lake env lean "$checks_tmp"
 python3 tools/BuildCatalogue.py < "$project_tmp" > "$catalogue_tmp"
