@@ -23,11 +23,12 @@ For now, theorem identity is automatic only when the elaborated Lean
 statements are identical. Similar-looking statements are not merged merely
 because they have the same informal meaning.
 
-Regenerate it after regenerating the project graph:
+Regenerate it with the checked graph pipeline:
 
 ```sh
-lake env lean tools/BuildGraph.lean \
-  | python3 tools/MergeGraph.py > MathNetwork/Graph/project.json
-python3 tools/BuildCatalogue.py < MathNetwork/Graph/project.json \
-  > MathNetwork/Graph/theorem-catalogue.json
+tools/build-graph.sh
 ```
+
+The pipeline exports comparison metadata, proposes exact merges from
+elaborated statements, and then asks Lean's `isDefEq` checker to validate every
+exact multi-route merge before publishing the graph artifact.

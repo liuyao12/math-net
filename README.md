@@ -12,8 +12,8 @@ The intended release name, local folder, and GitHub repository name are all
 ## Interactive explorer
 
 The first network browser is in [`web/`](web/). By default it reads the
-generated project-wide Lean declaration graph, currently containing 2,087
-nodes and 20,351 checked dependency edges. It supports theorem selection,
+generated project-wide Lean declaration graph, currently containing 2,155
+nodes and 20,817 checked dependency edges. It supports theorem selection,
 multi-level neighborhood fading, proposition search, strict proof-dependency
 edges, structural-landmark highlighting, background-detail suppression, and
 click-to-inspect Lean source. The default theorem view shows mathematical
@@ -100,6 +100,10 @@ role:
   integral;
 - a **foundation-comparison** route is chosen to expose a different
   dependency boundary, for example a computable or geometric construction.
+- an **adapter** route is a deliberately minimal local wrapper around an
+  equivalent imported theorem. It is kept to record the comparison boundary,
+  but the explorer marks its delegation rather than presenting it as an
+  independent proof.
 
 The route is still conditional when it treats imported lemmas as black boxes.
 Its status means that the local Lean term checks; its `closure` and
@@ -229,10 +233,11 @@ general statement for primes congruent to \(1\) modulo \(4\):
 - a computational search or certified finite construction for individual
   primes.
 
-The network should therefore include proof-route nodes and correspondence
-edges, not only theorem-dependency edges. A single target may have several
-routes, and a lemma such as norm multiplicativity may support one route while
-the fixed-point involution supports another. This makes it possible to ask
+The network therefore stores proof routes as metadata on theorem declarations,
+while retaining **only** kernel-derived `used-in-proof` arrows in the graph.
+A single target may have several routes, and a lemma such as norm
+multiplicativity may support one route while the fixed-point involution
+supports another. This makes it possible to ask
 which parts of a result are geometric, algebraic, combinatorial, or
 computational, and which choices cause those routes to converge or diverge.
 
@@ -278,6 +283,10 @@ The analysis-facing starting tranche from Wiedijk's 100 Theorems list is in
 The checked Fermat application and its proof routes live in
 `MathNetwork/Fermat/Registry.lean`; the supporting declaration graph is
 generated from the elaborated Lean environment.
+
+For the precise workflow for adding an exact merged proposition, a local
+adapter, or a foundation-aligned comparison, see
+[`docs/adding-comparisons.md`](docs/adding-comparisons.md).
 
 ## Pedagogical mode
 
