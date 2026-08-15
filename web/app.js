@@ -5,6 +5,7 @@ const query = new URLSearchParams(window.location.search);
 const requestedGraph = query.get("graph");
 const requestedTheorem = query.get("theorem");
 const requestedDeclaration = query.get("declaration");
+const requestedRoute = query.get("route");
 const REPO_ROOT = window.location.pathname.includes("/web/") ? "../" : "./";
 // The HTML entry point versions this module on every publish. Reuse that
 // revision for graph assets so the interface and its extracted Lean data can
@@ -475,6 +476,7 @@ function focusDeclaration(nodeId) {
   next.searchParams.delete("theorem");
   next.searchParams.delete("graph");
   next.searchParams.set("declaration", node.namespace || node.id);
+  next.searchParams.delete("route");
   history.replaceState(null, "", next);
   updateTheoremNote();
   renderInspector();
@@ -731,6 +733,7 @@ function populateTheoremSelect() {
       const next = new URL(window.location.href);
       next.searchParams.delete("theorem");
       next.searchParams.delete("declaration");
+      next.searchParams.delete("route");
       history.replaceState(null, "", next);
       state.theoremNumber = null;
       state.focusId = null;
@@ -751,6 +754,7 @@ function populateTheoremSelect() {
     next.searchParams.set("theorem", number);
     next.searchParams.delete("graph");
     next.searchParams.delete("declaration");
+    next.searchParams.delete("route");
     history.pushState(null, "", next);
     state.theoremNumber = number;
     state.focusId = null;
@@ -1134,6 +1138,14 @@ function selectNode(nodeId, redraw = false) {
 
 function selectProof(proofId) {
   state.selectedProofId = proofId;
+  const focus = state.focusId && nodeMap().get(state.focusId);
+  const proof = focus && (focus.proofs || []).find((item) => item.id === proofId);
+  if (proof) {
+    const next = new URL(window.location.href);
+    next.searchParams.set("declaration", focus.namespace || focus.id);
+    next.searchParams.set("route", proof.declaration);
+    history.replaceState(null, "", next);
+  }
   renderInspector();
   // A route has a different upstream closure. Rebuild the progressive
   // neighborhood from the selected proof rather than retaining reveal steps
@@ -1144,6 +1156,9 @@ function selectProof(proofId) {
 
 function selectAllProofs() {
   state.selectedProofId = null;
+  const next = new URL(window.location.href);
+  next.searchParams.delete("route");
+  history.replaceState(null, "", next);
   renderInspector();
   if (state.focusId) beginProgressiveReveal();
   else draw();
@@ -2083,8 +2098,11 @@ async function load() {
     kindControls();
     renderProofLegend();
     const declaration = requestedDeclaration && state.graph.nodes.find((node) => node.namespace === requestedDeclaration || node.id === requestedDeclaration);
-    if (declaration) focusDeclaration(declaration.id);
-    else selectTheoremNode();
+    if (declaration) {
+      focusDeclaration(declaration.id);
+      const route = requestedRoute && (declaration.proofs || []).find((proof) => proof.declaration === requestedRoute);
+      if (route) selectProof(route.id);
+    } else selectTheoremNode();
     updateWorkspaceContext();
   } catch (error) {
     const loading = $("#loading-state");
@@ -2156,6 +2174,7 @@ $("#reset").addEventListener("click", () => {
   next.searchParams.delete("theorem");
   next.searchParams.delete("graph");
   next.searchParams.delete("declaration");
+  next.searchParams.delete("route");
   history.replaceState(null, "", next);
   updateTheoremNote();
   renderInspector();
@@ -2183,6 +2202,7 @@ $("#clear-selection").addEventListener("click", () => {
   const next = new URL(window.location.href);
   next.searchParams.delete("theorem");
   next.searchParams.delete("declaration");
+  next.searchParams.delete("route");
   history.replaceState(null, "", next);
   updateTheoremNote();
   renderInspector();
