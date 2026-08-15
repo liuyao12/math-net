@@ -89,8 +89,6 @@ const state = {
   theoremNumber: requestedTheorem || theoremForGraph() || "1",
   focusId: null,
   coreId: null,
-  provenanceAnchorId: null,
-  provenanceClusters: [],
   selectedId: null,
   selectedProofId: null,
   search: "",
@@ -1494,102 +1492,6 @@ function directedLayout(nodes, edges, width, height) {
   });
 }
 
-function proofRouteSides(nodes, edges, focusId) {
-  const sides = new Map();
-  state.provenanceAnchorId = null;
-  state.provenanceClusters = [];
-  const focus = nodes.find((node) => node.id === focusId);
-  if (!focus) return sides;
-  const incoming = new Map();
-  edges.forEach((edge) => {
-    if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
-    incoming.get(edge.target.id).push(edge);
-  });
-  // Find the nearest declaration with independently sourced proof terms.
-  // This is deliberately generic: the graph supplies the route provenance;
-  // no theorem name, repository pair, or expected number of proofs appears
-  // in the layout rule.
-  const visited = new Set([focusId]);
-  const search = [focusId];
-  let provenanceAnchor = null;
-  while (search.length && !provenanceAnchor) {
-    const targetId = search.shift();
-    const target = nodes.find((node) => node.id === targetId);
-    const repositories = new Set((target?.proofs || []).map(repositoryForProof));
-    if (repositories.size > 1) {
-      provenanceAnchor = target;
-      break;
-    }
-    (incoming.get(targetId) || []).forEach((edge) => {
-      if (!visited.has(edge.source.id)) {
-        visited.add(edge.source.id);
-        search.push(edge.source.id);
-      }
-    });
-  }
-  const anchor = provenanceAnchor || focus;
-  if (!(anchor.proofs || []).length) return sides;
-  state.provenanceAnchorId = provenanceAnchor?.id || null;
-  if (state.selectedProofId) {
-    // Once one proof is selected, its upstream closure is the subject of the
-    // view. Keep that route on the central spine; repository lanes are useful
-    // only while comparing multiple routes at the merged proposition.
-    const queue = [focusId];
-    sides.set(focusId, 0);
-    while (queue.length) {
-      const targetId = queue.shift();
-      (incoming.get(targetId) || []).forEach((edge) => {
-        if (sides.has(edge.source.id)) return;
-        sides.set(edge.source.id, 0);
-        queue.push(edge.source.id);
-      });
-    }
-    return sides;
-  }
-  // Assign each proof term to a provenance cluster. The resulting values are
-  // branch identities, not prescribed screen positions: the graph layout is
-  // free to decide whether a branch settles to the left or right.
-  const clusters = [...new Set(anchor.proofs.map((proof) => repositoryForProof(proof)))].sort();
-  if (clusters.length < 2) return sides;
-  const clusterForProof = new Map(anchor.proofs.map((proof) => [proof.id, repositoryForProof(proof)]));
-  const scale = Math.max(1, (clusters.length - 1) / 2);
-  const coordinate = new Map(clusters.map((cluster, index) => [cluster, (index - (clusters.length - 1) / 2) / scale]));
-  state.provenanceClusters = clusters.map((cluster) => ({ repository: cluster, coordinate: coordinate.get(cluster) }));
-  const ownership = new Map([[anchor.id, new Set()]]);
-  const queue = [anchor.id];
-  sides.set(focusId, 0);
-  while (queue.length) {
-    const targetId = queue.shift();
-    (incoming.get(targetId) || []).forEach((edge) => {
-      const inherited = ownership.get(targetId) || new Set();
-      const edgeCluster = targetId === anchor.id ? clusterForProof.get(edge.proof) : null;
-      const nextOwnership = edgeCluster ? new Set([edgeCluster]) : new Set(inherited);
-      if (!ownership.has(edge.source.id)) {
-        ownership.set(edge.source.id, nextOwnership);
-        queue.push(edge.source.id);
-      } else {
-        const existing = ownership.get(edge.source.id);
-        const size = existing.size;
-        nextOwnership.forEach((cluster) => existing.add(cluster));
-        if (existing.size > size) queue.push(edge.source.id);
-      }
-    });
-  }
-  ownership.forEach((clustersForNode, nodeId) => {
-    sides.set(nodeId, clustersForNode.size === 1 ? coordinate.get([...clustersForNode][0]) : 0);
-  });
-  // A comparison registry may designate a checked, representation-free
-  // mathematical core. It is a neutral reading anchor even when one route
-  // happens to use the bridge theorem and another reaches the same condition
-  // definitionally. This changes placement only; no relationship edge is
-  // added to the Lean dependency graph.
-  const declaredCore = anchor.comparison?.mathematicalCore;
-  if (declaredCore) {
-    nodes.filter((node) => node.namespace === declaredCore).forEach((node) => sides.set(node.id, 0));
-  }
-  return sides;
-}
-
 function theoremLike(node) {
   return node?.kind === "proposition" || ["theorem", "opaque", "axiom", "proposition"].includes(declarationKindFor(node));
 }
@@ -1758,47 +1660,15 @@ function horizontalLabelCollisionForce(nodes) {
   return force;
 }
 
-function routeSeparationForce(nodes, routeSides) {
-  // Different proof components should avoid occupying the same visual space,
-  // but their placement must emerge from the directed graph rather than from
-  // a repository-to-left/right convention.  Shared declarations (route 0)
-  // remain neutral; ordinary link tension keeps each component coherent.
-  const routed = nodes.filter((node) => (routeSides.get(node.id) || 0) !== 0);
-  return () => {
-    for (let pass = 0; pass < 2; pass += 1) {
-      routed.forEach((left, index) => {
-        routed.slice(index + 1).forEach((right) => {
-          if (routeSides.get(left.id) === routeSides.get(right.id)) return;
-          const verticalDistance = Math.abs(left.y - right.y);
-          if (verticalDistance > 180) return;
-          const desired = Math.max(70, 150 - verticalDistance * 0.42);
-          let dx = right.x - left.x;
-          if (Math.abs(dx) < 0.5) {
-            // A stable lexical tie-break only breaks perfect symmetry; it
-            // does not encode which repository belongs on which side.
-            dx = left.id.localeCompare(right.id) < 0 ? 1 : -1;
-          }
-          const overlap = desired - Math.abs(dx);
-          if (overlap <= 0) return;
-          const shift = Math.min(8, overlap * 0.075) * Math.sign(dx);
-          left.x -= shift;
-          right.x += shift;
-        });
-      });
-    }
-  };
-}
-
-function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides) {
-  // `directedLayout` seeds all nodes before this pass. Those seed coordinates
-  // are not established reader positions: provenance constraints must still
-  // act on the first focused render. Only subsequent reveal batches preserve
-  // their already settled nodes.
-  const establishedIds = state.revealCursor > 0 ? new Set(state.layoutPositions.keys()) : new Set();
+function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
+  // `directedLayout` supplies a stable seed before this constrained pass.
+  // Later reveal batches retain that seed as a suggestion, but never freeze
+  // ordinary declarations horizontally: the graph may still settle into a
+  // less crossed and less crowded arrangement.
   const focusRank = ranks.get(state.focusId) || Math.max(0, ...ranks.values());
   const rankGap = 52;
   nodes.forEach((node) => {
-    node.targetX = node.id === coreId || node.id === state.focusId || node.id === state.provenanceAnchorId ? width / 2 : node.x;
+    node.targetX = node.id === coreId || node.id === state.focusId ? width / 2 : node.x;
     node.targetY = height * 0.72 - (focusRank - (ranks.get(node.id) || 0)) * rankGap;
     node.rankY = node.targetY;
     node.y = node.rankY;
@@ -1807,8 +1677,9 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     node.fx = null;
     node.fy = null;
   });
-  // Keep the directed-layout seed as the only positional suggestion. Proof
-  // provenance participates through a symmetric separation force below.
+  // Keep the directed-layout seed as the positional suggestion. Dagre's
+  // crossing minimisation sees the actual dependency graph; ordinary forces
+  // then resolve labels and node collisions without knowing proof identity.
   nodes.forEach((node) => { node.x = node.targetX; });
   // Run forces only within each fixed rank. `fy` prevents the simulation
   // from changing proof height, while charge, link tension, and collision
@@ -1816,7 +1687,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
   nodes.forEach((node) => {
     node.fy = node.rankY;
     const pinned = state.pinnedPositions.get(node.id);
-    node.fx = pinned ? pinned.x : node.id === coreId || node.id === state.provenanceAnchorId ? width / 2 : establishedIds.has(node.id) ? node.x : null;
+    node.fx = pinned ? pinned.x : node.id === coreId ? width / 2 : null;
   });
   d3.forceSimulation(nodes)
     .force("x", d3.forceX((node) => node.targetX).strength(0.13))
@@ -1824,7 +1695,6 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     .force("charge", d3.forceManyBody().strength(-150))
     .force("collide", d3.forceCollide().radius((node) => Math.max(18, Math.min(52, labelFor(node).length * 3.3 + 14))).strength(0.9))
     .force("labels", horizontalLabelCollisionForce(nodes))
-    .force("proof-components", routeSeparationForce(nodes, routeSides))
     .stop()
     .tick(120);
   const topMargin = 34;
@@ -1878,7 +1748,6 @@ function draw() {
   // from the focus is still used for fading, but no longer flattens peers
   // into one horizontal band.
   const topologyRanks = dependencyRanks(nodes, edges);
-  const routeSides = proofRouteSides(nodes, edges, state.focusId);
   const coreId = state.coreId && nodes.some((node) => node.id === state.coreId) ? state.coreId : coreNodeFor(nodes);
   const ambientIds = ambientNodesForFocus(state.graph.nodes);
   const focusDependencyIds = new Set(edges
@@ -1907,8 +1776,9 @@ function draw() {
   const nodesByRank = d3.group(nodes, (item) => ranks.get(item.id) || 0);
   const maxLayerSize = Math.max(1, ...Array.from(nodesByRank.values()).map((layer) => layer.length));
   const columnGap = Math.min(112, Math.max(72, (width - 80) / Math.max(1, maxLayerSize)));
-  // Seed each rank without consulting repository provenance. Subsequent
-  // branch-aware forces separate independent proof components organically.
+  // Seed each rank from the directed graph. Dagre supplies an initial
+  // crossing-minimising order; later node and label forces remain agnostic
+  // about repositories and proof-route identities.
   const rankPositions = new Map();
   nodesByRank.forEach((layer) => {
     layer.slice().sort((left, right) => left.id.localeCompare(right.id)).forEach((item, index) => {
@@ -2024,7 +1894,7 @@ function draw() {
     // after which the constrained layout visibly pulled them right again.
     // Settled coordinates are now retained across batches.
     if (!state.layoutPositions.size) directedLayout(nodes, edges, width, height);
-    rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides);
+    rankLockedLayout(nodes, edges, ranks, width, height, coreId);
     node.attr("transform", (item) => `translate(${item.x},${item.y})`);
     link.attr("d", (edge) => routedLinkPath(edge, nodes))
       .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
@@ -2051,7 +1921,7 @@ function draw() {
     state.simulation = d3.forceSimulation(nodes)
       .force("link", d3.forceLink(edges).id((item) => item.id).distance(state.focusId ? 104 : 82).strength(state.focusId ? 0.34 : 0.22))
       .force("y", d3.forceY((item) => item.id === coreId ? height * 0.5 : item.id === state.focusId ? height * 0.74 : graphTop + (ranks.get(item.id) || 0) * layerGap).strength((item) => item.id === state.focusId || item.id === coreId ? 0.92 : state.focusId ? 0.08 : 1.2))
-      .force("x", d3.forceX((item) => item.id === state.focusId || item.id === coreId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId || item.id === coreId ? 0.94 : routeSides.has(item.id) && routeSides.get(item.id) !== 0 ? 0.42 : 0.12))
+      .force("x", d3.forceX((item) => item.id === state.focusId || item.id === coreId ? width / 2 : item.targetX ?? width / 2).strength((item) => item.id === state.focusId || item.id === coreId ? 0.94 : 0.12))
       .force("charge", d3.forceManyBody().strength(state.focusId ? -230 : -180))
       .force("collide", d3.forceCollide().radius((item) => item.kind === "proof-family" ? 26 : 21))
       .force("labels", horizontalLabelCollisionForce(nodes))
