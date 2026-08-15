@@ -1,5 +1,6 @@
 import Lean
 import MathNetwork.Comparisons.Registry
+import MathNetwork.Euler.Applications
 
 /-!
 # Kernel-backed comparison check
@@ -26,8 +27,9 @@ elab_rules : command
     logInfo s!"definitional equality checked: {left.getId} ≡ {right.getId}"
 
 /-!
-The current √2 comparison has its Mathlib route registered.  The
-computable-analysis rational-square-root criterion has a different native
-`RealRaw` statement and will be added here once a checked representation
-bridge supplies a literal common proposition.
+A representative exact merge. `tools/build-graph.sh` generates and runs the
+complete `isDefEq` check set for every exact merge in the published graph.
+The computable square-root criterion deliberately remains a
+foundation-aligned (not definitionally equal) comparison.
 -/
+check_defeq MathNetwork.Euler.trig_addition_real_route Real.cos_add

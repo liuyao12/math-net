@@ -285,6 +285,11 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
                     "elaborated proposition types as definitionally equal."
                 ),
             }
+            if not is_foundation_aligned:
+                merged["comparison"]["kernelCheck"] = (
+                    "Lean's definitional-equality checker validates every route pair "
+                    "when tools/build-graph.sh generates this graph."
+                )
             if is_foundation_aligned:
                 merged["comparison"]["foundations"] = [
                     {

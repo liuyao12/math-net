@@ -4,26 +4,28 @@ Math-net hosts small Lean comparison files rather than duplicating upstream
 proof developments. A comparison specializes two routes to a common target
 proposition and records both checked proof terms.
 
-For the square-root-of-two benchmark:
+For the square-root benchmark, MathNet separates two honest situations:
 
-- `MathNetwork.SqrtTwo.irrational` proves `Irrational (√2)` through mathlib;
-- `MathNetwork.SqrtTwo.irrational_descent` proves the same target through the
-  infinite-descent core imported from `computable-analysis`;
-- `MathNetwork.Comparisons.irrationalSqrtTwo` stores both proof terms in one
-  `CheckedComparison` value.
+- `MathNetwork.SqrtTwo.irrational` is the mathlib corollary `Irrational (√2)`;
+- the general mathlib and computable-analysis square-root criteria are kept as
+  a `FoundationAlignedComparison`, because their native propositions use `ℝ`
+  and `ComputableAnalysis.RealRaw` respectively;
+- the rational-square criterion is displayed as their shared mathematical
+  core, without claiming that Lean has identified the two real-number types.
 
-The comparison registry forces every route in the list to have the same
-proposition type. `tools/CheckComparison.lean` additionally asks Lean's definitional
-equality procedure to compare the elaborated declaration types:
+`CheckedComparison` forces every route in its list to have the same proposition
+type. `tools/CheckComparison.lean` supplies a representative direct
+definitional-equality check, while graph generation checks every exact merged
+pair with Lean's `isDefEq` procedure:
 
 ```sh
 tools/check-comparisons.sh
 ```
 
-The graph merger uses exact elaborated proposition statements to join the
-dependency graphs. The explicit comparison registry records why that merge is
-intended and which repository supplies each route; it does not replace the
-kernel check. `tools/ExportComparisons.lean` exports the checked registry
-metadata to `MathNetwork/Graph/comparisons.json`, and `tools/build-graph.sh`
-feeds that manifest into the graph merger. This keeps the generated graph
-reproducible as more comparison objects are added.
+The graph merger uses exact elaborated proposition statements to propose
+joins; `tools/build-graph.sh` then rejects any exact join that the Lean kernel
+does not accept definitionally. The explicit comparison registry records why
+an alignment is intended and which repository supplies each route. It never
+turns a foundation-aligned pair into an exact merge. `tools/ExportComparisons.lean`
+exports this metadata to `MathNetwork/Graph/comparisons.json` before the graph
+is generated.
