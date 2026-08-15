@@ -1140,11 +1140,10 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations. Each formalization below remains available as a separate proof/source route.</p></div>`
     : "";
   const comparison = node.comparison;
-  const routeStatement = (proof) => highlightLean(compactLeanSource(proof.statement || node.statement || "-- Checked declaration statement unavailable.", { maxLines: 8, maxLineLength: 180 }));
   const allRouteStatement = !activeProof && proofList.length > 1
     ? comparison?.alignment === "foundation-aligned"
-      ? `<div class="comparison-statements">${proofList.map((proof) => `<div class="comparison-statement"><div class="comparison-statement-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} route</div><pre class="proof-source"><code>${routeStatement(proof)}</code></pre></div>`).join("")}</div>`
-      : `<pre class="proof-source"><code>${routeStatement(proofList[0])}</code></pre>`
+      ? `<div class="comparison-statements">${proofList.map((proof) => `<div class="comparison-statement"><div class="comparison-statement-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} route</div><pre class="proof-source pending" data-route-statement="${escapeHtml(proof.id)}"><code>Loading Lean declaration…</code></pre></div>`).join("")}</div>`
+      : `<pre class="proof-source pending" data-route-statement="${escapeHtml(proofList[0].id)}"><code>Loading Lean declaration…</code></pre>`
     : null;
   const formalStatementHeading = activeProof
     ? `Formal statement · ${escapeHtml((REPOSITORIES[repositoryForProof(activeProof)] || REPOSITORIES.unknown).label)} route`
@@ -1226,8 +1225,12 @@ function renderInspector() {
   } else {
     loadProofSource(node, content.querySelector("#proof-source"), sourceRequest, activeProof);
   }
-  if (activeProof) loadDeclarationSignature(node, content.querySelector("#declaration-signature"), sourceRequest, activeProof);
-  else content.querySelector("#declaration-signature")?.classList.remove("pending");
+  if (activeProof) {
+    loadDeclarationSignature(node, content.querySelector("#declaration-signature"), sourceRequest, activeProof);
+  } else if (allRouteStatement) {
+    const statementProofs = comparison?.alignment === "foundation-aligned" ? proofList : proofList.slice(0, 1);
+    statementProofs.forEach((proof) => loadDeclarationSignature(node, content.querySelector(`[data-route-statement="${proof.id}"]`), sourceRequest, proof));
+  }
 }
 
 function updateWorkspaceContext() {
