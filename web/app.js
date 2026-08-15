@@ -958,9 +958,25 @@ function resumeRevealIfVisible() {
   if (state.revealPaused && !viewportHasEdgeNode()) state.resumeReveal?.();
 }
 
-function labelFor(node) {
+function disambiguatingContext(node) {
+  const short = displayLabelFor(node);
+  const namespaceParts = String(node.namespace || "").split(".").filter(Boolean);
+  const namespaceContext = namespaceParts.slice(0, -1).at(-1);
+  if (namespaceContext && namespaceContext !== short) return namespaceContext;
+  const moduleParts = String(node.module || node.locator || "").split(/[./]/).filter(Boolean);
+  const moduleContext = moduleParts.at(-1);
+  if (moduleContext && moduleContext !== short) return moduleContext;
+  return moduleParts[0] || namespaceParts[0] || "Lean";
+}
+
+function labelFor(node, peers = null) {
   const label = displayLabelFor(node);
-  return label.length > 29 ? `${label.slice(0, 27)}…` : label;
+  // A short Lean identifier is normally the most legible graph label. When
+  // several visible declarations share it, show the real namespace/module
+  // context rather than making distinct proof routes visually indistinct.
+  const collides = peers?.some((candidate) => candidate.id !== node.id && displayLabelFor(candidate) === label);
+  const visible = collides ? `${disambiguatingContext(node)}.${label}` : label;
+  return visible.length > 29 ? `${visible.slice(0, 27)}…` : visible;
 }
 
 function verificationFor(node) {
@@ -1464,7 +1480,7 @@ function directedLayout(nodes, edges, width, height) {
   graph.setGraph({ rankdir: "TB", ranksep: 58, nodesep: 42, edgesep: 16, marginx: 18, marginy: 24 });
   graph.setDefaultEdgeLabel(() => ({}));
   nodes.forEach((node) => {
-    const labelWidth = Math.min(250, Math.max(56, labelFor(node).length * 6.6 + 32));
+    const labelWidth = Math.min(250, Math.max(56, labelFor(node, nodes).length * 6.6 + 32));
     graph.setNode(node.id, { width: labelWidth, height: 30 });
   });
   edges.forEach((edge) => graph.setEdge(edge.source.id, edge.target.id, {}, edge.id));
@@ -1633,7 +1649,7 @@ function enforceTopDown(nodes, edges, ranks, focusId, coreId, gap = 26) {
 
 function horizontalLabelCollisionForce(nodes) {
   const active = nodes.filter((node) => isMajorNode(node) && (nodes.length <= 12 || node.label.length <= 31));
-  const widthOf = (node) => Math.max(30, labelFor(node).length * 6.2 + 20);
+  const widthOf = (node) => Math.max(30, labelFor(node, nodes).length * 6.2 + 20);
   const boxOf = (node) => {
     const width = widthOf(node);
     return { left: node.x + 10, right: node.x + 10 + width, top: node.y - 10, bottom: node.y + 10, width };
@@ -1697,7 +1713,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
     .force("x", d3.forceX((node) => node.targetX).strength(0.13))
     .force("link", d3.forceLink(edges).id((node) => node.id).distance(92).strength(0.12))
     .force("charge", d3.forceManyBody().strength(-150))
-    .force("collide", d3.forceCollide().radius((node) => Math.max(18, Math.min(52, labelFor(node).length * 3.3 + 14))).strength(0.9))
+    .force("collide", d3.forceCollide().radius((node) => Math.max(18, Math.min(52, labelFor(node, nodes).length * 3.3 + 14))).strength(0.9))
     .force("labels", horizontalLabelCollisionForce(nodes))
     .stop()
     .tick(120);
@@ -1870,7 +1886,7 @@ function draw() {
     const repositories = repositoriesForNode(item);
     return repositories.length === 1 ? repositoryColor(repositories[0]) : "transparent";
   });
-  node.append("text").attr("class", "node-label").classed("structure", isStructureNode).classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", (item) => isStructureNode(item) ? 22 : 16).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (isSuppressedNode(item) && item.id !== state.selectedId && item.id !== state.focusId && !ambientIds.has(item.id)) || (item.id !== coreId && !ambientIds.has(item.id) && displayLabelFor(item).length > 31 && nodes.length > 12));
+  node.append("text").attr("class", "node-label").classed("structure", isStructureNode).classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", (item) => isStructureNode(item) ? 22 : 16).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item, nodes)}`).classed("hidden", (item) => (isSuppressedNode(item) && item.id !== state.selectedId && item.id !== state.focusId && !ambientIds.has(item.id)) || (item.id !== coreId && !ambientIds.has(item.id) && labelFor(item, nodes).length > 31 && nodes.length > 12));
   node.append("text").attr("class", "node-route-count")
     .classed("hidden", (item) => !(item.comparison && (item.proofs || []).length > 1))
     .attr("x", (item) => isStructureNode(item) ? 22 : 16).attr("y", 17)
