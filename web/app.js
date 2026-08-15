@@ -1646,7 +1646,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     node.fx = pinned ? pinned.x : node.id === coreId ? width / 2 : establishedIds.has(node.id) ? node.x : null;
   });
   d3.forceSimulation(nodes)
-    .force("x", d3.forceX((node) => node.targetX).strength((node) => routeSides.get(node.id) ? 0.62 : 0.13))
+    .force("x", d3.forceX((node) => node.targetX).strength((node) => routeSides.has(node.id) ? 0.62 : 0.13))
     .force("link", d3.forceLink(edges).id((node) => node.id).distance(92).strength(0.12))
     .force("charge", d3.forceManyBody().strength(-150))
     .force("collide", d3.forceCollide().radius((node) => Math.max(18, Math.min(52, labelFor(node).length * 3.3 + 14))).strength(0.9))
