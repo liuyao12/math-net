@@ -1384,10 +1384,9 @@ function proofRouteSides(nodes, edges, focusId) {
     }
     return sides;
   }
-  // Assign each proof term to a provenance cluster. The cluster positions
-  // are an evenly spaced one-dimensional embedding of however many routes
-  // occur; declarations reached by several clusters are shared and remain
-  // on the center spine.
+  // Assign each proof term to a provenance cluster. The resulting values are
+  // branch identities, not prescribed screen positions: the graph layout is
+  // free to decide whether a branch settles to the left or right.
   const clusters = [...new Set(anchor.proofs.map((proof) => repositoryForProof(proof)))].sort();
   if (clusters.length < 2) return sides;
   const clusterForProof = new Map(anchor.proofs.map((proof) => [proof.id, repositoryForProof(proof)]));
@@ -1597,62 +1596,35 @@ function horizontalLabelCollisionForce(nodes) {
   return force;
 }
 
-function applyProofRouteLanes(nodes, routeSides, width, coreId, establishedIds) {
-  const sides = [...new Set(routeSides.values())].filter((side) => side !== 0);
-  if (!sides.length) return;
-  const center = width / 2;
-  const laneGap = Math.min(290, Math.max(130, width / (Math.max(...sides.map(Math.abs)) * 2 + 2)));
-  const bySide = d3.group(nodes.filter((node) => routeSides.get(node.id)), (node) => routeSides.get(node.id));
-  bySide.forEach((lane, side) => {
-    lane.sort((left, right) => left.targetY - right.targetY || left.id.localeCompare(right.id));
-    lane.forEach((node, index) => {
-      const pinned = state.pinnedPositions.get(node.id);
-      if (pinned || establishedIds.has(node.id)) {
-        // Existing nodes keep their horizontal coordinate while a new batch
-        // of prerequisites is revealed. Only the new nodes are placed into
-        // lanes, so an expanding graph never sweeps the established drawing
-        // sideways.
-        node.targetX = pinned ? pinned.x : node.x;
-        return;
-      }
-      const withinLane = Math.max(-laneGap * 0.55, Math.min(laneGap * 0.55, (index - (lane.length - 1) / 2) * 34));
-      const laneX = center + side * laneGap + withinLane;
-      // Dagre determines local order; the lane is a strong geometric cue,
-      // not an artificial disconnection of genuine cross-route edges.
-      node.targetX = node.targetX * 0.05 + laneX * 0.95;
-    });
-  });
-  // Nodes with several provenance owners are the genuine joins of the proof
-  // graph. Pull them to the common spine instead of leaving their x-position
-  // to the incidental order produced by the initial layered layout.
-  nodes.forEach((node) => {
-    if (routeSides.has(node.id) && routeSides.get(node.id) === 0 && !state.pinnedPositions.has(node.id) && !establishedIds.has(node.id)) {
-      node.targetX = node.targetX * 0.08 + center * 0.92;
+function routeSeparationForce(nodes, routeSides) {
+  // Different proof components should avoid occupying the same visual space,
+  // but their placement must emerge from the directed graph rather than from
+  // a repository-to-left/right convention.  Shared declarations (route 0)
+  // remain neutral; ordinary link tension keeps each component coherent.
+  const routed = nodes.filter((node) => (routeSides.get(node.id) || 0) !== 0);
+  return () => {
+    for (let pass = 0; pass < 2; pass += 1) {
+      routed.forEach((left, index) => {
+        routed.slice(index + 1).forEach((right) => {
+          if (routeSides.get(left.id) === routeSides.get(right.id)) return;
+          const verticalDistance = Math.abs(left.y - right.y);
+          if (verticalDistance > 180) return;
+          const desired = Math.max(70, 150 - verticalDistance * 0.42);
+          let dx = right.x - left.x;
+          if (Math.abs(dx) < 0.5) {
+            // A stable lexical tie-break only breaks perfect symmetry; it
+            // does not encode which repository belongs on which side.
+            dx = left.id.localeCompare(right.id) < 0 ? 1 : -1;
+          }
+          const overlap = desired - Math.abs(dx);
+          if (overlap <= 0) return;
+          const shift = Math.min(8, overlap * 0.075) * Math.sign(dx);
+          left.x -= shift;
+          right.x += shift;
+        });
+      });
     }
-  });
-  const coreSide = routeSides.get(coreId);
-  if (coreSide) {
-    const core = nodes.find((node) => node.id === coreId);
-    if (core) {
-      core.fx = null;
-      core.fy = null;
-    }
-  }
-}
-
-function enforceRouteLaneBounds(nodes, routeSides, width, establishedIds) {
-  const sides = [...new Set(routeSides.values())].filter((side) => side !== 0);
-  if (!sides.length) return;
-  const center = width / 2;
-  const laneGap = Math.min(290, Math.max(130, width / (Math.max(...sides.map(Math.abs)) * 2 + 2)));
-  nodes.forEach((node) => {
-    if (state.pinnedPositions.has(node.id) || establishedIds.has(node.id)) return;
-    const side = routeSides.get(node.id) || 0;
-    // A route-specific declaration may spread within its lane, but it cannot
-    // drift through the shared middle and visually merge with another proof.
-    if (side < 0) node.x = Math.min(node.x, center + side * laneGap * 0.82);
-    if (side > 0) node.x = Math.max(node.x, center + side * laneGap * 0.82);
-  });
+  };
 }
 
 function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides) {
@@ -1673,7 +1645,8 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     node.fx = null;
     node.fy = null;
   });
-  applyProofRouteLanes(nodes, routeSides, width, coreId, establishedIds);
+  // Keep the directed-layout seed as the only positional suggestion. Proof
+  // provenance participates through a symmetric separation force below.
   nodes.forEach((node) => { node.x = node.targetX; });
   // Run forces only within each fixed rank. `fy` prevents the simulation
   // from changing proof height, while charge, link tension, and collision
@@ -1684,14 +1657,14 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
     node.fx = pinned ? pinned.x : node.id === coreId || node.id === state.provenanceAnchorId ? width / 2 : establishedIds.has(node.id) ? node.x : null;
   });
   d3.forceSimulation(nodes)
-    .force("x", d3.forceX((node) => node.targetX).strength((node) => routeSides.has(node.id) ? 0.62 : 0.13))
+    .force("x", d3.forceX((node) => node.targetX).strength(0.13))
     .force("link", d3.forceLink(edges).id((node) => node.id).distance(92).strength(0.12))
     .force("charge", d3.forceManyBody().strength(-150))
     .force("collide", d3.forceCollide().radius((node) => Math.max(18, Math.min(52, labelFor(node).length * 3.3 + 14))).strength(0.9))
     .force("labels", horizontalLabelCollisionForce(nodes))
+    .force("proof-components", routeSeparationForce(nodes, routeSides))
     .stop()
     .tick(120);
-  enforceRouteLaneBounds(nodes, routeSides, width, establishedIds);
   const topMargin = 34;
   const minY = Math.min(...nodes.map((node) => node.y));
   if (minY < topMargin) {
@@ -1751,19 +1724,6 @@ function draw() {
     .map((edge) => edge.source.id));
   separateParallelProofEdges(edges);
   state.coreId = coreId;
-  if (state.focusId && state.provenanceClusters.length > 1) {
-    const laneGap = Math.min(290, Math.max(130, width / 4));
-    const laneGuide = root.append("g").attr("class", "provenance-lanes").attr("aria-hidden", "true");
-    laneGuide.append("text").attr("class", "provenance-lane shared").attr("x", width / 2).attr("y", 17).text("shared declarations");
-    state.provenanceClusters.forEach((cluster) => {
-      laneGuide.append("text")
-        .attr("class", "provenance-lane")
-        .attr("x", width / 2 + cluster.coordinate * laneGap)
-        .attr("y", 17)
-        .attr("fill", repositoryColor(cluster.repository))
-        .text((REPOSITORIES[cluster.repository] || REPOSITORIES.unknown).label);
-    });
-  }
   const maxFocusDistance = Math.max(0, ...nodes.map((node) => state.focusDistances.get(node.id) || 0));
   const rawRanks = new Map(nodes.map((item) => {
     // Distance supplies the main top-to-bottom dependency hierarchy. The
@@ -1785,16 +1745,19 @@ function draw() {
   const nodesByRank = d3.group(nodes, (item) => ranks.get(item.id) || 0);
   const maxLayerSize = Math.max(1, ...Array.from(nodesByRank.values()).map((layer) => layer.length));
   const columnGap = Math.min(112, Math.max(72, (width - 80) / Math.max(1, maxLayerSize)));
-  const lanePositions = new Map();
-  nodesByRank.forEach((layer) => d3.group(layer, (item) => routeSides.get(item.id) || 0).forEach((lane, side) => {
-    lane.forEach((item, index) => lanePositions.set(item.id, { side: Number(side), index, size: lane.length }));
-  }));
-  const laneOffset = Math.min(150, Math.max(78, width * 0.16));
+  // Seed each rank without consulting repository provenance. Subsequent
+  // branch-aware forces separate independent proof components organically.
+  const rankPositions = new Map();
+  nodesByRank.forEach((layer) => {
+    layer.slice().sort((left, right) => left.id.localeCompare(right.id)).forEach((item, index) => {
+      rankPositions.set(item.id, { index, size: layer.length });
+    });
+  });
   nodesByRank.forEach((layer, rank) => layer.forEach((item) => {
-    const lane = lanePositions.get(item.id) || { side: 0, index: 0, size: 1 };
+    const position = rankPositions.get(item.id) || { index: 0, size: 1 };
     const targetX = item.id === state.focusId || item.id === coreId
       ? width / 2
-      : width / 2 + lane.side * laneOffset + (lane.index - (lane.size - 1) / 2) * columnGap * 0.72;
+      : width / 2 + (position.index - (position.size - 1) / 2) * columnGap * 0.72;
     const targetY = item.id === coreId
       ? height * 0.5
       : item.id === state.focusId
