@@ -82,6 +82,7 @@ const state = {
   theoremNumber: requestedTheorem || theoremForGraph() || "1",
   focusId: null,
   coreId: null,
+  provenanceAnchorId: null,
   selectedId: null,
   selectedProofId: null,
   search: "",
@@ -1300,6 +1301,7 @@ function directedLayout(nodes, edges, width, height) {
 
 function proofRouteSides(nodes, edges, focusId) {
   const sides = new Map();
+  state.provenanceAnchorId = null;
   const focus = nodes.find((node) => node.id === focusId);
   if (!focus) return sides;
   const incoming = new Map();
@@ -1331,6 +1333,7 @@ function proofRouteSides(nodes, edges, focusId) {
   }
   const anchor = provenanceAnchor || focus;
   if (!(anchor.proofs || []).length) return sides;
+  state.provenanceAnchorId = provenanceAnchor?.id || null;
   if (state.selectedProofId) {
     // Once one proof is selected, its upstream closure is the subject of the
     // view. Keep that route on the central spine; repository lanes are useful
@@ -1626,7 +1629,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
   const focusRank = ranks.get(state.focusId) || Math.max(0, ...ranks.values());
   const rankGap = 52;
   nodes.forEach((node) => {
-    node.targetX = node.id === coreId || node.id === state.focusId ? width / 2 : node.x;
+    node.targetX = node.id === coreId || node.id === state.focusId || node.id === state.provenanceAnchorId ? width / 2 : node.x;
     node.targetY = height * 0.72 - (focusRank - (ranks.get(node.id) || 0)) * rankGap;
     node.rankY = node.targetY;
     node.y = node.rankY;
@@ -1643,7 +1646,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides
   nodes.forEach((node) => {
     node.fy = node.rankY;
     const pinned = state.pinnedPositions.get(node.id);
-    node.fx = pinned ? pinned.x : node.id === coreId ? width / 2 : establishedIds.has(node.id) ? node.x : null;
+    node.fx = pinned ? pinned.x : node.id === coreId || node.id === state.provenanceAnchorId ? width / 2 : establishedIds.has(node.id) ? node.x : null;
   });
   d3.forceSimulation(nodes)
     .force("x", d3.forceX((node) => node.targetX).strength((node) => routeSides.has(node.id) ? 0.62 : 0.13))
