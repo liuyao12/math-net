@@ -1129,7 +1129,10 @@ function selectNode(nodeId, redraw = false) {
   }
   if (!hadFocus) state.focusId = nodeId;
   state.selectedId = nodeId;
-  state.selectedProofId = null;
+  // Inspecting a prerequisite should not silently change the selected proof
+  // route of the focused theorem. A new focus (search, theorem picker, or an
+  // unfocused graph click) starts in the all-routes view instead.
+  if (!hadFocus) state.selectedProofId = null;
   renderInspector();
   updateWorkspaceContext();
   if (redraw || !hadFocus) draw();
