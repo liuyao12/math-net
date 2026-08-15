@@ -234,6 +234,8 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .lean-variable { color: #9cdcfe; }
 
 .node-label { pointer-events: none; fill: var(--ink); font: 500 11px Manrope, sans-serif; paint-order: stroke; stroke: var(--paper); stroke-width: 4px; stroke-linejoin: round; }
+.node-route-count { pointer-events: none; fill: var(--muted); font: 9px var(--mono); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; stroke-linejoin: round; }
+.node-route-count.hidden { display: none; }
 .graph-node { animation: none; }
 .node-label.hidden { display: none; }
 .node-expand { cursor: pointer; }

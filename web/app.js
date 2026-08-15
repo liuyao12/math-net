@@ -1994,6 +1994,10 @@ function draw() {
     return repositories.length === 1 ? repositoryColor(repositories[0]) : "transparent";
   });
   node.append("text").attr("class", "node-label").classed("structure", isStructureNode).classed("core", (item) => item.id === coreId).classed("focus", (item) => item.id === state.focusId).classed("ambient", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation", (item) => presentationCategory(item) === "implementation").classed("supporting", (item) => presentationCategory(item) === "supporting").classed("routine", (item) => presentationCategory(item) === "routine").attr("data-focus-distance", (item) => state.focusDistances.get(item.id) ?? "").attr("x", (item) => isStructureNode(item) ? 22 : 16).attr("y", 4).text((item) => `${verificationFor(item).glyph} ${labelFor(item)}`).classed("hidden", (item) => (isSuppressedNode(item) && item.id !== state.selectedId && item.id !== state.focusId && !ambientIds.has(item.id)) || (item.id !== coreId && !ambientIds.has(item.id) && displayLabelFor(item).length > 31 && nodes.length > 12));
+  node.append("text").attr("class", "node-route-count")
+    .classed("hidden", (item) => !(item.comparison && (item.proofs || []).length > 1))
+    .attr("x", (item) => isStructureNode(item) ? 22 : 16).attr("y", 17)
+    .text((item) => `${item.proofs?.length || 0} ${item.comparison?.alignment === "foundation-aligned" ? "aligned routes" : "routes"}`);
   const expanders = node.append("g").attr("class", "node-expand").attr("transform", "translate(0,-18)")
     .classed("hidden", (item) => item.id !== state.selectedId || !hasHiddenDependencies(item.id, nodes))
     .attr("role", "button")
