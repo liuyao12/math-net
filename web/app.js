@@ -1618,7 +1618,11 @@ function enforceRouteLaneBounds(nodes, routeSides, width, establishedIds) {
 }
 
 function rankLockedLayout(nodes, edges, ranks, width, height, coreId, routeSides) {
-  const establishedIds = new Set(state.layoutPositions.keys());
+  // `directedLayout` seeds all nodes before this pass. Those seed coordinates
+  // are not established reader positions: provenance constraints must still
+  // act on the first focused render. Only subsequent reveal batches preserve
+  // their already settled nodes.
+  const establishedIds = state.revealCursor > 0 ? new Set(state.layoutPositions.keys()) : new Set();
   const focusRank = ranks.get(state.focusId) || Math.max(0, ...ranks.values());
   const rankGap = 52;
   nodes.forEach((node) => {
