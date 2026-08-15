@@ -1125,8 +1125,9 @@ function renderInspector() {
   const sourceRequest = ++state.sourceRequest;
   const neighbors = nodeNeighbors(node.id);
   const github = githubUrlFor(node);
+  const proofList = node.proofs || [];
   const selectedProof = (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
-  const activeProof = selectedProof || (node.proofs?.length === 1 ? node.proofs[0] : null);
+  const activeProof = selectedProof || (proofList.length === 1 ? proofList[0] : null);
   const formalizations = (node.formalizations || []).map((item) => {
     const file = item.file ? `<br><span>${escapeHtml(item.file)}${item.anchor ? ` · ${escapeHtml(item.anchor)}` : ""}</span>` : "";
     const github = githubUrlFor(node, item);
@@ -1139,6 +1140,19 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations. Each formalization below remains available as a separate proof/source route.</p></div>`
     : "";
   const comparison = node.comparison;
+  const routeStatement = (proof) => highlightLean(compactLeanSource(proof.statement || node.statement || "-- Checked declaration statement unavailable.", { maxLines: 8, maxLineLength: 180 }));
+  const allRouteStatement = !activeProof && proofList.length > 1
+    ? comparison?.alignment === "foundation-aligned"
+      ? `<div class="comparison-statements">${proofList.map((proof) => `<div class="comparison-statement"><div class="comparison-statement-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} route</div><pre class="proof-source"><code>${routeStatement(proof)}</code></pre></div>`).join("")}</div>`
+      : `<pre class="proof-source"><code>${routeStatement(proofList[0])}</code></pre>`
+    : null;
+  const formalStatementHeading = activeProof
+    ? `Formal statement · ${escapeHtml((REPOSITORIES[repositoryForProof(activeProof)] || REPOSITORIES.unknown).label)} route`
+    : comparison?.alignment === "foundation-aligned"
+      ? "Route statements · foundation-aligned, not definitionally identical"
+      : proofList.length > 1
+        ? "Shared formal statement · exact checked merge"
+        : "Formal statement";
   const comparisonNote = comparison
     ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : "Checked comparison"}</div><p>${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
     : "";
@@ -1164,7 +1178,6 @@ function renderInspector() {
   const presentation = node.presentation
     ? `<div class="detail-block"><div class="detail-label">Graph role</div><p><strong>${escapeHtml(node.presentation.category)}</strong> · ${escapeHtml(node.presentation.reason)}</p><p class="muted-note">Presentation heuristic, not a logical distinction in Lean.</p></div>`
     : "";
-  const proofList = node.proofs || [];
   const allProofsControl = proofList.length > 1
     ? `<button class="proof-all ${state.selectedProofId ? "" : "selected"}" data-all-proofs><span class="proof-all-glyph">◎</span>All routes <small>merged comparison</small></button>`
     : "";
@@ -1194,7 +1207,7 @@ function renderInspector() {
     <span class="node-kind ${escapeHtml(declarationClassFor(node))}" style="color:${escapeHtml(declarationColorFor(node))};background:${escapeHtml(declarationBackgroundFor(node))}">${escapeHtml(declarationKindFor(node))}</span>
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(displayLabelFor(node))}</h2>
-    <div class="detail-block declaration-signature"><div class="detail-label">Formal statement${activeProof ? ` · ${escapeHtml((REPOSITORIES[repositoryForProof(activeProof)] || REPOSITORIES.unknown).label)} route` : proofList.length > 1 ? " · all routes" : ""}</div><pre class="proof-source pending" id="declaration-signature"><code>${proofList.length > 1 && !activeProof ? "Select a route below to inspect its Lean declaration here. All checked source declarations remain available below." : "Loading Lean declaration…"}</code></pre></div>
+    <div class="detail-block declaration-signature"><div class="detail-label">${formalStatementHeading}</div>${allRouteStatement || `<pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre>`}</div>
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}

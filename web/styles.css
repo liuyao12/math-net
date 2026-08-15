@@ -215,6 +215,10 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .proof-source { max-height: 420px; margin: 0; padding: 13px 14px; overflow: auto; border: 1px solid #30353b; border-left: 3px solid #569cd6; border-radius: 6px; color: #d4d4d4; background: #1e1e1e; font: 11px/1.6 "DM Mono", ui-monospace, monospace; white-space: pre; tab-size: 2; quotes: none; }
 .declaration-signature { margin-top: 16px; }
 .declaration-signature .proof-source { max-height: 210px; border-left-color: var(--teal); }
+.comparison-statements { display: grid; gap: 10px; }
+.comparison-statement { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.34); }
+.comparison-statement-label { display: flex; align-items: center; gap: 7px; padding: 7px 9px 4px; color: var(--muted); font: 10px var(--mono); letter-spacing: .04em; text-transform: uppercase; }
+.comparison-statement .proof-source { max-height: 145px; margin: 0; border-left: 0; border-top: 1px solid var(--line); border-radius: 0; background: rgba(255,255,255,.54); }
 .proof-source code { color: inherit; font: inherit; }
 .proof-source.pending { color: var(--muted); }
 .lean-comment { color: #6a9955; }
