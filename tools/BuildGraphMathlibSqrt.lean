@@ -1,0 +1,6 @@
+import MathNetwork.Graph.Extract
+import MathNetwork.Comparisons.RationalSquares
+import MathNetwork.Comparisons.MathlibIrrationalSqrt
+import MathNetwork.Comparisons.IrrationalSqrtTwo
+
+build_project_graph
