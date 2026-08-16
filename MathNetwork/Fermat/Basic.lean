@@ -1,5 +1,5 @@
 import Mathlib.Data.Nat.Prime.Basic
-import Mathlib.Tactic
+import Mathlib.Tactic.Ring
 
 namespace MathNetwork.Fermat
 

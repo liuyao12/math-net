@@ -1,4 +1,3 @@
-import MathNetwork.Fermat.Basic
 import MathNetwork.Fermat.Zagier
 import Mathlib.NumberTheory.SumTwoSquares
 
