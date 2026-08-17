@@ -40,6 +40,6 @@ jobs:
           lake --version
           lake exe cache get
           lake build
-          tools/build-graph.sh
           tools/check-comparisons.sh
-          git diff --exit-code -- MathNetwork/Graph/project.json MathNetwork/Graph/theorem-catalogue.json
+          python3 tools/ValidateGraph.py MathNetwork/Graph/project.json
+          python3 tools/GraphFreshness.py --check MathNetwork/Graph/extraction-inputs.json

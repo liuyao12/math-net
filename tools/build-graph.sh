@@ -60,3 +60,4 @@ lake env lean "$checks_tmp"
 python3 tools/BuildCatalogue.py < "$project_tmp" > "$catalogue_tmp"
 mv "$project_tmp" MathNetwork/Graph/project.json
 mv "$catalogue_tmp" MathNetwork/Graph/theorem-catalogue.json
+python3 tools/GraphFreshness.py --write MathNetwork/Graph/extraction-inputs.json
