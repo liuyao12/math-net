@@ -1,6 +1,8 @@
 import MathNetwork.Comparisons.IrrationalSqrtTwo
 import MathNetwork.Comparisons.MathlibIrrationalSqrt
 import MathNetwork.Comparisons.ComputableIrrationalSqrt
+import MathNetwork.Comparisons.ComputableFTC
+import MathNetwork.Comparisons.ComputableFourier
 
 /-!
 # Checked proposition comparisons
@@ -59,6 +61,16 @@ def irrationalSqrtRat : FoundationAlignedComparison where
     ("computable-analysis", "MathNetwork.ComputableSqrt.irrational_sqrt_ratCast_iff_of_nonneg", "ComputableAnalysis.RealRaw")
   ]
 
-def aligned : List FoundationAlignedComparison := [irrationalSqrtRat]
+def effectiveFundamentalTheorem : FoundationAlignedComparison where
+  id := "effective-fundamental-theorem-of-calculus"
+  note := "Both routes express the fundamental theorem—an integral of a derivative equals an endpoint difference—but Mathlib uses interval integrals over completed real numbers while computable-analysis uses certified rational interval algorithms. A representation bridge is required before Lean can merge them."
+  mathematicalCore := "integral of derivative = endpoint difference"
+  routes := [
+    ("mathlib", "MathNetwork.List100.fundamentalTheoremOfCalculus", "Real / intervalIntegral"),
+    ("computable-analysis", "MathNetwork.ComputableFTC.effectiveFTC_equiv_endpoint", "ComputableAnalysis.RealRaw")
+  ]
+
+def aligned : List FoundationAlignedComparison :=
+  [irrationalSqrtRat, effectiveFundamentalTheorem]
 
 end MathNetwork.Comparisons

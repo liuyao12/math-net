@@ -16,6 +16,8 @@ IMPORTS = (
     "MathNetwork.Comparisons.MathlibIrrationalSqrt",
     "MathNetwork.Comparisons.IrrationalSqrtTwo",
     "MathNetwork.Comparisons.ComputableIrrationalSqrt",
+    "MathNetwork.Comparisons.ComputableFTC",
+    "MathNetwork.Comparisons.ComputableFourier",
 )
 
 
