@@ -816,11 +816,16 @@ function populateComparisonSelect() {
     .sort((left, right) => left.title.localeCompare(right.title));
   const groups = [
     ["exact", "Exact merged propositions"],
+    ["benchmark", "Concrete checked benchmarks"],
     ["foundation-aligned", "Foundation-aligned routes"],
     ["presentation", "Checked applications"],
   ];
   groups.forEach(([alignment, label]) => {
-    const items = comparisons.filter((comparison) => (comparison.alignment || "exact") === alignment);
+    const items = comparisons.filter((comparison) => alignment === "benchmark"
+      ? !comparison.alignment && comparison.routes?.length <= 1
+      : alignment === "exact"
+        ? !comparison.alignment && comparison.routes?.length > 1
+        : comparison.alignment === alignment);
     if (!items.length) return;
     const group = document.createElement("optgroup");
     group.label = label;
@@ -831,7 +836,9 @@ function populateComparisonSelect() {
       ? "foundation-aligned"
       : comparison.alignment === "presentation"
         ? "checked presentation"
-        : `${comparison.routes?.length || 0} exact routes`;
+        : comparison.routes?.length > 1
+          ? `${comparison.routes.length} exact routes`
+          : "checked benchmark";
     option.textContent = `${comparison.title} · ${routeSummary}`;
     group.append(option);
   });
@@ -1317,26 +1324,36 @@ function renderInspector() {
       .sort((left, right) => left.title.localeCompare(right.title));
     const comparisonCard = (comparison) => {
       const routes = comparison.routes || [];
+      const exactMerge = !comparison.alignment && routes.length > 1;
       const alignment = comparison.alignment === "foundation-aligned"
         ? "foundation-aligned"
         : comparison.alignment === "presentation"
           ? "checked presentation"
-          : `${routes.length} exact proof routes`;
+          : exactMerge
+            ? `${routes.length} exact proof routes`
+            : "checked concrete benchmark";
       const verification = comparison.alignment === "foundation-aligned"
         ? "✓ routes Lean-checked · bridge pending"
         : comparison.alignment === "presentation"
           ? "✓ Lean-checked route"
-          : `✓ Lean exact merge · ${routes.length} routes`;
+          : exactMerge
+            ? `✓ Lean exact merge · ${routes.length} routes`
+            : "✓ Lean-checked benchmark";
       const repositories = [...new Set(routes.map((route) => route.repository))];
       const href = `?comparison=${encodeURIComponent(comparison.id)}`;
       return `<a class="comparison-overview-card" href="${escapeHtml(href)}"><span class="comparison-overview-title">${escapeHtml(comparison.title)}</span><span class="comparison-overview-description">${escapeHtml(comparison.description || comparison.note || "")}</span><span class="comparison-overview-meta comparison-repositories">${repositories.map((repository) => `<span class="proof-color" style="background:${escapeHtml(repositoryColor(repository))}"></span>${escapeHtml((REPOSITORIES[repository] || REPOSITORIES.unknown).label)}`).join(" ")} · ${escapeHtml(alignment)}</span><span class="comparison-overview-verification">${escapeHtml(verification)}</span></a>`;
     };
     const overviewGroups = [
       ["exact", "Exact merged propositions", "Lean has checked that the route statements are definitionally identical."],
+      ["benchmark", "Concrete checked benchmarks", "A fully checked low-level problem with one current route; its comparison belongs upstream or remains to be added."],
       ["foundation-aligned", "Foundation-aligned routes", "The mathematical target is aligned, but a representation bridge is still explicit."],
       ["presentation", "Checked applications", "One complete route is ready for inspection and for a future comparison."],
     ].map(([alignment, title, description]) => ({ alignment, title, description,
-      nodes: comparisons.filter((comparison) => (comparison.alignment || "exact") === alignment) }))
+      nodes: comparisons.filter((comparison) => alignment === "benchmark"
+        ? !comparison.alignment && comparison.routes?.length <= 1
+        : alignment === "exact"
+          ? !comparison.alignment && comparison.routes?.length > 1
+          : comparison.alignment === alignment) }))
       .filter((group) => group.nodes.length);
     const groupedCards = (group) => {
       if (group.alignment !== "presentation") return `<div class="comparison-overview-list">${group.nodes.map(comparisonCard).join("")}</div>`;
@@ -2296,7 +2313,11 @@ async function load() {
     ]);
     if (theoremResponse.ok) state.theorems = await theoremResponse.json();
     if (comparisonResponse.ok) state.comparisons = (await comparisonResponse.json()).comparisons || [];
-    $("#graph-badge").textContent = `${state.comparisons.length} proof landscapes`;
+    const exact = state.comparisons.filter((comparison) => !comparison.alignment && comparison.routes?.length > 1).length;
+    const aligned = state.comparisons.filter((comparison) => comparison.alignment === "foundation-aligned").length;
+    const presentations = state.comparisons.filter((comparison) => comparison.alignment === "presentation" ||
+      (!comparison.alignment && comparison.routes?.length <= 1)).length;
+    $("#graph-badge").textContent = `${exact} exact · ${aligned} aligned · ${presentations} applications`;
     populateTheoremSelect();
     populateComparisonSelect();
     const needsGraph = Boolean(requestedDeclaration || requestedComparison || state.theoremNumber);
