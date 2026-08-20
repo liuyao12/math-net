@@ -22,6 +22,7 @@ catalogue_tmp="$(mktemp)"
 checks_tmp="$(mktemp)"
 trap 'rm -f "$raw_fermat_basic_tmp" "$raw_fermat_registry_tmp" "$raw_euler_tmp" "$raw_list100_basel_tmp" "$raw_list100_demoivre_tmp" "$raw_list100_leibniz_tmp" "$raw_list100_taylor_tmp" "$raw_list100_ftc_tmp" "$raw_mathlib_sqrt_tmp" "$raw_computable_sqrt_tmp" "$raw_computable_ftc_tmp" "$raw_computable_fourier_tmp" "$raw_computable_series_tmp" "$raw_computable_demoivre_tmp" "$raw_graph_tmp" "$project_tmp" "$catalogue_tmp" "$checks_tmp"' EXIT
 tools/export-comparisons.sh > "$manifest"
+python3 tools/CheckNoSorry.py
 # Each extractor sees a real elaborated Lean environment, but only for a
 # coherent mathematical domain. Loading all of mathlib's calculus imports and
 # the computable-analysis imports together peaks above hosted CI memory.

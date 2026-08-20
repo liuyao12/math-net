@@ -321,6 +321,11 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
                 merged["comparison"]["registry"] = registered[0][1]["id"]
                 merged["comparison"]["title"] = registered[0][1].get("comparisonTitle", "")
                 merged["comparison"]["description"] = registered[0][1].get("comparisonDescription", "")
+                merged["comparison"]["routeAudit"] = (
+                    "Every registered route is checked for the absence of Lean's "
+                    "sorryAx when this graph is generated. Computational "
+                    "native_decide axioms, if any, are reported separately."
+                )
                 mathematical_core = registered[0][1].get("mathematicalCore")
                 if mathematical_core:
                     merged["comparison"]["mathematicalCore"] = mathematical_core
