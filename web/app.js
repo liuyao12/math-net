@@ -1949,15 +1949,12 @@ function draw() {
     .map((edge) => edge.source.id));
   separateParallelProofEdges(edges);
   state.coreId = coreId;
-  const maxFocusDistance = Math.max(0, ...nodes.map((node) => state.focusDistances.get(node.id) || 0));
-  const rawRanks = new Map(nodes.map((item) => {
-    // Distance supplies the main top-to-bottom dependency hierarchy. The
-    // topological rank breaks ties, so a declaration used by a peer rises
-    // above that peer instead of sharing the focuser's direct-dependency row.
-    const distance = state.focusId ? (state.focusDistances.get(item.id) || 0) : 0;
-    const distanceRank = state.focusId ? (maxFocusDistance - distance) * (nodes.length + 1) : 0;
-    return [item.id, distanceRank + (topologyRanks.get(item.id) || 0)];
-  }));
+  // Vertical rank is determined *only* by Lean's used-in-proof relation.
+  // A former focus-distance adjustment could outweigh a topological rank,
+  // making a genuine dependency edge slope upwards.  Discovery distance is
+  // useful for fading and progressive reveal, but it must never participate
+  // in a directed drawing's vertical constraint.
+  const rawRanks = new Map(nodes.map((item) => [item.id, topologyRanks.get(item.id) || 0]));
   const rankValues = [...new Set(rawRanks.values())].sort((a, b) => a - b);
   const rankIndex = new Map(rankValues.map((value, index) => [value, index]));
   const ranks = new Map([...rawRanks.entries()].map(([id, value]) => [id, rankIndex.get(value)]));
