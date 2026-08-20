@@ -79,6 +79,11 @@ every imported theorem a “proof comparison.”
 This progression is intentional: math-net can catalogue useful finished work
 now, while retaining a mechanically auditable path to future proof merging.
 
+Every declaration registered in one of these three categories is also checked
+for the absence of Lean's `sorryAx` in its transitive axiom footprint. Run
+`tools/check-comparisons.sh` to check exact statement merges and this
+no-placeholder condition together.
+
 ## Initial research questions
 
 1. Which theorem statements are genuinely common to both developments?
