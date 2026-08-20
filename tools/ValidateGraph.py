@@ -54,6 +54,29 @@ def main(path: str, manifest_path: str | None = None) -> None:
                 fail(f"exact comparison {node['id']} has fewer than two proof routes")
             if not comparison.get("kernelCheck"):
                 fail(f"exact comparison {node['id']} lacks kernel-check provenance")
+            # A checked alias is valuable provenance, but it is not an
+            # alternative argument.  The explorer's route selector promises
+            # at least two independent proof bodies for an exact comparison.
+            independent = {
+                proof["id"]
+                for proof in node.get("proofs", [])
+                if proof.get("proofKind") != "delegation"
+            }
+            if len(independent) < 2:
+                fail(f"exact comparison {node['id']} has fewer than two independent proof bodies")
+            direct_routes = {
+                edge.get("proof")
+                for edge in edges
+                if edge.get("relation") == "used-in-proof"
+                and edge.get("target", {}).get("id") == node["id"]
+                and edge.get("proof") in independent
+            }
+            if direct_routes != independent:
+                missing = sorted(independent - direct_routes)
+                fail(
+                    f"exact comparison {node['id']} has proof body/bodies without "
+                    f"direct proof-use edges: {', '.join(missing)}"
+                )
         elif comparison.get("alignment") == "foundation-aligned":
             aligned += 1
             if comparison.get("kernelCheck"):
