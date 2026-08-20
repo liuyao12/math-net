@@ -51,14 +51,16 @@
     "tools/BuildGraphList100Leibniz.lean": "8c6f6d80d494f700f998025e76c58f95901fd832946c472a5369abd7bbe41904",
     "tools/BuildGraphList100Taylor.lean": "6b9e20355ef5c09e1c82f4c64d9ea7adfb700b0817c18485fc9f079b0429a3dc",
     "tools/BuildGraphMathlibSqrt.lean": "2d1b4f3bda359af26c307c0f4c082af1f2e55524b4af2a9a9278085564d0baad",
+    "tools/CheckNoSorry.py": "4f14f664256f73bfa79d52102846886e555d8081eaebe46a0586c046314307ab",
     "tools/CombineRawGraphs.py": "53ee2d1dbd845b2f4aafe299234ec81db5eb881d693892563b485edd04c8d886",
     "tools/ExportSourceRevisions.py": "846a598fabf43ea10e760740805198cb43b12569c3ad8c43efb850f4aa05d015",
     "tools/GenerateComparisonSlices.py": "9508a38cbab5368e3b6054fef493033c6f2155f1aaa954974de2f5cb41258de9",
     "tools/GenerateExactMergeChecks.py": "6786e04e471707f6cb671e0f6e990367ff99da4eca624802a08fb10ee070255a",
-    "tools/GraphFreshness.py": "9ab37408bc2b93381f193fd4eb7b6f8e950257e3ec34fa78d46d26441a9a3520",
+    "tools/GraphFreshness.py": "d16b5e804198806c55a9315b4484efdf5ea8f4e72e856bc4a9b1c10e56ce2741",
     "tools/MergeGraph.py": "3f78256dc283a2116e13dad4039d0b3a97a545c9bda36fd128bc51d7193a1f5a",
     "tools/ValidateGraph.py": "e701b38e550bb828c89cab727b527f1f6293bbd4a07ca5b21ce3742c93c24ad8",
-    "tools/build-graph.sh": "d422dd668f4a963f535e981de12e3214a7ee94444a0749c32e710ec294bd96b2"
+    "tools/build-graph.sh": "d422dd668f4a963f535e981de12e3214a7ee94444a0749c32e710ec294bd96b2",
+    "tools/export-comparisons.sh": "6019fc2847601b20da5b9b2a9b7612573f84cd1d6fc3d352f6d33eda1f4011e7"
   },
   "schemaVersion": 1
 }

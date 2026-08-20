@@ -26,6 +26,8 @@ def input_paths() -> list[Path]:
         ROOT / "tools" / "BuildCatalogue.py",
         ROOT / "tools" / "GenerateComparisonSlices.py",
         ROOT / "tools" / "ExportSourceRevisions.py",
+        ROOT / "tools" / "CheckNoSorry.py",
+        ROOT / "tools" / "export-comparisons.sh",
         ROOT / "tools" / "GraphFreshness.py",
         ROOT / "MathNetwork" / "Graph" / "Extract.lean",
     ]
