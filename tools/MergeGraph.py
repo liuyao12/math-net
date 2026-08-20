@@ -17,25 +17,22 @@ from pathlib import Path
 from collections import defaultdict
 
 
-def proof_record(node: dict) -> dict:
+def proof_record(node: dict, registered_routes: dict[str, dict]) -> dict:
     declaration = node.get("namespace", node["label"])
     short_declaration = declaration.rsplit(".", 1)[-1]
-    if node.get("locator", "").startswith("mathlib/"):
+    # The comparison registry is the authoritative source for the native
+    # provenance of an adapter route.  An adapter necessarily lives in
+    # MathNetwork, but it can faithfully expose a Mathlib or
+    # computable-analysis proof.  Keeping that fact in the registry avoids
+    # per-theorem exceptions here as the landscape grows.
+    registered = registered_routes.get(declaration)
+    registered_repository = registered.get("repository") if registered else None
+    if registered_repository == "mathlib" or node.get("locator", "").startswith("mathlib/"):
         label = f"mathlib · {short_declaration}"
         route_kind = "mathlib"
         color = "#3f7f8f"
-    elif node.get("locator", "").startswith("computable-analysis/"):
-        label = f"computable-analysis · {short_declaration}"
-        route_kind = "computable-analysis"
-        color = "#a45b38"
-    elif declaration in {
-        "MathNetwork.SqrtTwo.irrational",
-        "MathNetwork.MathlibSqrt.irrational_sqrt_ratCast_iff_of_nonneg",
-    }:
-        label = f"mathlib · {short_declaration}"
-        route_kind = "mathlib"
-        color = "#3f7f8f"
-    elif declaration == "MathNetwork.ComputableSqrt.irrational_sqrt_ratCast_iff_of_nonneg":
+    elif (registered_repository == "computable-analysis" or
+          node.get("locator", "").startswith("computable-analysis/")):
         label = f"computable-analysis · {short_declaration}"
         route_kind = "computable-analysis"
         color = "#a45b38"
@@ -59,6 +56,8 @@ def proof_record(node: dict) -> dict:
         # provenance, but is not another mathematical proof route.
         "proofKind": "body",
     }
+    if registered_repository:
+        record["repository"] = registered_repository
     module = node.get("module", "")
     if module.startswith("MathNetwork."):
         record["file"] = f"{module.replace('.', '/')}.lean"
@@ -265,7 +264,7 @@ def merge(graph: dict, manifest_path: str | None = None, audit_path: str | None 
         seen_formalizations = set()
         for node in group:
             old_to_new[node["id"]] = representative["id"]
-            record = proof_record(node)
+            record = proof_record(node, registered_routes)
             if record["declaration"] in audited_routes:
                 record["audit"] = audited_routes[record["declaration"]]
             proof_for_old[node["id"]] = record["id"]
