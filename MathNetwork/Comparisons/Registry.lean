@@ -152,6 +152,28 @@ def telescopingReciprocalSeries : CheckedComparison where
     }
   ]
 
+/-- The new certified connection between the alternating-series and
+power-series presentations of sine. It is intentionally retained as a
+single-route presentation until a matching theorem is transported from a
+second foundation. -/
+def sineTaylorIntervalBridge : CheckedComparison where
+  id := "sine-alternating-taylor-bridge"
+  title := "Sine: alternating series and Taylor intervals"
+  description := "A checked identification of the computable alternating-series enclosure with the corresponding sine Taylor partial-sum interval."
+  statement := ∀ {x : Rat} (hx : 0 <= x) (hterms : ComputableAnalysis.qabs x <= 2) (n : Nat),
+    (ComputableAnalysis.Series.AlternatingRaw.sineAlternatingRaw x hterms).interval n =
+      ComputableAnalysis.Series.evenOddInterval
+        (ComputableAnalysis.FormalPowerSeries.sineTaylorPartial x) n
+  routes := [
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.ComputableSeries.sineAlternatingRaw_interval_eq_sineTaylorInterval"
+      title := "Alternating-series/Taylor bridge"
+      description := "The finite interval enclosure is proved identical to the Taylor partial-sum enclosure on the controlled input range."
+      proof := MathNetwork.ComputableSeries.sineAlternatingRaw_interval_eq_sineTaylorInterval
+    }
+  ]
+
 def all : List CheckedComparison :=
   [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
 
@@ -159,7 +181,7 @@ def all : List CheckedComparison :=
 not comparisons until a second route has been bridged to the same checked
 statement. -/
 def presentations : List CheckedComparison :=
-  [telescopingReciprocalSeries]
+  [telescopingReciprocalSeries, sineTaylorIntervalBridge]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.
