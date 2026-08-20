@@ -1897,6 +1897,27 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
     .force("labels", horizontalLabelCollisionForce(nodes))
     .stop()
     .tick(120);
+  // Collision forces can create a very wide intermediate configuration when
+  // one proof route has many more direct inputs than another.  Fit each
+  // rank's settled horizontal extent back into the visible stage while
+  // preserving its order and relative spacing.  This is a viewport
+  // constraint, not a second layout: vertical rank and the branch ordering
+  // found above remain unchanged.
+  const horizontalMargin = 28;
+  const usableWidth = Math.max(1, width - horizontalMargin * 2);
+  d3.group(nodes, (node) => node.rankY).forEach((layer) => {
+    const halfWidth = (node) => Math.max(16, Math.min(105, labelFor(node, nodes).length * 3.2 + 14));
+    const left = Math.min(...layer.map((node) => node.x - halfWidth(node)));
+    const right = Math.max(...layer.map((node) => node.x + halfWidth(node)));
+    const extent = Math.max(1, right - left);
+    if (extent > usableWidth) {
+      const scale = usableWidth / extent;
+      layer.forEach((node) => { node.x = horizontalMargin + (node.x - left) * scale; });
+      return;
+    }
+    const shift = Math.max(horizontalMargin - left, Math.min(width - horizontalMargin - right, (width - (left + right)) / 2));
+    layer.forEach((node) => { node.x += shift; });
+  });
   // Do not shift the whole diagram down merely to fit a newly discovered
   // prerequisite layer. The focus theorem is a reading anchor. Layers that
   // would leave the viewport are handled by progressive-reveal pausing,
