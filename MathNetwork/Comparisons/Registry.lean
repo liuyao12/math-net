@@ -6,6 +6,7 @@ import MathNetwork.Comparisons.ComputableFourier
 import MathNetwork.Comparisons.ComputableSeries
 import MathNetwork.Comparisons.ComputableDeMoivre
 import MathNetwork.Comparisons.ComputablePiGeometry
+import MathNetwork.Comparisons.ComputableLogarithm
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 import MathNetwork.Euler.Identity
@@ -261,6 +262,24 @@ def piCircleAreaGeometricArctangent : CheckedComparison where
     }
   ]
 
+/-- A power-series/integral comparison for a basic logarithmic value. -/
+def logTwoSeriesReciprocalIntegral : CheckedComparison where
+  id := "log-two-series-reciprocal-integral"
+  title := "log 2: alternating series equals reciprocal integral"
+  description := "The alternating harmonic series and the certified reciprocal integral of 1/x on [1,2] represent the same computable real number."
+  statement :=
+    ComputableAnalysis.Logarithm.logTwoSeries.Equiv
+      ComputableAnalysis.Logarithm.logTwoReciprocalIntegral
+  routes := [
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.ComputableLogarithm.logTwoSeries_equiv_logTwoReciprocalIntegral"
+      title := "Alternating series and Darboux integral"
+      description := "A common dyadic refinement proves overlap between the alternating-harmonic series boxes and the reciprocal-integral boxes."
+      proof := MathNetwork.ComputableLogarithm.logTwoSeries_equiv_logTwoReciprocalIntegral
+    }
+  ]
+
 def all : List CheckedComparison :=
   [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
 
@@ -270,6 +289,7 @@ statement. -/
 def presentations : List CheckedComparison :=
   [telescopingReciprocalSeries, sineTaylorIntervalBridge, finiteDeMoivre,
     eulerIdentity, fourPointParseval, piCircleAreaGeometricArctangent]
+    ++ [logTwoSeriesReciprocalIntegral]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.

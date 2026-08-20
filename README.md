@@ -12,8 +12,8 @@ The intended release name, local folder, and GitHub repository name are all
 ## Interactive explorer
 
 The first network browser is in [`web/`](web/). By default it reads the
-generated project-wide Lean declaration graph, currently containing 1,827
-nodes and 9,142 checked body-level dependency edges. It supports theorem selection,
+generated project-wide Lean declaration graph, currently containing 1,847
+nodes and 9,188 checked body-level dependency edges. It supports theorem selection,
 multi-level neighborhood fading, proposition search, strict proof-dependency
 edges, structural-landmark highlighting, background-detail suppression, and
 click-to-inspect Lean source. The default theorem view shows mathematical
