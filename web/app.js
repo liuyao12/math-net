@@ -794,20 +794,36 @@ function populateComparisonSelect() {
   const select = $("#comparison-select");
   if (!select || !state.graph) return;
   const comparisons = state.graph.nodes
-    .filter((node) => node.namespace?.startsWith("MathNetwork.") && node.comparison &&
+    // Canonicalization can make an imported declaration (rather than the
+    // local adapter) the representative node for a checked presentation.
+    // The registry metadata, not its namespace, determines whether it is a
+    // selectable proof landscape.
+    .filter((node) => node.comparison &&
       ((node.proofs || []).length > 1 || node.comparison.alignment === "presentation"))
     .sort((left, right) => (left.comparison.title || displayLabelFor(left))
       .localeCompare(right.comparison.title || displayLabelFor(right)));
-  comparisons.forEach((node) => {
+  const groups = [
+    ["exact", "Exact merged propositions"],
+    ["foundation-aligned", "Foundation-aligned routes"],
+    ["presentation", "Checked applications"],
+  ];
+  groups.forEach(([alignment, label]) => {
+    const items = comparisons.filter((node) => node.comparison.alignment === alignment);
+    if (!items.length) return;
+    const group = document.createElement("optgroup");
+    group.label = label;
+    items.forEach((node) => {
     const option = document.createElement("option");
     option.value = node.id;
-    const alignment = node.comparison.alignment === "foundation-aligned"
+    const routeSummary = node.comparison.alignment === "foundation-aligned"
       ? "foundation-aligned"
       : node.comparison.alignment === "presentation"
         ? "checked presentation"
         : `${node.comparison.routes?.length || 0} exact routes`;
-    option.textContent = `${node.comparison.title || displayLabelFor(node)} · ${alignment}`;
-    select.append(option);
+    option.textContent = `${node.comparison.title || displayLabelFor(node)} · ${routeSummary}`;
+    group.append(option);
+  });
+    select.append(group);
   });
   select.addEventListener("change", (event) => {
     if (event.target.value) focusDeclaration(event.target.value);
