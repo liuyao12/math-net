@@ -2222,7 +2222,18 @@ async function load() {
       focusDeclaration(declaration.id);
       const route = requestedRoute && (declaration.proofs || []).find((proof) => proof.declaration === requestedRoute);
       if (route) selectProof(route.id);
-    } else selectTheoremNode();
+    } else if (state.theoremNumber) {
+      selectTheoremNode();
+    } else {
+      // The landing page is a proof-landscape catalogue, not an invitation
+      // to render every imported declaration.  Building the full unfocused
+      // graph here made the hosted page appear to hang before a reader could
+      // choose a theorem.  A focused selection still renders its actual
+      // dependency neighborhood immediately.
+      renderInspector();
+      $("#visible-node-count").textContent = "0";
+      $("#visible-edge-count").textContent = "0";
+    }
     updateWorkspaceContext();
   } catch (error) {
     const loading = $("#loading-state");
