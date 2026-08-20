@@ -206,6 +206,12 @@ function sourceUrlFor(node, proof = null) {
   const file = sourceFileFor(node, proof);
   const locator = proof?.locator || node.locator;
   if (!file) return null;
+  // A math-net adapter can deliberately delegate to a theorem imported from
+  // another repository. Its source file is nevertheless local, and must win
+  // over the canonicalized node locator when the inspector fetches code.
+  if (file.startsWith("MathNetwork/")) {
+    return `https://raw.githubusercontent.com/liuyao12/math-net/main/${file}`;
+  }
   if (locator?.startsWith("mathlib/")) {
     return `https://raw.githubusercontent.com/leanprover-community/mathlib4/master/${file}`;
   }
