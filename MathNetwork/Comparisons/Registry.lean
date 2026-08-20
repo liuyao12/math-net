@@ -5,6 +5,7 @@ import MathNetwork.Comparisons.ComputableFTC
 import MathNetwork.Comparisons.ComputableFourier
 import MathNetwork.Comparisons.ComputableSeries
 import MathNetwork.Comparisons.ComputableDeMoivre
+import MathNetwork.Comparisons.ComputablePiGeometry
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 import MathNetwork.Euler.Identity
@@ -241,6 +242,25 @@ def fourPointParseval : CheckedComparison where
     }
   ]
 
+/-- A direct geometry-to-arctangent bridge for π, without the broader π
+presentation registry. -/
+def piCircleAreaGeometricArctangent : CheckedComparison where
+  id := "pi-circle-area-geometric-arctangent"
+  title := "π: circle area equals four geometric arctangents"
+  description := "The circle-area algorithm and four unit geometric arctangent sectors are certified to represent the same computable real number π."
+  statement :=
+    (((4 : Nat) * ComputableAnalysis.ArctanGeometry.arctanGeom (1 : Rat) :
+      ComputableAnalysis.RealRaw).Equiv ComputableAnalysis.piCircleArea)
+  routes := [
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.ComputablePiGeometry.four_arctanGeom_one_equiv_piCircleArea"
+      title := "Circle area and geometric arctangent"
+      description := "A stagewise rational-box equivalence between a circle-area π construction and four unit arctangent sectors."
+      proof := MathNetwork.ComputablePiGeometry.four_arctanGeom_one_equiv_piCircleArea
+    }
+  ]
+
 def all : List CheckedComparison :=
   [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
 
@@ -249,7 +269,7 @@ not comparisons until a second route has been bridged to the same checked
 statement. -/
 def presentations : List CheckedComparison :=
   [telescopingReciprocalSeries, sineTaylorIntervalBridge, finiteDeMoivre,
-    eulerIdentity, fourPointParseval]
+    eulerIdentity, fourPointParseval, piCircleAreaGeometricArctangent]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.
