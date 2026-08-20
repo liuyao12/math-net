@@ -9,6 +9,7 @@
     "MathNetwork/Comparisons/ComputablePiGeometry.lean": "8bbd369c7d5cb4bc6e619c448451b3e6ac6ead3e481c58905be62276ec92166c",
     "MathNetwork/Comparisons/ComputableRotationODE.lean": "7aeac435ce23c4631d265853a5031de14a4e404ed0e9dffe440b345480aa147b",
     "MathNetwork/Comparisons/ComputableSeries.lean": "da80c2cae1ea84e68a4df6af88a16c1acc6302e64cb8002d32ac6d2ea4341b19",
+    "MathNetwork/Comparisons/ComputableTrigSpecialValues.lean": "05178a9b88cfed0367fc242315ad2ab3c0339d82cbd924f0e353d4fb9cb155d0",
     "MathNetwork/Comparisons/IrrationalSqrtTwo.lean": "43c0de41c9ca65909087d0b6bf2f3287830954ddcc09b52ce6edf1601d048fdf",
     "MathNetwork/Comparisons/List100.lean": "3d4e457cfb13568f8cc635b07c8f88e0598014c73b382c60182919da83a8c6f0",
     "MathNetwork/Comparisons/List100/Basel.lean": "023aafce47d0cb084e1b7bd0e117ed16ec78d09259f726e20c4de4e91a439e7f",
@@ -18,7 +19,7 @@
     "MathNetwork/Comparisons/List100/Taylor.lean": "c10276624f7527183de52aacecaecb804a5448bc4b0f6de012262d7dce695380",
     "MathNetwork/Comparisons/MathlibIrrationalSqrt.lean": "2699fe4a3088ac3b693f596c51b37a26fdde8b154333f48a308fc900ec0d0a37",
     "MathNetwork/Comparisons/RationalSquares.lean": "1f58749c7558feb68642bb41468a1e2835f97a293e8c9be524fa95e7ab17a3bb",
-    "MathNetwork/Comparisons/Registry.lean": "014c37b8e2940cdc6cd579a912af13b223d9a752720a143ff36af555bfdf5f59",
+    "MathNetwork/Comparisons/Registry.lean": "35ce9557a459f3823344643bc77c7edd77c7d7b0158281a3a441fd8fd36a95c4",
     "MathNetwork/Euler/Applications.lean": "161ffa962d6095962b02f12921d45c5debcd8338576066166ea333efbeb3a9a1",
     "MathNetwork/Euler/Identity.lean": "43f83131d9343ad2ae645db0b150a052af087ee6b3eb5f24f2e8439d11887844",
     "MathNetwork/Fermat/Basic.lean": "3a28bf6f315f107df78158400d06d280e1f554b6a1a6790c0d153154f632f637",
@@ -39,6 +40,7 @@
     "tools/BuildGraphComputableRotationODE.lean": "6a5e628abbf301df360784b36d41ac5232944b828aabf3f860a398422e65dbbe",
     "tools/BuildGraphComputableSeries.lean": "38f257d45d5aacee4bcd1b77e8feecb51094320e3435f57d6f3405e8e2be6651",
     "tools/BuildGraphComputableSqrt.lean": "142c231b05312e30d1c1ad9941b45861b3238dd22d306a4ee89ea13c5ff1ca2a",
+    "tools/BuildGraphComputableTrigSpecialValues.lean": "655ee6aca9d5feb43fd26ee446f9fef30dc88a00ba54641373b06d4618509aa4",
     "tools/BuildGraphEuler.lean": "f956a5020657a782a2f04db59f0b3826a9faf19ea144ff9e5fe63397d668faac",
     "tools/BuildGraphFermatBasic.lean": "152ea143bfa064e0dc1ca70bacd31ffc63b88beb8de4103aa69648309dfbf76b",
     "tools/BuildGraphFermatRegistry.lean": "74d2a22d768a4446cb37beb58649449db5bbdb30b23ad499e90c4c8e3ee0cfcd",
@@ -50,7 +52,7 @@
     "tools/BuildGraphMathlibSqrt.lean": "2d1b4f3bda359af26c307c0f4c082af1f2e55524b4af2a9a9278085564d0baad",
     "tools/CombineRawGraphs.py": "53ee2d1dbd845b2f4aafe299234ec81db5eb881d693892563b485edd04c8d886",
     "tools/GraphFreshness.py": "7cf83ffbdaaab81112893a8cb05b73812aaf2b83e0733bcb8da348a368925430",
-    "tools/build-graph.sh": "abb8882f94df422d82f070d3d82b76d60d64fa9f91b0d6a2aac92a1c05cd1f46"
+    "tools/build-graph.sh": "ca03b69e0f635982dc03a597d2e6a06df07ea137d5a586b69e24a34d0b698b57"
   },
   "schemaVersion": 1
 }

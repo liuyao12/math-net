@@ -9,6 +9,7 @@ import MathNetwork.Comparisons.ComputablePiGeometry
 import MathNetwork.Comparisons.ComputableLogarithm
 import MathNetwork.Comparisons.ComputableNilakantha
 import MathNetwork.Comparisons.ComputableRotationODE
+import MathNetwork.Comparisons.ComputableTrigSpecialValues
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 import MathNetwork.Euler.Identity
@@ -252,6 +253,28 @@ def finiteDeMoivre : CheckedComparison where
     }
   ]
 
+/-- A computable special-angle form of the unit-circle identity. -/
+def computableFortyFiveUnitCircle : CheckedComparison where
+  id := "computable-forty-five-unit-circle"
+  title := "45°: sine² plus cosine² equals one"
+  description := "Certified computable 45-degree sine and cosine values satisfy the unit-circle identity over rational interval reals."
+  area := "Geometry and trigonometry"
+  statement :=
+    (ComputableAnalysis.RationalCircle.GeometricTrig.SpecialAngles.rawSquare
+      ComputableAnalysis.RationalCircle.GeometricTrig.SpecialAngles.cosFortyFiveValue +
+      ComputableAnalysis.RationalCircle.GeometricTrig.SpecialAngles.rawSquare
+        ComputableAnalysis.RationalCircle.GeometricTrig.SpecialAngles.sinFortyFiveValue).Equiv
+      (ComputableAnalysis.RealRaw.ofRat (1 : Rat))
+  routes := [
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.ComputableTrigSpecialValues.cosFortyFive_square_add_sinFortyFive_square_equiv_one"
+      title := "Certified special-angle intervals"
+      description := "Rational interval certificates for the 45-degree special values combine to the exact unit-circle value."
+      proof := MathNetwork.ComputableTrigSpecialValues.cosFortyFive_square_add_sinFortyFive_square_equiv_one
+    }
+  ]
+
 /-- The canonical complex-exponential identity is an application landmark in
 its own right. A second foundation can later be added as a route to this same
 statement once a checked complex-number bridge is available. -/
@@ -397,7 +420,7 @@ not comparisons until a second route has been bridged to the same checked
 statement. -/
 def presentations : List CheckedComparison :=
   [telescopingReciprocalSeries, sineTaylorIntervalBridge, finiteDeMoivre,
-    eulerIdentity, finiteRotationEulerODEBridge, fourPointParseval, piCircleAreaGeometricArctangent]
+    computableFortyFiveUnitCircle, eulerIdentity, finiteRotationEulerODEBridge, fourPointParseval, piCircleAreaGeometricArctangent]
     ++ [logTwoSeriesReciprocalIntegral, nilakanthaLeibnizPi]
 
 /-- The two general irrational-square-root criteria are the same comparison
