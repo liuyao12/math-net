@@ -5,6 +5,7 @@ const query = new URLSearchParams(window.location.search);
 const requestedGraph = query.get("graph");
 const requestedTheorem = query.get("theorem");
 const requestedDeclaration = query.get("declaration");
+const requestedComparison = query.get("comparison");
 const requestedRoute = query.get("route");
 const REPO_ROOT = window.location.pathname.includes("/web/") ? "../" : "./";
 // The HTML entry point versions this module on every publish. Reuse that
@@ -483,6 +484,8 @@ function focusDeclaration(nodeId) {
   next.searchParams.delete("theorem");
   next.searchParams.delete("graph");
   next.searchParams.set("declaration", node.namespace || node.id);
+  if (node.comparison?.registry) next.searchParams.set("comparison", node.comparison.registry);
+  else next.searchParams.delete("comparison");
   next.searchParams.delete("route");
   history.replaceState(null, "", next);
   updateTheoremNote();
@@ -739,6 +742,7 @@ function populateTheoremSelect() {
       const next = new URL(window.location.href);
       next.searchParams.delete("theorem");
       next.searchParams.delete("declaration");
+      next.searchParams.delete("comparison");
       next.searchParams.delete("route");
       history.replaceState(null, "", next);
       state.theoremNumber = null;
@@ -760,6 +764,7 @@ function populateTheoremSelect() {
     next.searchParams.set("theorem", number);
     next.searchParams.delete("graph");
     next.searchParams.delete("declaration");
+    next.searchParams.delete("comparison");
     next.searchParams.delete("route");
     history.pushState(null, "", next);
     state.theoremNumber = number;
@@ -2139,7 +2144,8 @@ async function load() {
     populateComparisonSelect();
     kindControls();
     renderProofLegend();
-    const declaration = requestedDeclaration && state.graph.nodes.find((node) => node.namespace === requestedDeclaration || node.id === requestedDeclaration);
+    const declaration = (requestedDeclaration && state.graph.nodes.find((node) => node.namespace === requestedDeclaration || node.id === requestedDeclaration)) ||
+      (requestedComparison && state.graph.nodes.find((node) => node.comparison?.registry === requestedComparison));
     if (declaration) {
       focusDeclaration(declaration.id);
       const route = requestedRoute && (declaration.proofs || []).find((proof) => proof.declaration === requestedRoute);
@@ -2216,6 +2222,7 @@ $("#reset").addEventListener("click", () => {
   next.searchParams.delete("theorem");
   next.searchParams.delete("graph");
   next.searchParams.delete("declaration");
+  next.searchParams.delete("comparison");
   next.searchParams.delete("route");
   history.replaceState(null, "", next);
   updateTheoremNote();
@@ -2244,6 +2251,7 @@ $("#clear-selection").addEventListener("click", () => {
   const next = new URL(window.location.href);
   next.searchParams.delete("theorem");
   next.searchParams.delete("declaration");
+  next.searchParams.delete("comparison");
   next.searchParams.delete("route");
   history.replaceState(null, "", next);
   updateTheoremNote();
