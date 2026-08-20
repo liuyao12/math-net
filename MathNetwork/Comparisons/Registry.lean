@@ -4,6 +4,7 @@ import MathNetwork.Comparisons.ComputableIrrationalSqrt
 import MathNetwork.Comparisons.ComputableFTC
 import MathNetwork.Comparisons.ComputableFourier
 import MathNetwork.Comparisons.ComputableSeries
+import MathNetwork.Comparisons.ComputableDeMoivre
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 
@@ -174,6 +175,26 @@ def sineTaylorIntervalBridge : CheckedComparison where
     }
   ]
 
+def finiteDeMoivre : CheckedComparison where
+  id := "finite-de-moivre-rational-circle"
+  title := "Finite De Moivre on the rational circle"
+  description := "Taking a natural power commutes with multiplication of rational unit-circle points: a geometric form of De Moivre without angles, exp, or completed complex numbers."
+  statement := ∀ (p q : ComputableAnalysis.PiCirclePoint) (n : Nat),
+    ComputableAnalysis.RationalCircle.Trigonometry.pointPow
+      (ComputableAnalysis.RationalCircle.Trigonometry.pointMul p q) n =
+      ComputableAnalysis.RationalCircle.Trigonometry.pointMul
+        (ComputableAnalysis.RationalCircle.Trigonometry.pointPow p n)
+        (ComputableAnalysis.RationalCircle.Trigonometry.pointPow q n)
+  routes := [
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.ComputableDeMoivre.pointPow_mul"
+      title := "Rational-circle powers"
+      description := "A finite rational-coordinate rotation identity, with no analytic limit or angle convention in the statement."
+      proof := MathNetwork.ComputableDeMoivre.pointPow_mul
+    }
+  ]
+
 def all : List CheckedComparison :=
   [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
 
@@ -181,7 +202,7 @@ def all : List CheckedComparison :=
 not comparisons until a second route has been bridged to the same checked
 statement. -/
 def presentations : List CheckedComparison :=
-  [telescopingReciprocalSeries, sineTaylorIntervalBridge]
+  [telescopingReciprocalSeries, sineTaylorIntervalBridge, finiteDeMoivre]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.

@@ -15,11 +15,12 @@ raw_computable_sqrt_tmp="$(mktemp)"
 raw_computable_ftc_tmp="$(mktemp)"
 raw_computable_fourier_tmp="$(mktemp)"
 raw_computable_series_tmp="$(mktemp)"
+raw_computable_demoivre_tmp="$(mktemp)"
 raw_graph_tmp="$(mktemp)"
 project_tmp="$(mktemp)"
 catalogue_tmp="$(mktemp)"
 checks_tmp="$(mktemp)"
-trap 'rm -f "$raw_fermat_basic_tmp" "$raw_fermat_registry_tmp" "$raw_euler_tmp" "$raw_list100_basel_tmp" "$raw_list100_demoivre_tmp" "$raw_list100_leibniz_tmp" "$raw_list100_taylor_tmp" "$raw_list100_ftc_tmp" "$raw_mathlib_sqrt_tmp" "$raw_computable_sqrt_tmp" "$raw_computable_ftc_tmp" "$raw_computable_fourier_tmp" "$raw_computable_series_tmp" "$raw_graph_tmp" "$project_tmp" "$catalogue_tmp" "$checks_tmp"' EXIT
+trap 'rm -f "$raw_fermat_basic_tmp" "$raw_fermat_registry_tmp" "$raw_euler_tmp" "$raw_list100_basel_tmp" "$raw_list100_demoivre_tmp" "$raw_list100_leibniz_tmp" "$raw_list100_taylor_tmp" "$raw_list100_ftc_tmp" "$raw_mathlib_sqrt_tmp" "$raw_computable_sqrt_tmp" "$raw_computable_ftc_tmp" "$raw_computable_fourier_tmp" "$raw_computable_series_tmp" "$raw_computable_demoivre_tmp" "$raw_graph_tmp" "$project_tmp" "$catalogue_tmp" "$checks_tmp"' EXIT
 tools/export-comparisons.sh > "$manifest"
 # Each extractor sees a real elaborated Lean environment, but only for a
 # coherent mathematical domain. Loading all of mathlib's calculus imports and
@@ -54,7 +55,8 @@ extract_slice tools/BuildGraphComputableSqrt.lean "$raw_computable_sqrt_tmp"
 extract_slice tools/BuildGraphComputableFTC.lean "$raw_computable_ftc_tmp"
 extract_slice tools/BuildGraphComputableFourier.lean "$raw_computable_fourier_tmp"
 extract_slice tools/BuildGraphComputableSeries.lean "$raw_computable_series_tmp"
-python3 tools/CombineRawGraphs.py "$raw_fermat_basic_tmp" "$raw_fermat_registry_tmp" "$raw_euler_tmp" "$raw_list100_basel_tmp" "$raw_list100_demoivre_tmp" "$raw_list100_leibniz_tmp" "$raw_list100_taylor_tmp" "$raw_list100_ftc_tmp" "$raw_mathlib_sqrt_tmp" "$raw_computable_sqrt_tmp" "$raw_computable_ftc_tmp" "$raw_computable_fourier_tmp" "$raw_computable_series_tmp" > "$raw_graph_tmp"
+extract_slice tools/BuildGraphComputableDeMoivre.lean "$raw_computable_demoivre_tmp"
+python3 tools/CombineRawGraphs.py "$raw_fermat_basic_tmp" "$raw_fermat_registry_tmp" "$raw_euler_tmp" "$raw_list100_basel_tmp" "$raw_list100_demoivre_tmp" "$raw_list100_leibniz_tmp" "$raw_list100_taylor_tmp" "$raw_list100_ftc_tmp" "$raw_mathlib_sqrt_tmp" "$raw_computable_sqrt_tmp" "$raw_computable_ftc_tmp" "$raw_computable_fourier_tmp" "$raw_computable_series_tmp" "$raw_computable_demoivre_tmp" > "$raw_graph_tmp"
 if [[ ! -s "$raw_graph_tmp" ]]; then
   echo "BuildGraph.lean produced no graph JSON" >&2
   exit 1
