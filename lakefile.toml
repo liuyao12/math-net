@@ -10,7 +10,7 @@ rev = "f4a20a0e0d8a29d2421fd9d042efe34d920f50c0"
 [[require]]
 name = "ComputableAnalysis"
 git = "https://github.com/liuyao12/computable-analysis.git"
-rev = "78977b439802dca573a17b0c273d9fba5a9ff799"
+rev = "05f117fbb3643ed31efef4a72c598f715b6c927a"
 
 [[lean_lib]]
 name = "MathNetwork"

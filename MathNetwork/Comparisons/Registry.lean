@@ -3,6 +3,7 @@ import MathNetwork.Comparisons.MathlibIrrationalSqrt
 import MathNetwork.Comparisons.ComputableIrrationalSqrt
 import MathNetwork.Comparisons.ComputableFTC
 import MathNetwork.Comparisons.ComputableFourier
+import MathNetwork.Comparisons.ComputableSeries
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 
@@ -132,8 +133,28 @@ def sineAddition : CheckedComparison where
     }
   ]
 
+/-- A finished computable-analysis application that is useful in its own
+right, even before a Mathlib representation bridge identifies it with a
+completed-real series limit. -/
+def telescopingReciprocalSeries : CheckedComparison where
+  id := "telescoping-reciprocal-series"
+  title := "Telescoping reciprocal series"
+  description := "A certified rational-interval computation of the exact value of the reciprocal triangular series."
+  statement := ComputableAnalysis.Series.triangularTelescopingRaw.Equiv
+    (ComputableAnalysis.RealRaw.ofRat 2)
+  routes := [
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.ComputableSeries.triangularTelescopingRaw_equiv_two"
+      title := "Certified telescoping intervals"
+      description := "Finite rational partial sums give nested intervals converging to 2."
+      proof := MathNetwork.ComputableSeries.triangularTelescopingRaw_equiv_two
+    }
+  ]
+
 def all : List CheckedComparison :=
-  [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
+  [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition,
+    telescopingReciprocalSeries]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.
