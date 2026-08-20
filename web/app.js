@@ -1014,6 +1014,7 @@ function isMajorNode(node) {
 
 function repositoryForProof(proof) {
   if (!proof) return "unknown";
+  if (proof.repository && REPOSITORIES[proof.repository]) return proof.repository;
   if (proof.routeKind === "local") return "math-net";
   if (proof.routeKind === "mathlib" || proof.locator?.startsWith("mathlib/")) return "mathlib";
   if (proof.routeKind === "computable-analysis") return "computable-analysis";
@@ -1029,7 +1030,11 @@ function repositoryForFormalization(formalization) {
 }
 
 function repositoriesForNode(node) {
-  const repositories = new Set((node.proofs || []).map(repositoryForProof));
+  // An adapter records a useful alternative declaration, but its repository
+  // should not make a theorem look like it has another proof. Prefer bodies;
+  // fall back to adapters only for a declaration with no inspectable body.
+  const routeProofs = (node.proofs || []).filter((proof) => proof.proofKind !== "delegation");
+  const repositories = new Set((routeProofs.length ? routeProofs : (node.proofs || [])).map(repositoryForProof));
   if (!repositories.size) (node.formalizations || []).map(repositoryForFormalization).filter(Boolean).forEach((repository) => repositories.add(repository));
   if (!repositories.size && node.locator?.startsWith("mathlib/")) repositories.add("mathlib");
   if (!repositories.size && node.locator?.startsWith("computable-analysis/")) repositories.add("computable-analysis");
@@ -1260,6 +1265,8 @@ function renderInspector() {
   const focusedTheorem = state.focusId ? nodeMap().get(state.focusId) : null;
   const focusedRoute = focusedTheorem && (focusedTheorem.proofs || []).find((proof) => proof.id === state.selectedProofId);
   const proofList = node.proofs || [];
+  const independentProofs = proofList.filter((proof) => proof.proofKind !== "delegation");
+  const hasProofComparison = Boolean(node.comparison);
   const proofDependencies = proofDependencySummaries(node.id, proofList);
   const proofDifference = proofDependencyDifference(node.id, proofList);
   const delegations = new Map();
@@ -1268,7 +1275,12 @@ function renderInspector() {
     delegations.get(delegation.proof).push(delegation);
   });
   const selectedProof = (node.proofs || []).find((item) => item.id === state.selectedProofId) || null;
-  const activeProof = selectedProof || (proofList.length === 1 ? proofList[0] : null);
+  // For a theorem with aliases, the theorem body is the natural statement and
+  // source to show first. An adapter remains inspectable below, but does not
+  // displace the underlying proof as the reader's starting point.
+  const activeProof = selectedProof || (!hasProofComparison
+    ? (independentProofs[0] || proofList[0] || null)
+    : (proofList.length === 1 ? proofList[0] : null));
   const formalizations = (node.formalizations || []).map((item) => {
     const file = item.file ? `<br><span>${escapeHtml(item.file)}${item.anchor ? ` · ${escapeHtml(item.anchor)}` : ""}</span>` : "";
     const github = githubUrlFor(node, item);
@@ -1278,10 +1290,10 @@ function renderInspector() {
   const tags = (node.tags || []).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
   const routes = node.assumptions ? node.assumptions.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("") : "";
   const mergeNote = node.declarationCount > 1 && node.comparison?.alignment !== "foundation-aligned"
-    ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations. Each formalization below remains available as a separate proof/source route.</p></div>`
+    ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations.${hasProofComparison ? " The independent proof bodies below remain separate routes." : " Some declarations are checked aliases of another theorem; they are retained as provenance, not counted as alternative proofs."}</p></div>`
     : "";
   const comparison = node.comparison;
-  const allRouteStatement = !activeProof && proofList.length > 1
+  const allRouteStatement = !activeProof && hasProofComparison && proofList.length > 1
     ? comparison?.alignment === "foundation-aligned"
       ? `<div class="comparison-statements">${proofList.map((proof) => `<div class="comparison-statement"><div class="comparison-statement-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} route</div><pre class="proof-source pending" data-route-statement="${escapeHtml(proof.id)}"><code>Loading Lean declaration…</code></pre></div>`).join("")}</div>`
       : `<pre class="proof-source pending" data-route-statement="${escapeHtml(proofList[0].id)}"><code>Loading Lean declaration…</code></pre>`
@@ -1290,7 +1302,7 @@ function renderInspector() {
     ? `Formal statement · ${escapeHtml((REPOSITORIES[repositoryForProof(activeProof)] || REPOSITORIES.unknown).label)} route`
     : comparison?.alignment === "foundation-aligned"
       ? "Route statements · foundation-aligned, not definitionally identical"
-      : proofList.length > 1
+      : hasProofComparison && proofList.length > 1
         ? "Shared formal statement · exact checked merge"
         : "Formal statement";
   const routeContext = focusedTheorem && focusedRoute && node.id !== focusedTheorem.id
@@ -1321,27 +1333,35 @@ function renderInspector() {
   const presentation = node.presentation
     ? `<div class="detail-block"><div class="detail-label">Graph role</div><p><strong>${escapeHtml(node.presentation.category)}</strong> · ${escapeHtml(node.presentation.reason)}</p><p class="muted-note">Presentation heuristic, not a logical distinction in Lean.</p></div>`
     : "";
-  const allProofsControl = proofList.length > 1
+  const allProofsControl = hasProofComparison && proofList.length > 1
     ? `<button class="proof-all ${state.selectedProofId ? "" : "selected"}" data-all-proofs><span class="proof-all-glyph">◎</span>All routes <small>merged comparison</small></button>`
     : "";
   const proofs = proofList.map((proof) => {
     const summary = proofDependencies.get(proof.id);
     const delegated = (delegations.get(proof.id) || []).map((delegation) => delegation.declaration).join(", ");
+    const proofRepository = repositoryForProof(proof);
+    const proofRepositoryLabel = (REPOSITORIES[proofRepository] || REPOSITORIES.unknown).label;
+    const declarationName = String(proof.declaration || proof.label || "").split(".").pop();
     const routeLabel = delegated
-      ? `${(REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label} · adapter`
-      : proof.label;
-    const directInputs = summary && proofList.length > 1
+      ? `${proofRepositoryLabel} · adapter`
+      : `${proofRepositoryLabel} · ${declarationName}`;
+    const routeKind = proof.proofKind === "delegation"
+      ? "checked adapter"
+      : proof.repository
+        ? proofRepositoryLabel
+        : (ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind);
+    const directInputs = summary && hasProofComparison
       ? `<small class="proof-dependency-summary">${summary.total} direct inputs · ${summary.routeOnly} route-only · ${summary.shared} shared</small>`
       : "";
     const delegationNote = delegated ? `<small class="proof-delegation">delegates to ${escapeHtml(delegated)}</small>` : "";
-    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span><span>${escapeHtml(routeLabel)}${proof.routeKind ? `<small>${escapeHtml(ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind)}</small>` : ""}${directInputs}${delegationNote}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
+    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(proofRepository))}"></span><span>${escapeHtml(routeLabel)}${routeKind ? `<small>${escapeHtml(routeKind)}</small>` : ""}${directInputs}${delegationNote}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
   }).join("");
   const dependencyButtons = (nodes) => {
     const shown = nodes.slice(0, 5);
     const more = nodes.length > shown.length ? `<span class="route-more">+${nodes.length - shown.length} more</span>` : "";
     return `${shown.map((dependency) => `<button class="neighbor" data-neighbor="${escapeHtml(dependency.id)}">${escapeHtml(displayLabelFor(dependency))}</button>`).join("")}${more}`;
   };
-  const routeDifference = proofDifference && proofList.length > 1 &&
+  const routeDifference = hasProofComparison && proofDifference && proofList.length > 1 &&
     (proofDifference.shared.length || proofDifference.routes.some((route) => route.routeOnly.length))
     ? `<div class="detail-block route-difference"><div class="detail-label">Where proof routes diverge · direct mathematical inputs</div>${proofDifference.shared.length ? `<div class="route-difference-row"><span class="route-difference-name">Shared</span><div class="tag-list">${dependencyButtons(proofDifference.shared)}</div></div>` : ""}${proofDifference.routes.map(({ proof, routeOnly }) => routeOnly.length ? `<div class="route-difference-row"><span class="route-difference-name"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} only</span><div class="tag-list">${dependencyButtons(routeOnly)}</div></div>` : "").join("")}</div>`
     : "";
@@ -1374,7 +1394,7 @@ function renderInspector() {
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
-    ${proofs ? `<div class="detail-block"><div class="detail-label">Proof routes · select one to filter dependencies</div><div class="proof-list">${allProofsControl}${proofs}</div></div>` : ""}
+    ${proofs ? `<div class="detail-block"><div class="detail-label">${hasProofComparison ? "Proof routes · select one to filter dependencies" : "Lean declarations and checked aliases"}</div><div class="proof-list">${allProofsControl}${proofs}</div></div>` : ""}
     ${routeDifference}
     ${mathematicalCoreAnchor}
     ${foundationAnchors ? `<div class="detail-block"><div class="detail-label">Native real foundations</div><div class="tag-list">${foundationAnchors}</div></div>` : ""}

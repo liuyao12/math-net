@@ -3,6 +3,7 @@ import MathNetwork.Comparisons.MathlibIrrationalSqrt
 import MathNetwork.Comparisons.ComputableIrrationalSqrt
 import MathNetwork.Comparisons.ComputableFTC
 import MathNetwork.Comparisons.ComputableFourier
+import MathNetwork.Fermat.Registry
 
 /-!
 # Checked proposition comparisons
@@ -46,7 +47,26 @@ def irrationalSqrtTwo : CheckedComparison where
     }
   ]
 
-def all : List CheckedComparison := [irrationalSqrtTwo]
+/-- Fermat's two-square theorem is the first full exact-proof comparison:
+the Gaussian-integer result supplied by Mathlib and the locally assembled
+Zagier involution proof establish precisely the same Lean proposition. -/
+def fermatTwoSquares : CheckedComparison where
+  id := "fermat-prime-two-squares"
+  statement := MathNetwork.Fermat.fermatPrimeTwoSquares
+  routes := [
+    {
+      repository := "mathlib"
+      declaration := "MathNetwork.Fermat.fermat_two_squares_gaussian"
+      proof := MathNetwork.Fermat.fermat_two_squares_gaussian
+    },
+    {
+      repository := "math-net"
+      declaration := "MathNetwork.Fermat.fermat_two_squares_involution"
+      proof := MathNetwork.Fermat.fermat_two_squares_involution
+    }
+  ]
+
+def all : List CheckedComparison := [irrationalSqrtTwo, fermatTwoSquares]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.

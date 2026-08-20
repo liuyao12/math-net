@@ -54,6 +54,10 @@ def proof_record(node: dict) -> dict:
         "closure": "partial",
         "note": "Proof provenance retained from the elaborated Lean declaration.",
         "statement": node.get("statement", ""),
+        # This is refined to `delegation` after the merged edge set is known.
+        # A declaration that merely invokes an equal theorem is useful
+        # provenance, but is not another mathematical proof route.
+        "proofKind": "body",
     }
     module = node.get("module", "")
     if module.startswith("MathNetwork."):
@@ -360,6 +364,42 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
             continue
         edges.append(rewritten)
 
+    # A self-loop removed above witnesses an exact delegation: its proof body
+    # invokes a theorem with precisely the proposition of the merged node.
+    # Keep the alias visible, but never advertise it as an independent proof.
+    for node in merged_nodes:
+        delegations = {
+            item["proof"]: item["declaration"]
+            for item in node.get("proofDelegations", [])
+        }
+        for proof in node.get("proofs", []):
+            if proof["id"] in delegations:
+                proof["proofKind"] = "delegation"
+                proof["delegatesTo"] = delegations[proof["id"]]
+
+            # The comparison registry records the provenance of a route even
+            # when MathNet supplies a small adapter declaration.  This makes
+            # the map colour describe the proof's native repository, rather
+            # than the repository that happens to host the adapter.
+            metadata = registered_routes.get(proof["declaration"])
+            if metadata:
+                proof["repository"] = metadata["repository"]
+
+        comparison = node.get("comparison")
+        if comparison and comparison.get("alignment") == "exact":
+            independent = [proof for proof in node.get("proofs", [])
+                           if proof.get("proofKind") != "delegation"]
+            # Statement aliases in mathlib and MathNet are not comparisons.
+            # Leave their declarations and delegation provenance in place, but
+            # reserve the comparison UI for genuinely distinct proof bodies.
+            if len(independent) < 2:
+                node.pop("comparison", None)
+            else:
+                comparison["routes"] = [
+                    route for route in comparison.get("routes", [])
+                    if route.get("proof") in {proof["id"] for proof in independent}
+                ]
+
     result = dict(graph)
     result["nodes"] = merged_nodes
     result["edges"] = edges
@@ -368,7 +408,7 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
     result["merge"] = {
         "key": "exact elaborated proposition statement across local and imported declarations",
         "definitions": "one node per declaration",
-        "proofProvenance": "edge proof field and proposition proofs records",
+        "proofProvenance": "edge proof field and proposition proofs records; aliases are marked as delegations, not proof alternatives",
     }
     return result
 
