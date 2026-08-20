@@ -183,6 +183,15 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .share-button:hover { color: var(--ink); border-color: var(--line-strong); }
 .inspector-content { padding: 20px; }
 .empty-inspector { display: grid; justify-items: start; gap: 11px; padding-top: 44px; }
+.comparison-overview { width: 100%; margin-top: 12px; }
+.comparison-overview > p { margin: 5px 0 13px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.comparison-overview-list { display: grid; gap: 8px; }
+.comparison-overview-card { display: grid; gap: 5px; width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 11px; background: rgba(255,255,255,.42); color: var(--ink); text-align: left; cursor: pointer; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+.comparison-overview-card:hover { border-color: var(--blue); background: rgba(219,236,238,.55); transform: translateY(-1px); }
+.comparison-overview-title { font-size: 13px; font-weight: 700; letter-spacing: -.01em; }
+.comparison-overview-description { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.comparison-overview-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; color: var(--muted); font: 9px var(--mono); letter-spacing: .02em; text-transform: uppercase; }
+.comparison-overview-meta .proof-color { width: 9px; height: 9px; margin-right: -2px; }
 .empty-glyph { color: var(--line-strong); font-size: 42px; line-height: 1; }
 .node-kind { display: inline-block; padding: 5px 7px; border-radius: 4px; color: var(--blue); background: var(--blue-soft); }
 .node-kind.proof-family { color: var(--gold); background: var(--gold-soft); }

@@ -90,7 +90,9 @@ const FOCUS_Y_FRACTION = 0.62;
 const state = {
   graph: null,
   theorems: [],
-  theoremNumber: requestedTheorem || theoremForGraph() || "1",
+  // A bare visit begins with the proof-landscape overview. Deep links retain
+  // their theorem or graph focus through the query parameters.
+  theoremNumber: requestedTheorem || theoremForGraph() || null,
   focusId: null,
   coreId: null,
   selectedId: null,
@@ -725,7 +727,6 @@ function populateTheoremSelect() {
     }
   });
   select.append(indexed, catalogued);
-  state.theoremNumber = state.theoremNumber || "1";
   if (state.theoremNumber) select.value = String(state.theoremNumber);
   updateTheoremNote();
   select.addEventListener("change", (event) => {
@@ -1257,7 +1258,24 @@ function renderInspector() {
   const node = nodeMap().get(state.selectedId);
   if (!node) {
     state.sourceRequest += 1;
-    content.innerHTML = `<div class="empty-inspector"><div class="empty-glyph">◎</div><p>Click a node to inspect its statement, verification status, and proof dependencies.</p></div>`;
+    const comparisons = (state.graph?.nodes || [])
+      .filter((candidate) => candidate.comparison?.title)
+      .sort((left, right) => left.comparison.title.localeCompare(right.comparison.title));
+    const overview = comparisons.length
+      ? `<div class="comparison-overview"><div class="detail-label">Proof landscapes</div><p>Each landscape keeps formal routes distinct, then joins them only where Lean has checked an exact statement—or records an explicit foundation boundary.</p><div class="comparison-overview-list">${comparisons.map((candidate) => {
+        const comparison = candidate.comparison;
+        const routes = comparison.routes || [];
+        const alignment = comparison.alignment === "foundation-aligned"
+          ? "foundation-aligned"
+          : `${routes.length} exact proof routes`;
+        const repositories = [...new Set(routes.map((route) => route.repository))];
+        return `<button class="comparison-overview-card" data-comparison-node="${escapeHtml(candidate.id)}"><span class="comparison-overview-title">${escapeHtml(comparison.title)}</span><span class="comparison-overview-description">${escapeHtml(comparison.description || comparison.note || "")}</span><span class="comparison-overview-meta">${repositories.map((repository) => `<span class="proof-color" style="background:${escapeHtml(repositoryColor(repository))}"></span>${escapeHtml((REPOSITORIES[repository] || REPOSITORIES.unknown).label)}`).join(" ")} · ${escapeHtml(alignment)}</span></button>`;
+      }).join("")}</div></div>`
+      : "";
+    content.innerHTML = `<div class="empty-inspector"><div class="empty-glyph">◎</div><p>Select a declaration to inspect its Lean statement, verification status, and proof dependencies.</p>${overview}</div>`;
+    content.querySelectorAll("[data-comparison-node]").forEach((button) => {
+      button.addEventListener("click", () => focusDeclaration(button.dataset.comparisonNode));
+    });
     return;
   }
   const sourceRequest = ++state.sourceRequest;
