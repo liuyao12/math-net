@@ -41,5 +41,5 @@ jobs:
           lake exe cache get
           lake build
           tools/check-comparisons.sh
-          python3 tools/ValidateGraph.py MathNetwork/Graph/project.json
+          python3 tools/ValidateGraph.py MathNetwork/Graph/project.json --comparisons MathNetwork/Graph/comparisons.json
           python3 tools/GraphFreshness.py --check MathNetwork/Graph/extraction-inputs.json
