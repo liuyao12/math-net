@@ -277,12 +277,19 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
                 registered_routes.get(record["declaration"], {}).get("alignment") == "foundation-aligned"
                 for record in merged["proofs"]
             )
+            is_presentation = any(
+                registered_routes.get(record["declaration"], {}).get("alignment") == "presentation"
+                for record in merged["proofs"]
+            )
             merged["comparison"] = {
                 "identity": (
                     "foundation-aligned criteria over distinct real-number representations"
-                    if is_foundation_aligned else "exact elaborated proposition statement"
+                    if is_foundation_aligned else
+                    "one independently checked Lean declaration, awaiting a second route"
+                    if is_presentation else "exact elaborated proposition statement"
                 ),
-                "alignment": "foundation-aligned" if is_foundation_aligned else "exact",
+                "alignment": "foundation-aligned" if is_foundation_aligned else
+                             "presentation" if is_presentation else "exact",
                 "routes": comparison_routes,
                 "note": (
                     next((registered_routes[record["declaration"]].get("note", "")
@@ -290,11 +297,13 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
                           if record["declaration"] in registered_routes and
                           registered_routes[record["declaration"]].get("alignment") == "foundation-aligned"), "")
                     if is_foundation_aligned else
+                    "This application has one checked route. It remains visible so a later imported proof can be compared without redesigning the graph."
+                    if is_presentation else
                     "The declarations are merged only because Lean checked their "
                     "elaborated proposition types as definitionally equal."
                 ),
             }
-            if not is_foundation_aligned:
+            if not is_foundation_aligned and not is_presentation:
                 merged["comparison"]["kernelCheck"] = (
                     "Lean's definitional-equality checker validates every route pair "
                     "when tools/build-graph.sh generates this graph."
@@ -320,6 +329,8 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
                 merged["verification"].get("note", "")
                 + (f" Foundation-aligned from {len(group)} independently checked declarations; their real-number bridge is not yet formalized."
                    if is_foundation_aligned else
+                   f" Presented as one independently checked route across {len(group)} indexed declaration(s)."
+                   if is_presentation else
                    f" Merged from {len(group)} declarations with the identical checked statement in the same module.")
             ).strip()
         merged_nodes.append(merged)

@@ -42,6 +42,7 @@ def main(path: str) -> None:
 
     exact_merges = 0
     aligned = 0
+    presentations = 0
     for node in nodes:
         comparison = node.get("comparison")
         if not comparison:
@@ -57,6 +58,12 @@ def main(path: str) -> None:
             aligned += 1
             if comparison.get("kernelCheck"):
                 fail(f"foundation-aligned comparison {node['id']} claims a kernel exact merge")
+        elif comparison.get("alignment") == "presentation":
+            presentations += 1
+            if comparison.get("kernelCheck"):
+                fail(f"checked presentation {node['id']} claims an exact merge")
+            if not comparison.get("routes"):
+                fail(f"checked presentation {node['id']} has no checked route")
         else:
             fail(f"comparison {node['id']} has unknown alignment")
         for route in comparison.get("routes", []):
@@ -73,7 +80,8 @@ def main(path: str) -> None:
 
     print(
         f"validated {len(nodes)} nodes, {len(edges)} proof edges, "
-        f"{exact_merges} exact comparisons, and {aligned} foundation-aligned comparisons"
+        f"{exact_merges} exact comparisons, {aligned} foundation-aligned comparisons, "
+        f"and {presentations} checked presentations"
     )
 
 

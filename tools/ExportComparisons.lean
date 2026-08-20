@@ -37,10 +37,20 @@ private def alignedComparisonJson (comparison : FoundationAlignedComparison) : J
     )).toArray)
   ]
 
+private def presentationJson (presentation : CheckedComparison) : Json :=
+  Json.mkObj [
+    ("id", presentation.id),
+    ("title", presentation.title),
+    ("description", presentation.description),
+    ("alignment", "presentation"),
+    ("routes", Json.arr (presentation.routes.map routeJson).toArray)
+  ]
+
 private def manifest : Json :=
   Json.mkObj [
     ("schemaVersion", "1.0"),
-    ("comparisons", Json.arr ((all.map comparisonJson ++ aligned.map alignedComparisonJson).toArray))
+    ("comparisons", Json.arr ((all.map comparisonJson ++
+      aligned.map alignedComparisonJson ++ presentations.map presentationJson).toArray))
   ]
 
 elab "export_checked_comparisons" : command =>

@@ -153,8 +153,13 @@ def telescopingReciprocalSeries : CheckedComparison where
   ]
 
 def all : List CheckedComparison :=
-  [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition,
-    telescopingReciprocalSeries]
+  [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
+
+/-- Checked single-route applications belong in the landscape too. They are
+not comparisons until a second route has been bridged to the same checked
+statement. -/
+def presentations : List CheckedComparison :=
+  [telescopingReciprocalSeries]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.

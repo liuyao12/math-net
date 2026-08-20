@@ -780,7 +780,8 @@ function populateComparisonSelect() {
   const select = $("#comparison-select");
   if (!select || !state.graph) return;
   const comparisons = state.graph.nodes
-    .filter((node) => node.namespace?.startsWith("MathNetwork.") && node.comparison && (node.proofs || []).length > 1)
+    .filter((node) => node.namespace?.startsWith("MathNetwork.") && node.comparison &&
+      ((node.proofs || []).length > 1 || node.comparison.alignment === "presentation"))
     .sort((left, right) => (left.comparison.title || displayLabelFor(left))
       .localeCompare(right.comparison.title || displayLabelFor(right)));
   comparisons.forEach((node) => {
@@ -788,7 +789,9 @@ function populateComparisonSelect() {
     option.value = node.id;
     const alignment = node.comparison.alignment === "foundation-aligned"
       ? "foundation-aligned"
-      : `${node.comparison.routes?.length || 0} exact routes`;
+      : node.comparison.alignment === "presentation"
+        ? "checked presentation"
+        : `${node.comparison.routes?.length || 0} exact routes`;
     option.textContent = `${node.comparison.title || displayLabelFor(node)} · ${alignment}`;
     select.append(option);
   });
@@ -1262,12 +1265,14 @@ function renderInspector() {
       .filter((candidate) => candidate.comparison?.title)
       .sort((left, right) => left.comparison.title.localeCompare(right.comparison.title));
     const overview = comparisons.length
-      ? `<div class="comparison-overview"><div class="detail-label">Proof landscapes</div><p>Each landscape keeps formal routes distinct, then joins them only where Lean has checked an exact statement—or records an explicit foundation boundary.</p><div class="comparison-overview-list">${comparisons.map((candidate) => {
+      ? `<div class="comparison-overview"><div class="detail-label">Proof landscapes</div><p>Browse exact proof comparisons, explicit foundation boundaries, and single checked applications that are ready for a future comparison.</p><div class="comparison-overview-list">${comparisons.map((candidate) => {
         const comparison = candidate.comparison;
         const routes = comparison.routes || [];
         const alignment = comparison.alignment === "foundation-aligned"
           ? "foundation-aligned"
-          : `${routes.length} exact proof routes`;
+          : comparison.alignment === "presentation"
+            ? "checked presentation"
+            : `${routes.length} exact proof routes`;
         const repositories = [...new Set(routes.map((route) => route.repository))];
         return `<button class="comparison-overview-card" data-comparison-node="${escapeHtml(candidate.id)}"><span class="comparison-overview-title">${escapeHtml(comparison.title)}</span><span class="comparison-overview-description">${escapeHtml(comparison.description || comparison.note || "")}</span><span class="comparison-overview-meta">${repositories.map((repository) => `<span class="proof-color" style="background:${escapeHtml(repositoryColor(repository))}"></span>${escapeHtml((REPOSITORIES[repository] || REPOSITORIES.unknown).label)}`).join(" ")} · ${escapeHtml(alignment)}</span></button>`;
       }).join("")}</div></div>`
@@ -1330,7 +1335,7 @@ function renderInspector() {
     ? `<div class="route-context"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(focusedRoute)))}"></span><span>Viewing a dependency of <button class="route-context-theorem" data-neighbor="${escapeHtml(focusedTheorem.id)}">${escapeHtml(displayLabelFor(focusedTheorem))}</button> via <strong>${escapeHtml(focusedRoute.label)}</strong>.</span></div>`
     : "";
   const comparisonNote = comparison
-    ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : "Checked comparison"}</div>${comparison.title ? `<h3 class="comparison-title">${escapeHtml(comparison.title)}</h3>` : ""}${comparison.description ? `<p>${escapeHtml(comparison.description)}</p>` : ""}<p class="muted-note">${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
+    ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : comparison.alignment === "presentation" ? "Checked presentation" : "Checked comparison"}</div>${comparison.title ? `<h3 class="comparison-title">${escapeHtml(comparison.title)}</h3>` : ""}${comparison.description ? `<p>${escapeHtml(comparison.description)}</p>` : ""}<p class="muted-note">${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : comparison.alignment === "presentation" ? " This is one fully checked route, retained as an application and a future comparison target; it makes no claim of a second route." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
     : "";
   const foundationAnchors = (comparison?.foundations || []).map((foundation) => {
     const anchor = state.graph.nodes.find((item) => item.namespace === foundation.declaration);
