@@ -1085,8 +1085,16 @@ function renderProofLegend() {
   const entries = [...grouped]
     .map((id) => ({ id, label: (REPOSITORIES[id] || REPOSITORIES.unknown).label }))
     .sort((left, right) => left.label.localeCompare(right.label));
+  const evidence = { exact: 0, aligned: 0, presentation: 0 };
+  state.graph.nodes.forEach((node) => {
+    const alignment = node.comparison?.alignment;
+    if (alignment === "exact") evidence.exact += 1;
+    else if (alignment === "foundation-aligned") evidence.aligned += 1;
+    else if (alignment === "presentation") evidence.presentation += 1;
+  });
+  const evidenceLegend = `<span class="legend-heading evidence-heading">Comparison evidence</span><span class="legend-item evidence-exact">${evidence.exact} exact merged</span><span class="legend-item evidence-aligned">${evidence.aligned} foundation-aligned</span><span class="legend-item evidence-presentation">${evidence.presentation} checked presentation</span>`;
   container.innerHTML = entries.length
-    ? `<span class="legend-heading">Repository colors · nodes and proof arrows</span>${entries.map((entry) => `<span class="legend-item"><span class="legend-dot repository-dot" style="background:${escapeHtml(repositoryColor(entry.id))}"></span><span>${escapeHtml(entry.label)}</span></span>`).join("")}`
+    ? `<span class="legend-heading">Repository colors · nodes and proof arrows</span>${entries.map((entry) => `<span class="legend-item"><span class="legend-dot repository-dot" style="background:${escapeHtml(repositoryColor(entry.id))}"></span><span>${escapeHtml(entry.label)}</span></span>`).join("")}${evidenceLegend}`
     : "";
 }
 
