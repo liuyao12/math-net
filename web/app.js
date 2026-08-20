@@ -1344,7 +1344,7 @@ function renderInspector() {
     const declarationName = String(proof.declaration || proof.label || "").split(".").pop();
     const routeLabel = delegated
       ? `${proofRepositoryLabel} · adapter`
-      : `${proofRepositoryLabel} · ${declarationName}`;
+      : `${proofRepositoryLabel} · ${proof.routeTitle || declarationName}`;
     const routeKind = proof.proofKind === "delegation"
       ? "checked adapter"
       : proof.repository
@@ -1354,7 +1354,9 @@ function renderInspector() {
       ? `<small class="proof-dependency-summary">${summary.total} direct inputs · ${summary.routeOnly} route-only · ${summary.shared} shared</small>`
       : "";
     const delegationNote = delegated ? `<small class="proof-delegation">delegates to ${escapeHtml(delegated)}</small>` : "";
-    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(proofRepository))}"></span><span>${escapeHtml(routeLabel)}${routeKind ? `<small>${escapeHtml(routeKind)}</small>` : ""}${directInputs}${delegationNote}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
+    const methodDescription = proof.routeDescription ? `<small class="proof-method">${escapeHtml(proof.routeDescription)}</small>` : "";
+    const leanDeclaration = proof.routeTitle ? `<small class="proof-declaration">Lean · ${escapeHtml(declarationName)}</small>` : "";
+    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(proofRepository))}"></span><span>${escapeHtml(routeLabel)}${routeKind ? `<small>${escapeHtml(routeKind)}</small>` : ""}${leanDeclaration}${methodDescription}${directInputs}${delegationNote}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
   }).join("");
   const dependencyButtons = (nodes) => {
     const shown = nodes.slice(0, 5);

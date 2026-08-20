@@ -19,6 +19,8 @@ namespace MathNetwork.Comparisons
 structure CheckedProof (statement : Prop) where
   repository : String
   declaration : String
+  title : String
+  description : String
   proof : statement
 
 structure CheckedComparison where
@@ -43,6 +45,8 @@ def irrationalSqrtTwo : CheckedComparison where
     {
       repository := "mathlib"
       declaration := "MathNetwork.SqrtTwo.irrational"
+      title := "Mathlib irrational-square-root theorem"
+      description := "A checked Mathlib corollary for the concrete benchmark √2."
       proof := MathNetwork.SqrtTwo.irrational
     }
   ]
@@ -57,11 +61,15 @@ def fermatTwoSquares : CheckedComparison where
     {
       repository := "mathlib"
       declaration := "MathNetwork.Fermat.fermat_two_squares_gaussian"
+      title := "Gaussian integers"
+      description := "Mathlib's prime-as-a-sum-of-two-squares theorem through the Gaussian-integer Euclidean domain."
       proof := MathNetwork.Fermat.fermat_two_squares_gaussian
     },
     {
       repository := "math-net"
       declaration := "MathNetwork.Fermat.fermat_two_squares_involution"
+      title := "Zagier involution"
+      description := "A fixed-point parity argument with two involutions on a finite set."
       proof := MathNetwork.Fermat.fermat_two_squares_involution
     }
   ]

@@ -79,6 +79,8 @@ def comparison_manifest(path: str | None) -> dict[str, dict]:
             "note": comparison.get("note", ""),
             "foundation": route.get("foundation"),
             "mathematicalCore": comparison.get("mathematicalCore"),
+            "title": route.get("title", ""),
+            "description": route.get("description", ""),
         }
         for comparison in data.get("comparisons", [])
         for route in comparison.get("routes", [])
@@ -384,6 +386,8 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
             metadata = registered_routes.get(proof["declaration"])
             if metadata:
                 proof["repository"] = metadata["repository"]
+                proof["routeTitle"] = metadata.get("title", "")
+                proof["routeDescription"] = metadata.get("description", "")
 
         comparison = node.get("comparison")
         if comparison and comparison.get("alignment") == "exact":

@@ -7,7 +7,9 @@ open MathNetwork.Comparisons
 private def routeJson {statement : Prop} (route : CheckedProof statement) : Json :=
   Json.mkObj [
     ("repository", route.repository),
-    ("declaration", route.declaration)
+    ("declaration", route.declaration),
+    ("title", route.title),
+    ("description", route.description)
   ]
 
 private def comparisonJson (comparison : CheckedComparison) : Json :=
