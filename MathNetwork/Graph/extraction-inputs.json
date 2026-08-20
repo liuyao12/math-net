@@ -52,7 +52,7 @@
     "tools/BuildGraphMathlibSqrt.lean": "2d1b4f3bda359af26c307c0f4c082af1f2e55524b4af2a9a9278085564d0baad",
     "tools/CombineRawGraphs.py": "53ee2d1dbd845b2f4aafe299234ec81db5eb881d693892563b485edd04c8d886",
     "tools/GraphFreshness.py": "7cf83ffbdaaab81112893a8cb05b73812aaf2b83e0733bcb8da348a368925430",
-    "tools/build-graph.sh": "ca03b69e0f635982dc03a597d2e6a06df07ea137d5a586b69e24a34d0b698b57"
+    "tools/build-graph.sh": "d422dd668f4a963f535e981de12e3214a7ee94444a0749c32e710ec294bd96b2"
   },
   "schemaVersion": 1
 }

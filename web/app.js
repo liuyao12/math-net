@@ -17,6 +17,9 @@ const THEOREMS_URL = versionedAsset("./theorems.json");
 const COMPARISONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/comparisons.json`);
 const SOURCE_REVISIONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/source-revisions.json`);
 const DATA_URLS = [versionedAsset(`${REPO_ROOT}MathNetwork/Graph/project.json`)];
+const comparisonSliceUrl = (comparisonId) => versionedAsset(
+  `${REPO_ROOT}MathNetwork/Graph/slices/${encodeURIComponent(comparisonId)}.json`,
+);
 const DECLARATION_LABELS = {
   theorem: "Theorems",
   opaque: "Opaque declarations",
@@ -96,6 +99,7 @@ const state = {
   comparisons: [],
   sourceRevisions: {},
   graphPromise: null,
+  graphPartial: false,
   // A bare visit begins with the proof-landscape overview. Deep links retain
   // their theorem or graph focus through the query parameters.
   theoremNumber: requestedTheorem || theoremForGraph() || null,
@@ -514,7 +518,7 @@ function focusDeclaration(nodeId) {
 }
 
 async function openComparison(comparisonId) {
-  await ensureGraph();
+  if (!state.graph || state.graphPartial) await loadComparisonSlice(comparisonId);
   const comparison = state.comparisons.find((candidate) => candidate.id === comparisonId);
   const declarations = new Set((comparison?.routes || []).map((route) => route.declaration));
   const node = state.graph?.nodes.find((candidate) =>
@@ -1282,6 +1286,13 @@ function expandNodeDependencies(nodeId, redraw = true) {
   if (Number.isFinite(node.x) && Number.isFinite(node.y)) {
     state.inspectionAnchor = { id: nodeId, x: node.x, y: node.y };
   }
+  // Focus slices deliberately stop after a few upstream generations. At that
+  // boundary, preserve the reader's selected node and promote to the full
+  // declaration graph rather than implying it has no further prerequisites.
+  if (state.graphPartial && (state.graph.partialBoundaryNodes || []).includes(nodeId)) {
+    ensureGraph().then(() => expandNodeDependencies(nodeId, redraw));
+    return true;
+  }
   const dependencies = state.graph.edges
     .filter((edge) => edge.relation === "used-in-proof" && edge.target.id === nodeId)
     .map((edge) => edge.source.id);
@@ -1315,6 +1326,7 @@ function scheduleSimulationStop(delay = 900) {
 }
 
 function hasHiddenDependencies(nodeId, visibleNodes) {
+  if (state.graphPartial && (state.graph.partialBoundaryNodes || []).includes(nodeId)) return true;
   const visibleIds = new Set(visibleNodes.map((node) => node.id));
   return state.graph.edges.some((edge) => edge.relation === "used-in-proof" && edge.target.id === nodeId &&
     !visibleIds.has(edge.source.id) && state.kinds.has(declarationKindFor(nodeMap().get(edge.source.id))));
@@ -2281,33 +2293,59 @@ function draw() {
 }
 
 async function ensureGraph() {
-  if (state.graph) return state.graph;
+  if (state.graph && !state.graphPartial) return state.graph;
   if (state.graphPromise) return state.graphPromise;
   state.graphPromise = (async () => {
     const responses = await Promise.all(DATA_URLS.map((url) => fetch(url)));
     const failed = responses.find((response) => !response.ok);
     if (failed) throw new Error(`Could not load ${DATA_URLS.join(", ")}`);
     const graphs = await Promise.all(responses.map((response) => response.json()));
-    state.graph = graphs.length === 1 ? graphs[0] : {
+    const graph = graphs.length === 1 ? graphs[0] : {
       schemaVersion: graphs[0].schemaVersion,
       graphId: "math-net-project",
       label: "math-net project: Fermat + Euler applications",
       nodes: graphs.flatMap((graph) => graph.nodes),
       edges: graphs.flatMap((graph) => graph.edges),
     };
-    $("#graph-badge").textContent = `${state.graph.nodes.length} nodes · ${state.graph.edges.length} links`;
-    state.kinds = new Set(availableDeclarationKinds());
-    $(".data-source code").textContent = DATA_URLS.map((url) => url.split("/").pop()).join(" + ");
-    $("#loading-state").remove();
-    kindControls();
-    renderProofLegend();
+    installGraph(graph, "project.json");
     return state.graph;
   })();
+  const pending = state.graphPromise;
   try {
-    return await state.graphPromise;
-  } catch (error) {
-    state.graphPromise = null;
-    throw error;
+    return await pending;
+  } finally {
+    if (state.graphPromise === pending) state.graphPromise = null;
+  }
+}
+
+function installGraph(graph, sourceName) {
+  state.graph = graph;
+  state.graphPartial = Boolean(graph.partial);
+  const scope = state.graphPartial ? "focused" : "project";
+  $("#graph-badge").textContent = `${graph.nodes.length} nodes · ${graph.edges.length} links · ${scope}`;
+  state.kinds = new Set(availableDeclarationKinds());
+  $(".data-source code").textContent = sourceName;
+  $("#loading-state").remove();
+  kindControls();
+  renderProofLegend();
+}
+
+async function loadComparisonSlice(comparisonId) {
+  if (state.graph && state.graphPartial && state.graph.focusComparison === comparisonId) return state.graph;
+  if (state.graph && !state.graphPartial) return state.graph;
+  if (state.graphPromise) return state.graphPromise;
+  state.graphPromise = (async () => {
+    const response = await fetch(comparisonSliceUrl(comparisonId));
+    if (!response.ok) throw new Error(`Could not load focused graph for ${comparisonId}`);
+    const graph = await response.json();
+    installGraph(graph, `slices/${comparisonId}.json`);
+    return state.graph;
+  })();
+  const pending = state.graphPromise;
+  try {
+    return await pending;
+  } finally {
+    if (state.graphPromise === pending) state.graphPromise = null;
   }
 }
 
@@ -2329,7 +2367,8 @@ async function load() {
     populateTheoremSelect();
     populateComparisonSelect();
     const needsGraph = Boolean(requestedDeclaration || requestedComparison || state.theoremNumber);
-    if (needsGraph) await ensureGraph();
+    if (requestedComparison) await loadComparisonSlice(requestedComparison);
+    else if (needsGraph) await ensureGraph();
     const declaration = state.graph && ((requestedDeclaration && state.graph.nodes.find((node) => node.namespace === requestedDeclaration || node.id === requestedDeclaration)) ||
       (requestedComparison && state.graph.nodes.find((node) => node.comparison?.registry === requestedComparison)));
     if (declaration) {
