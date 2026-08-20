@@ -15,6 +15,7 @@ const APP_REVISION = new URL(import.meta.url).searchParams.get("v") || "dev";
 const versionedAsset = (url) => `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(APP_REVISION)}`;
 const THEOREMS_URL = versionedAsset("./theorems.json");
 const COMPARISONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/comparisons.json`);
+const SOURCE_REVISIONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/source-revisions.json`);
 const DATA_URLS = [versionedAsset(`${REPO_ROOT}MathNetwork/Graph/project.json`)];
 const DECLARATION_LABELS = {
   theorem: "Theorems",
@@ -93,6 +94,7 @@ const state = {
   graph: null,
   theorems: [],
   comparisons: [],
+  sourceRevisions: {},
   graphPromise: null,
   // A bare visit begins with the proof-landscape overview. Deep links retain
   // their theorem or graph focus through the query parameters.
@@ -205,6 +207,10 @@ function sourceFileFor(node, proof = null) {
   return null;
 }
 
+function sourceRevision(repository) {
+  return state.sourceRevisions?.[repository]?.revision || "main";
+}
+
 function sourceUrlFor(node, proof = null) {
   const file = sourceFileFor(node, proof);
   const locator = proof?.locator || node.locator;
@@ -216,10 +222,10 @@ function sourceUrlFor(node, proof = null) {
     return `https://raw.githubusercontent.com/liuyao12/math-net/main/${file}`;
   }
   if (locator?.startsWith("mathlib/")) {
-    return `https://raw.githubusercontent.com/leanprover-community/mathlib4/master/${file}`;
+    return `https://raw.githubusercontent.com/leanprover-community/mathlib4/${sourceRevision("mathlib")}/${file}`;
   }
   if (locator?.startsWith("computable-analysis/")) {
-    return `https://raw.githubusercontent.com/liuyao12/computable-analysis/main/${file}`;
+    return `https://raw.githubusercontent.com/liuyao12/computable-analysis/${sourceRevision("computable-analysis")}/${file}`;
   }
   // GitHub Pages publishes the web directory, not the repository root.
   // Use the canonical raw source for math-net declarations so Lean code is
@@ -228,16 +234,16 @@ function sourceUrlFor(node, proof = null) {
 }
 
 function githubUrlFor(node, item = null) {
-  const file = item?.file || sourceFileFor(node);
+  const file = item?.file || sourceFileFor(node, item);
   if (file?.startsWith("MathNetwork/")) return `${GITHUB_REPO}/blob/main/${file}`;
   const locator = item?.locator || node.locator;
   if (locator?.startsWith("mathlib/")) {
     const file = `${locator.slice("mathlib/".length).replaceAll(".", "/")}.lean`;
-    return `https://github.com/leanprover-community/mathlib4/blob/master/${file}`;
+    return `https://github.com/leanprover-community/mathlib4/blob/${sourceRevision("mathlib")}/${file}`;
   }
   if (locator?.startsWith("computable-analysis/")) {
     const file = `${locator.slice("computable-analysis/".length).replaceAll(".", "/")}.lean`;
-    return `${COMPUTABLE_ANALYSIS_REPO}/blob/main/${file}`;
+    return `${COMPUTABLE_ANALYSIS_REPO}/blob/${sourceRevision("computable-analysis")}/${file}`;
   }
   return null;
 }
@@ -2307,12 +2313,14 @@ async function ensureGraph() {
 
 async function load() {
   try {
-    const [theoremResponse, comparisonResponse] = await Promise.all([
+    const [theoremResponse, comparisonResponse, sourceRevisionResponse] = await Promise.all([
       fetch(THEOREMS_URL),
       fetch(COMPARISONS_URL),
+      fetch(SOURCE_REVISIONS_URL),
     ]);
     if (theoremResponse.ok) state.theorems = await theoremResponse.json();
     if (comparisonResponse.ok) state.comparisons = (await comparisonResponse.json()).comparisons || [];
+    if (sourceRevisionResponse.ok) state.sourceRevisions = (await sourceRevisionResponse.json()).repositories || {};
     const exact = state.comparisons.filter((comparison) => !comparison.alignment && comparison.routes?.length > 1).length;
     const aligned = state.comparisons.filter((comparison) => comparison.alignment === "foundation-aligned").length;
     const presentations = state.comparisons.filter((comparison) => comparison.alignment === "presentation" ||

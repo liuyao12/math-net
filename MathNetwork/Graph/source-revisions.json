@@ -1,0 +1,1 @@
+{"schemaVersion":1,"repositories":{"mathlib":{"repository":"https://github.com/leanprover-community/mathlib4.git","revision":"f4a20a0e0d8a29d2421fd9d042efe34d920f50c0"},"computable-analysis":{"repository":"https://github.com/liuyao12/computable-analysis.git","revision":"05f117fbb3643ed31efef4a72c598f715b6c927a"}}}
