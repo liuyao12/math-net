@@ -519,13 +519,17 @@ function focusDeclaration(nodeId) {
 
 async function openComparison(comparisonId) {
   if (!state.graph || state.graphPartial) await loadComparisonSlice(comparisonId);
+  const node = comparisonNode(comparisonId);
+  if (node) focusDeclaration(node.id);
+}
+
+function comparisonNode(comparisonId) {
   const comparison = state.comparisons.find((candidate) => candidate.id === comparisonId);
   const declarations = new Set((comparison?.routes || []).map((route) => route.declaration));
-  const node = state.graph?.nodes.find((candidate) =>
+  return state.graph?.nodes.find((candidate) =>
     candidate.comparison?.registry === comparisonId ||
     declarations.has(candidate.namespace) ||
     (candidate.proofs || []).some((proof) => declarations.has(proof.declaration)));
-  if (node) focusDeclaration(node.id);
 }
 
 function focusDistances(nodeId, edges, maxDepth = 3) {
@@ -2370,7 +2374,7 @@ async function load() {
     if (requestedComparison) await loadComparisonSlice(requestedComparison);
     else if (needsGraph) await ensureGraph();
     const declaration = state.graph && ((requestedDeclaration && state.graph.nodes.find((node) => node.namespace === requestedDeclaration || node.id === requestedDeclaration)) ||
-      (requestedComparison && state.graph.nodes.find((node) => node.comparison?.registry === requestedComparison)));
+      (requestedComparison && comparisonNode(requestedComparison)));
     if (declaration) {
       focusDeclaration(declaration.id);
       const route = requestedRoute && (declaration.proofs || []).find((proof) => proof.declaration === requestedRoute);
