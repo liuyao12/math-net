@@ -4,6 +4,7 @@ import MathNetwork.Comparisons.ComputableIrrationalSqrt
 import MathNetwork.Comparisons.ComputableFTC
 import MathNetwork.Comparisons.ComputableFourier
 import MathNetwork.Fermat.Registry
+import MathNetwork.Euler.Applications
 
 /-!
 # Checked proposition comparisons
@@ -82,7 +83,57 @@ def fermatTwoSquares : CheckedComparison where
     }
   ]
 
-def all : List CheckedComparison := [irrationalSqrtTwo, fermatTwoSquares]
+/-- Euler's identity is used here as an actual proof mechanism: take real and
+imaginary parts of the exponential addition law, rather than treating the
+addition formulas as definitions. -/
+def cosineAddition : CheckedComparison where
+  id := "cosine-addition"
+  title := "Cosine addition formula"
+  description := "The standard real-trigonometric formula, compared with a derivation from complex exponentials."
+  statement := ∀ x y : ℝ,
+    Real.cos (x + y) = Real.cos x * Real.cos y - Real.sin x * Real.sin y
+  routes := [
+    {
+      repository := "mathlib"
+      declaration := "Real.cos_add"
+      title := "Real trigonometry"
+      description := "Mathlib's standard real sine-and-cosine addition theorem."
+      proof := Real.cos_add
+    },
+    {
+      repository := "math-net"
+      declaration := "MathNetwork.Euler.trig_addition_euler_cos_route"
+      title := "Complex exponential"
+      description := "Take the real part of exp((x + y)i) = exp(xi) exp(yi)."
+      proof := MathNetwork.Euler.trig_addition_euler_cos_route
+    }
+  ]
+
+def sineAddition : CheckedComparison where
+  id := "sine-addition"
+  title := "Sine addition formula"
+  description := "The standard real-trigonometric formula, compared with a derivation from complex exponentials."
+  statement := ∀ x y : ℝ,
+    Real.sin (x + y) = Real.sin x * Real.cos y + Real.cos x * Real.sin y
+  routes := [
+    {
+      repository := "mathlib"
+      declaration := "Real.sin_add"
+      title := "Real trigonometry"
+      description := "Mathlib's standard real sine-and-cosine addition theorem."
+      proof := Real.sin_add
+    },
+    {
+      repository := "math-net"
+      declaration := "MathNetwork.Euler.trig_addition_euler_sin_route"
+      title := "Complex exponential"
+      description := "Take the imaginary part of exp((x + y)i) = exp(xi) exp(yi)."
+      proof := MathNetwork.Euler.trig_addition_euler_sin_route
+    }
+  ]
+
+def all : List CheckedComparison :=
+  [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.

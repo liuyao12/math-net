@@ -787,7 +787,7 @@ function populateComparisonSelect() {
     option.value = node.id;
     const alignment = node.comparison.alignment === "foundation-aligned"
       ? "foundation-aligned"
-      : `${node.proofs.length} exact routes`;
+      : `${node.comparison.routes?.length || 0} exact routes`;
     option.textContent = `${node.comparison.title || displayLabelFor(node)} · ${alignment}`;
     select.append(option);
   });
@@ -1268,8 +1268,10 @@ function renderInspector() {
   const proofList = node.proofs || [];
   const independentProofs = proofList.filter((proof) => proof.proofKind !== "delegation");
   const hasProofComparison = Boolean(node.comparison);
-  const proofDependencies = proofDependencySummaries(node.id, proofList);
-  const proofDifference = proofDependencyDifference(node.id, proofList);
+  // A checked alias is navigable provenance, but it does not contribute a
+  // proof branch or a mathematical difference between routes.
+  const proofDependencies = proofDependencySummaries(node.id, independentProofs);
+  const proofDifference = proofDependencyDifference(node.id, independentProofs);
   const delegations = new Map();
   (node.proofDelegations || []).forEach((delegation) => {
     if (!delegations.has(delegation.proof)) delegations.set(delegation.proof, []);
@@ -1335,7 +1337,7 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Graph role</div><p><strong>${escapeHtml(node.presentation.category)}</strong> · ${escapeHtml(node.presentation.reason)}</p><p class="muted-note">Presentation heuristic, not a logical distinction in Lean.</p></div>`
     : "";
   const allProofsControl = hasProofComparison && proofList.length > 1
-    ? `<button class="proof-all ${state.selectedProofId ? "" : "selected"}" data-all-proofs><span class="proof-all-glyph">◎</span>All routes <small>merged comparison</small></button>`
+    ? `<button class="proof-all ${state.selectedProofId ? "" : "selected"}" data-all-proofs><span class="proof-all-glyph">◎</span>All proof routes <small>merged comparison</small></button>`
     : "";
   const proofs = proofList.map((proof) => {
     const summary = proofDependencies.get(proof.id);
@@ -1397,7 +1399,7 @@ function renderInspector() {
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
-    ${proofs ? `<div class="detail-block"><div class="detail-label">${hasProofComparison ? "Proof routes · select one to filter dependencies" : "Lean declarations and checked aliases"}</div><div class="proof-list">${allProofsControl}${proofs}</div></div>` : ""}
+    ${proofs ? `<div class="detail-block"><div class="detail-label">${hasProofComparison ? "Proof routes and checked aliases · select a route to filter dependencies" : "Lean declarations and checked aliases"}</div><div class="proof-list">${allProofsControl}${proofs}</div></div>` : ""}
     ${routeDifference}
     ${mathematicalCoreAnchor}
     ${foundationAnchors ? `<div class="detail-block"><div class="detail-label">Native real foundations</div><div class="tag-list">${foundationAnchors}</div></div>` : ""}

@@ -57,6 +57,19 @@ theorem trig_addition_euler_route (x y : ℝ) :
     rw [Complex.exp_ofReal_mul_I_im (x + y)] at hi
     simpa [Complex.mul_im, add_comm] using hi
 
+/-- The cosine addition formula derived through the complex-exponential
+route.  Its statement is deliberately identical to `Real.cos_add`, allowing
+the proof landscapes to meet at one Lean-checked proposition. -/
+theorem trig_addition_euler_cos_route (x y : ℝ) :
+    Real.cos (x + y) = Real.cos x * Real.cos y - Real.sin x * Real.sin y :=
+  (trig_addition_euler_route x y).1
+
+/-- The sine addition formula derived through the same complex-exponential
+route. -/
+theorem trig_addition_euler_sin_route (x y : ℝ) :
+    Real.sin (x + y) = Real.sin x * Real.cos y + Real.cos x * Real.sin y :=
+  (trig_addition_euler_route x y).2
+
 def trigAdditionEulerRoute : Prop :=
   ∀ x y : ℝ,
     Real.cos (x + y) = Real.cos x * Real.cos y - Real.sin x * Real.sin y ∧
