@@ -71,7 +71,7 @@ if [[ ! -s "$raw_graph_tmp" ]]; then
   exit 1
 fi
 python3 tools/MergeGraph.py --comparisons "$manifest" < "$raw_graph_tmp" > "$project_tmp"
-python3 tools/ValidateGraph.py "$project_tmp"
+python3 tools/ValidateGraph.py "$project_tmp" --comparisons "$manifest"
 python3 tools/GenerateExactMergeChecks.py "$project_tmp" > "$checks_tmp"
 lake env lean "$checks_tmp"
 python3 tools/BuildCatalogue.py < "$project_tmp" > "$catalogue_tmp"

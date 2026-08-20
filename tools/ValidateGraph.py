@@ -12,7 +12,7 @@ def fail(message: str) -> None:
     raise SystemExit(f"graph validation failed: {message}")
 
 
-def main(path: str) -> None:
+def main(path: str, manifest_path: str | None = None) -> None:
     graph = json.loads(Path(path).read_text())
     nodes = graph.get("nodes", [])
     edges = graph.get("edges", [])
@@ -78,6 +78,39 @@ def main(path: str) -> None:
             if delegation.get("proof") not in proof_ids or not delegation.get("declaration"):
                 fail(f"comparison {node['id']} has malformed adapter delegation")
 
+    if manifest_path:
+        manifest = json.loads(Path(manifest_path).read_text())
+        # A singleton in the registry can be a concrete benchmark (such as
+        # irrationality of √2) whose comparison lives upstream.  Require a
+        # generated landscape only for actual multi-route comparisons,
+        # foundation alignments, and explicitly marked checked presentations.
+        registered = {
+            item.get("id"): item
+            for item in manifest.get("comparisons", [])
+            if item.get("id") and (
+                len(item.get("routes", [])) > 1
+                or item.get("alignment") in {"foundation-aligned", "presentation"}
+            )
+        }
+        graph_comparisons = {
+            comparison.get("registry"): node
+            for node in nodes
+            if (comparison := node.get("comparison")) and comparison.get("registry")
+        }
+        missing = sorted(set(registered) - set(graph_comparisons))
+        if missing:
+            fail(f"registered comparison(s) absent from generated graph: {', '.join(missing)}")
+        for comparison_id, registered_comparison in registered.items():
+            node = graph_comparisons[comparison_id]
+            actual = {proof.get("declaration") for proof in node.get("proofs", [])}
+            expected = {route.get("declaration") for route in registered_comparison.get("routes", [])}
+            absent_routes = sorted(expected - actual)
+            if absent_routes:
+                fail(
+                    f"registered route(s) absent from {comparison_id}: "
+                    f"{', '.join(absent_routes)}"
+                )
+
     print(
         f"validated {len(nodes)} nodes, {len(edges)} proof edges, "
         f"{exact_merges} exact comparisons, {aligned} foundation-aligned comparisons, "
@@ -86,6 +119,9 @@ def main(path: str) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        raise SystemExit("usage: ValidateGraph.py project.json")
-    main(sys.argv[1])
+    if len(sys.argv) == 2:
+        main(sys.argv[1])
+    elif len(sys.argv) == 4 and sys.argv[2] == "--comparisons":
+        main(sys.argv[1], sys.argv[3])
+    else:
+        raise SystemExit("usage: ValidateGraph.py project.json [--comparisons comparisons.json]")
