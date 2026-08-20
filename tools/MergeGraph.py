@@ -170,6 +170,19 @@ def annotate_presentation(nodes: list[dict]) -> None:
     def implementation_module(node: dict) -> bool:
         return node.get("locator", "").startswith(implementation_modules)
 
+    def elaboration_infrastructure(node: dict) -> bool:
+        """Recognise declaration *roles*, rather than maintaining a blacklist.
+
+        Lean generates and passes these instance witnesses through proof terms,
+        but their conventional terminal names say that they establish
+        decidability/finiteness/inhabitedness rather than a mathematical step.
+        The rule deliberately uses only the terminal declaration component, so
+        a mathematical object such as ``Function.fixedPoints`` stays visible
+        while its ``.decidable`` instance does not crowd the proof comparison.
+        """
+        terminal = node.get("namespace", node.get("label", "")).rsplit(".", 1)[-1].lower()
+        return terminal in {"decidable", "fintype", "inhabited"} or terminal.startswith("inst")
+
     for node in nodes:
         declaration_kind = node.get("declarationKind", "")
         declaration = node.get("namespace", node.get("label", ""))
@@ -177,6 +190,9 @@ def annotate_presentation(nodes: list[dict]) -> None:
         if generated or node.get("structuralProjection", False) or implementation_module(node):
             category = "implementation"
             reason = "Kernel-generated declaration, Lean structure projection, or tactic/meta implementation declaration."
+        elif elaboration_infrastructure(node):
+            category = "routine"
+            reason = "Conventional Lean instance witness for decidability, finiteness, or inhabitedness; retained but suppressed in the explanatory view."
         elif (
             declaration_kind in {"theorem", "opaque"}
             and foundational(node)
