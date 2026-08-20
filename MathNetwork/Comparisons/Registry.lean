@@ -8,6 +8,7 @@ import MathNetwork.Comparisons.ComputableDeMoivre
 import MathNetwork.Comparisons.ComputablePiGeometry
 import MathNetwork.Comparisons.ComputableLogarithm
 import MathNetwork.Comparisons.ComputableNilakantha
+import MathNetwork.Comparisons.ComputableRotationODE
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 import MathNetwork.Euler.Identity
@@ -222,6 +223,36 @@ def eulerIdentity : CheckedComparison where
     }
   ]
 
+/-- Euler's complex-exponential series and the constant-coefficient rotation
+ODE meet here at a finite rational matrix identity.  This is deliberately a
+finite Peano--Baker statement, not a claim about an unconstructed continuous
+solution operator. -/
+def finiteRotationEulerODEBridge : CheckedComparison where
+  id := "finite-rotation-euler-ode-bridge"
+  title := "Finite rotation: Euler series and Peano–Baker ODE"
+  description := "A finite constant-coefficient rotation ODE expansion is exactly the alternating cosine–sine matrix polynomial from the complex exponential route."
+  area := "Differential equations and complex analysis"
+  statement := ∀ (T : Rat) (n : Nat),
+    ComputableAnalysis.LinearODE.constantPeanoBakerSimplexPartial
+        ComputableAnalysis.LinearODE.RotationSystem.generator T
+        (ComputableAnalysis.RotationSeries.rotationTailTerms T n) =
+      ComputableAnalysis.LinearODE.matrixAdd
+        (ComputableAnalysis.LinearODE.matrixScale
+          (ComputableAnalysis.RotationSeries.rotationCenter T n).re
+          (ComputableAnalysis.LinearODE.matrixIdentity 2))
+        (ComputableAnalysis.LinearODE.matrixScale
+          (ComputableAnalysis.RotationSeries.rotationCenter T n).im
+          ComputableAnalysis.LinearODE.RotationSystem.generator)
+  routes := [
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.ComputableRotationODE.rotationCenter_eq_constantPeanoBakerPartial"
+      title := "Peano–Baker rotation polynomial"
+      description := "The even and odd matrix powers of the quarter-turn generator reduce to the finite cosine and sine prefixes."
+      proof := MathNetwork.ComputableRotationODE.rotationCenter_eq_constantPeanoBakerPartial
+    }
+  ]
+
 /-- A finite, exact Fourier application.  This is deliberately presented as a
 four-point rational-coordinate theorem rather than as an infinite-transform
 or completeness result. -/
@@ -317,7 +348,7 @@ not comparisons until a second route has been bridged to the same checked
 statement. -/
 def presentations : List CheckedComparison :=
   [telescopingReciprocalSeries, sineTaylorIntervalBridge, finiteDeMoivre,
-    eulerIdentity, fourPointParseval, piCircleAreaGeometricArctangent]
+    eulerIdentity, finiteRotationEulerODEBridge, fourPointParseval, piCircleAreaGeometricArctangent]
     ++ [logTwoSeriesReciprocalIntegral, nilakanthaLeibnizPi]
 
 /-- The two general irrational-square-root criteria are the same comparison
