@@ -7,6 +7,7 @@ import MathNetwork.Comparisons.ComputableSeries
 import MathNetwork.Comparisons.ComputableDeMoivre
 import MathNetwork.Comparisons.ComputablePiGeometry
 import MathNetwork.Comparisons.ComputableLogarithm
+import MathNetwork.Comparisons.ComputableNilakantha
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 import MathNetwork.Euler.Identity
@@ -288,6 +289,26 @@ def logTwoSeriesReciprocalIntegral : CheckedComparison where
     }
   ]
 
+/-- A whole-series comparison for π, rather than a finite numerical
+cross-check: Nilakantha's accelerated alternating series is certified to
+represent the same computable real as the classical Leibniz series. -/
+def nilakanthaLeibnizPi : CheckedComparison where
+  id := "nilakantha-leibniz-pi"
+  title := "π: Nilakantha series equals Leibniz series"
+  description := "Two infinite rational alternating-series algorithms for π are proved equivalent by termwise finite rational bounds."
+  area := "Series and π"
+  statement :=
+    ComputableAnalysis.piNilakantha.Equiv ComputableAnalysis.piLeibniz
+  routes := [
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.ComputableNilakantha.nilakantha_equiv_leibniz"
+      title := "Nilakantha and Leibniz alternating series"
+      description := "A termwise rational comparison transports the accelerated Nilakantha enclosure to the classical Leibniz enclosure at every requested precision."
+      proof := MathNetwork.ComputableNilakantha.nilakantha_equiv_leibniz
+    }
+  ]
+
 def all : List CheckedComparison :=
   [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
 
@@ -297,7 +318,7 @@ statement. -/
 def presentations : List CheckedComparison :=
   [telescopingReciprocalSeries, sineTaylorIntervalBridge, finiteDeMoivre,
     eulerIdentity, fourPointParseval, piCircleAreaGeometricArctangent]
-    ++ [logTwoSeriesReciprocalIntegral]
+    ++ [logTwoSeriesReciprocalIntegral, nilakanthaLeibnizPi]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.
