@@ -14,6 +14,7 @@ const REPO_ROOT = window.location.pathname.includes("/web/") ? "../" : "./";
 const APP_REVISION = new URL(import.meta.url).searchParams.get("v") || "dev";
 const versionedAsset = (url) => `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(APP_REVISION)}`;
 const THEOREMS_URL = versionedAsset("./theorems.json");
+const COMPARISONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/comparisons.json`);
 const DATA_URLS = [versionedAsset(`${REPO_ROOT}MathNetwork/Graph/project.json`)];
 const DECLARATION_LABELS = {
   theorem: "Theorems",
@@ -91,6 +92,8 @@ const FOCUS_Y_FRACTION = 0.62;
 const state = {
   graph: null,
   theorems: [],
+  comparisons: [],
+  graphPromise: null,
   // A bare visit begins with the proof-landscape overview. Deep links retain
   // their theorem or graph focus through the query parameters.
   theoremNumber: requestedTheorem || theoremForGraph() || null,
@@ -327,7 +330,7 @@ async function loadProofSource(node, container, request, selectedProof = null) {
 }
 
 function nodeMap() {
-  return new Map(state.graph.nodes.map((node) => [node.id, node]));
+  return new Map((state.graph?.nodes || []).map((node) => [node.id, node]));
 }
 
 function declarationKindFor(node) {
@@ -463,6 +466,10 @@ function searchCandidates(query) {
 
 function renderSearchResults() {
   const container = $("#search-results");
+  if (!state.graph && state.search.trim().length >= 2) {
+    container.innerHTML = `<div class="search-result-meta">Loading declaration index…</div>`;
+    return;
+  }
   const matches = searchCandidates(state.search);
   container.innerHTML = matches.map((node) => `<button class="search-result" role="option" data-search-node="${escapeHtml(node.id)}"><span class="search-result-name">${escapeHtml(node.label)}</span><span class="search-result-meta">${escapeHtml(declarationKindFor(node))}${node.namespace ? ` · ${escapeHtml(node.namespace)}` : ""}</span></button>`).join("");
   container.querySelectorAll("[data-search-node]").forEach((button) => button.addEventListener("click", () => focusDeclaration(button.dataset.searchNode)));
@@ -485,7 +492,7 @@ function focusDeclaration(nodeId) {
   $("#search-results").replaceChildren();
   $("#theorem-select").value = "";
   const comparisonSelect = $("#comparison-select");
-  if (comparisonSelect) comparisonSelect.value = nodeId;
+  if (comparisonSelect) comparisonSelect.value = node.comparison?.registry || "";
   const next = new URL(window.location.href);
   next.searchParams.delete("theorem");
   next.searchParams.delete("graph");
@@ -498,6 +505,17 @@ function focusDeclaration(nodeId) {
   renderInspector();
   updateWorkspaceContext();
   beginProgressiveReveal();
+}
+
+async function openComparison(comparisonId) {
+  await ensureGraph();
+  const comparison = state.comparisons.find((candidate) => candidate.id === comparisonId);
+  const declarations = new Set((comparison?.routes || []).map((route) => route.declaration));
+  const node = state.graph?.nodes.find((candidate) =>
+    candidate.comparison?.registry === comparisonId ||
+    declarations.has(candidate.namespace) ||
+    (candidate.proofs || []).some((proof) => declarations.has(proof.declaration)));
+  if (node) focusDeclaration(node.id);
 }
 
 function focusDistances(nodeId, edges, maxDepth = 3) {
@@ -792,41 +810,35 @@ function populateTheoremSelect() {
 
 function populateComparisonSelect() {
   const select = $("#comparison-select");
-  if (!select || !state.graph) return;
-  const comparisons = state.graph.nodes
-    // Canonicalization can make an imported declaration (rather than the
-    // local adapter) the representative node for a checked presentation.
-    // The registry metadata, not its namespace, determines whether it is a
-    // selectable proof landscape.
-    .filter((node) => node.comparison &&
-      ((node.proofs || []).length > 1 || node.comparison.alignment === "presentation"))
-    .sort((left, right) => (left.comparison.title || displayLabelFor(left))
-      .localeCompare(right.comparison.title || displayLabelFor(right)));
+  if (!select) return;
+  const comparisons = state.comparisons
+    .filter((comparison) => comparison.routes?.length > 0)
+    .sort((left, right) => left.title.localeCompare(right.title));
   const groups = [
     ["exact", "Exact merged propositions"],
     ["foundation-aligned", "Foundation-aligned routes"],
     ["presentation", "Checked applications"],
   ];
   groups.forEach(([alignment, label]) => {
-    const items = comparisons.filter((node) => node.comparison.alignment === alignment);
+    const items = comparisons.filter((comparison) => (comparison.alignment || "exact") === alignment);
     if (!items.length) return;
     const group = document.createElement("optgroup");
     group.label = label;
-    items.forEach((node) => {
+    items.forEach((comparison) => {
     const option = document.createElement("option");
-    option.value = node.id;
-    const routeSummary = node.comparison.alignment === "foundation-aligned"
+    option.value = comparison.id;
+    const routeSummary = comparison.alignment === "foundation-aligned"
       ? "foundation-aligned"
-      : node.comparison.alignment === "presentation"
+      : comparison.alignment === "presentation"
         ? "checked presentation"
-        : `${node.comparison.routes?.length || 0} exact routes`;
-    option.textContent = `${node.comparison.title || displayLabelFor(node)} · ${routeSummary}`;
+        : `${comparison.routes?.length || 0} exact routes`;
+    option.textContent = `${comparison.title} · ${routeSummary}`;
     group.append(option);
   });
     select.append(group);
   });
   select.addEventListener("change", (event) => {
-    if (event.target.value) focusDeclaration(event.target.value);
+    if (event.target.value) openComparison(event.target.value);
   });
 }
 
@@ -842,7 +854,8 @@ function updateTheoremNote() {
     : "catalogued · dependency graph not imported yet";
 }
 
-function selectTheoremNode() {
+async function selectTheoremNode() {
+  await ensureGraph();
   const theorem = state.theorems.find((item) => String(item.number) === String(state.theoremNumber));
   const node = state.graph?.nodes.find((item) => theorem?.namespace === item.namespace ||
     (theorem?.namespace && (item.formalizations || []).some((formalization) => formalization.name === theorem.namespace)));
@@ -1299,11 +1312,10 @@ function renderInspector() {
   const node = nodeMap().get(state.selectedId);
   if (!node) {
     state.sourceRequest += 1;
-    const comparisons = (state.graph?.nodes || [])
-      .filter((candidate) => candidate.comparison?.title)
-      .sort((left, right) => left.comparison.title.localeCompare(right.comparison.title));
-    const comparisonCard = (candidate) => {
-      const comparison = candidate.comparison;
+    const comparisons = state.comparisons
+      .filter((comparison) => comparison.title)
+      .sort((left, right) => left.title.localeCompare(right.title));
+    const comparisonCard = (comparison) => {
       const routes = comparison.routes || [];
       const alignment = comparison.alignment === "foundation-aligned"
         ? "foundation-aligned"
@@ -1311,22 +1323,23 @@ function renderInspector() {
           ? "checked presentation"
           : `${routes.length} exact proof routes`;
       const repositories = [...new Set(routes.map((route) => route.repository))];
-      return `<button class="comparison-overview-card" data-comparison-node="${escapeHtml(candidate.id)}"><span class="comparison-overview-title">${escapeHtml(comparison.title)}</span><span class="comparison-overview-description">${escapeHtml(comparison.description || comparison.note || "")}</span><span class="comparison-overview-meta">${repositories.map((repository) => `<span class="proof-color" style="background:${escapeHtml(repositoryColor(repository))}"></span>${escapeHtml((REPOSITORIES[repository] || REPOSITORIES.unknown).label)}`).join(" ")} · ${escapeHtml(alignment)}</span></button>`;
+      const href = `?comparison=${encodeURIComponent(comparison.id)}`;
+      return `<a class="comparison-overview-card" href="${escapeHtml(href)}"><span class="comparison-overview-title">${escapeHtml(comparison.title)}</span><span class="comparison-overview-description">${escapeHtml(comparison.description || comparison.note || "")}</span><span class="comparison-overview-meta">${repositories.map((repository) => `<span class="proof-color" style="background:${escapeHtml(repositoryColor(repository))}"></span>${escapeHtml((REPOSITORIES[repository] || REPOSITORIES.unknown).label)}`).join(" ")} · ${escapeHtml(alignment)}</span></a>`;
     };
     const overviewGroups = [
       ["exact", "Exact merged propositions", "Lean has checked that the route statements are definitionally identical."],
       ["foundation-aligned", "Foundation-aligned routes", "The mathematical target is aligned, but a representation bridge is still explicit."],
       ["presentation", "Checked applications", "One complete route is ready for inspection and for a future comparison."],
     ].map(([alignment, title, description]) => ({ alignment, title, description,
-      nodes: comparisons.filter((candidate) => candidate.comparison.alignment === alignment) }))
+      nodes: comparisons.filter((comparison) => (comparison.alignment || "exact") === alignment) }))
       .filter((group) => group.nodes.length);
     const groupedCards = (group) => {
       if (group.alignment !== "presentation") return `<div class="comparison-overview-list">${group.nodes.map(comparisonCard).join("")}</div>`;
       const areas = new Map();
-      group.nodes.forEach((node) => {
-        const area = node.comparison.area || "General mathematics";
+      group.nodes.forEach((comparison) => {
+        const area = comparison.area || "General mathematics";
         if (!areas.has(area)) areas.set(area, []);
-        areas.get(area).push(node);
+        areas.get(area).push(comparison);
       });
       return [...areas.entries()]
         .sort(([left], [right]) => left.localeCompare(right))
@@ -1337,9 +1350,6 @@ function renderInspector() {
       ? `<div class="comparison-overview"><div class="detail-label">Proof landscapes</div><p>Browse exact proof comparisons, explicit foundation boundaries, and single checked applications that are ready for a future comparison.</p>${overviewGroups.map((group) => `<section class="comparison-overview-group"><h3>${escapeHtml(group.title)}</h3><p>${escapeHtml(group.description)}</p>${groupedCards(group)}</section>`).join("")}</div>`
       : "";
     content.innerHTML = `<div class="empty-inspector"><div class="empty-glyph">◎</div><p>Select a declaration to inspect its Lean statement, verification status, and proof dependencies.</p>${overview}</div>`;
-    content.querySelectorAll("[data-comparison-node]").forEach((button) => {
-      button.addEventListener("click", () => focusDeclaration(button.dataset.comparisonNode));
-    });
     return;
   }
   const sourceRequest = ++state.sourceRequest;
@@ -2191,16 +2201,14 @@ function draw() {
   updateHighlight();
 }
 
-async function load() {
-  try {
-    const [responses, theoremResponse] = await Promise.all([
-      Promise.all(DATA_URLS.map((url) => fetch(url))),
-      fetch(THEOREMS_URL),
-    ]);
+async function ensureGraph() {
+  if (state.graph) return state.graph;
+  if (state.graphPromise) return state.graphPromise;
+  state.graphPromise = (async () => {
+    const responses = await Promise.all(DATA_URLS.map((url) => fetch(url)));
     const failed = responses.find((response) => !response.ok);
     if (failed) throw new Error(`Could not load ${DATA_URLS.join(", ")}`);
     const graphs = await Promise.all(responses.map((response) => response.json()));
-    if (theoremResponse.ok) state.theorems = await theoremResponse.json();
     state.graph = graphs.length === 1 ? graphs[0] : {
       schemaVersion: graphs[0].schemaVersion,
       graphId: "math-net-project",
@@ -2212,18 +2220,39 @@ async function load() {
     state.kinds = new Set(availableDeclarationKinds());
     $(".data-source code").textContent = DATA_URLS.map((url) => url.split("/").pop()).join(" + ");
     $("#loading-state").remove();
-    populateTheoremSelect();
-    populateComparisonSelect();
     kindControls();
     renderProofLegend();
-    const declaration = (requestedDeclaration && state.graph.nodes.find((node) => node.namespace === requestedDeclaration || node.id === requestedDeclaration)) ||
-      (requestedComparison && state.graph.nodes.find((node) => node.comparison?.registry === requestedComparison));
+    return state.graph;
+  })();
+  try {
+    return await state.graphPromise;
+  } catch (error) {
+    state.graphPromise = null;
+    throw error;
+  }
+}
+
+async function load() {
+  try {
+    const [theoremResponse, comparisonResponse] = await Promise.all([
+      fetch(THEOREMS_URL),
+      fetch(COMPARISONS_URL),
+    ]);
+    if (theoremResponse.ok) state.theorems = await theoremResponse.json();
+    if (comparisonResponse.ok) state.comparisons = (await comparisonResponse.json()).comparisons || [];
+    $("#graph-badge").textContent = `${state.comparisons.length} proof landscapes`;
+    populateTheoremSelect();
+    populateComparisonSelect();
+    const needsGraph = Boolean(requestedDeclaration || requestedComparison || state.theoremNumber);
+    if (needsGraph) await ensureGraph();
+    const declaration = state.graph && ((requestedDeclaration && state.graph.nodes.find((node) => node.namespace === requestedDeclaration || node.id === requestedDeclaration)) ||
+      (requestedComparison && state.graph.nodes.find((node) => node.comparison?.registry === requestedComparison)));
     if (declaration) {
       focusDeclaration(declaration.id);
       const route = requestedRoute && (declaration.proofs || []).find((proof) => proof.declaration === requestedRoute);
       if (route) selectProof(route.id);
     } else if (state.theoremNumber) {
-      selectTheoremNode();
+      await selectTheoremNode();
     } else {
       // The landing page is a proof-landscape catalogue, not an invitation
       // to render every imported declaration.  Building the full unfocused
@@ -2231,6 +2260,7 @@ async function load() {
       // choose a theorem.  A focused selection still renders its actual
       // dependency neighborhood immediately.
       renderInspector();
+      $("#loading-state").remove();
       $("#visible-node-count").textContent = "0";
       $("#visible-edge-count").textContent = "0";
     }
@@ -2246,7 +2276,10 @@ async function load() {
 $("#search").addEventListener("input", (event) => {
   state.search = event.target.value.trim();
   renderSearchResults();
-  if (!state.search) draw();
+  if (state.search.length >= 2 && !state.graph) {
+    ensureGraph().then(() => renderSearchResults()).catch(() => renderSearchResults());
+  }
+  if (!state.search && state.graph) draw();
 });
 $("#search").addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
