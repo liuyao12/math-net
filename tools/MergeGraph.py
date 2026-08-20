@@ -90,6 +90,21 @@ def comparison_manifest(path: str | None) -> dict[str, dict]:
     }
 
 
+def route_audit(path: str | None) -> dict[str, dict]:
+    """Read per-route trust facts emitted by ``CheckNoSorry.py --json``."""
+    if not path:
+        return {}
+    data = json.loads(Path(path).read_text())
+    return {
+        route["declaration"]: {
+            "sorryFree": bool(route.get("sorryFree", False)),
+            "nativeDecide": bool(route.get("nativeDecide", False)),
+        }
+        for route in data.get("routes", [])
+        if route.get("declaration")
+    }
+
+
 def annotate_importance(nodes: list[dict], edges: list[dict]) -> None:
     """Add reuse/reach signals without pretending they are proof difficulty.
 
@@ -211,8 +226,9 @@ def annotate_presentation(nodes: list[dict]) -> None:
         node["presentation"] = {"category": category, "reason": reason}
 
 
-def merge(graph: dict, manifest_path: str | None = None) -> dict:
+def merge(graph: dict, manifest_path: str | None = None, audit_path: str | None = None) -> dict:
     registered_routes = comparison_manifest(manifest_path)
+    audited_routes = route_audit(audit_path)
     nodes = graph["nodes"]
     node_by_id = {node["id"]: node for node in nodes}
     groups: dict[tuple, list[dict]] = defaultdict(list)
@@ -250,6 +266,8 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
         for node in group:
             old_to_new[node["id"]] = representative["id"]
             record = proof_record(node)
+            if record["declaration"] in audited_routes:
+                record["audit"] = audited_routes[record["declaration"]]
             proof_for_old[node["id"]] = record["id"]
             merged["proofs"].append(record)
             if node.get("kind") == "source" and node.get("namespace"):
@@ -457,10 +475,19 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
 
 if __name__ == "__main__":
     manifest = None
-    if len(sys.argv) == 3 and sys.argv[1] == "--comparisons":
-        manifest = sys.argv[2]
-    elif len(sys.argv) != 1:
-        raise SystemExit("usage: MergeGraph.py [--comparisons manifest.json]")
+    audit = None
+    arguments = sys.argv[1:]
+    while arguments:
+        option = arguments.pop(0)
+        if not arguments:
+            raise SystemExit("usage: MergeGraph.py [--comparisons manifest.json] [--route-audit audit.json]")
+        value = arguments.pop(0)
+        if option == "--comparisons":
+            manifest = value
+        elif option == "--route-audit":
+            audit = value
+        else:
+            raise SystemExit("usage: MergeGraph.py [--comparisons manifest.json] [--route-audit audit.json]")
     graph = json.load(sys.stdin)
-    json.dump(merge(graph, manifest), sys.stdout, separators=(",", ":"), sort_keys=True)
+    json.dump(merge(graph, manifest, audit), sys.stdout, separators=(",", ":"), sort_keys=True)
     sys.stdout.write("\n")

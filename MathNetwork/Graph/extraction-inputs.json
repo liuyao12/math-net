@@ -50,7 +50,7 @@
     "tools/BuildGraphMathlibSqrt.lean": "2d1b4f3bda359af26c307c0f4c082af1f2e55524b4af2a9a9278085564d0baad",
     "tools/CombineRawGraphs.py": "53ee2d1dbd845b2f4aafe299234ec81db5eb881d693892563b485edd04c8d886",
     "tools/GraphFreshness.py": "7cf83ffbdaaab81112893a8cb05b73812aaf2b83e0733bcb8da348a368925430",
-    "tools/build-graph.sh": "fb76fd1c49bbdfd11be914d487f0f5164ca9f4f5f2e36704f5f4ec9dda5e28f2"
+    "tools/build-graph.sh": "b78bbbfacc86dd344c38dd70ee33cccb0fe10d008a03b4b618d457a2fb6ac0a6"
   },
   "schemaVersion": 1
 }

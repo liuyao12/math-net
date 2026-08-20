@@ -1440,10 +1440,15 @@ function renderInspector() {
     const directInputs = summary && isExactComparison
       ? `<small class="proof-dependency-summary">${summary.total} direct inputs · ${summary.routeOnly} route-only · ${summary.shared} shared</small>`
       : "";
+    const auditNote = proof.audit?.nativeDecide
+      ? `<small class="proof-audit computational">sorry-free · uses native_decide computation</small>`
+      : proof.audit?.sorryFree
+        ? `<small class="proof-audit">sorry-free route</small>`
+        : "";
     const delegationNote = delegated ? `<small class="proof-delegation">delegates to ${escapeHtml(delegated)}</small>` : "";
     const methodDescription = proof.routeDescription ? `<small class="proof-method">${escapeHtml(proof.routeDescription)}</small>` : "";
     const leanDeclaration = proof.routeTitle ? `<small class="proof-declaration">Lean · ${escapeHtml(declarationName)}</small>` : "";
-    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(proofRepository))}"></span><span>${escapeHtml(routeLabel)}${routeKind ? `<small>${escapeHtml(routeKind)}</small>` : ""}${leanDeclaration}${methodDescription}${directInputs}${delegationNote}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
+    return `<div class="proof-row ${state.selectedProofId === proof.id ? "selected" : ""}"><button class="proof-select" data-proof="${escapeHtml(proof.id)}"><span class="proof-color" style="background:${escapeHtml(repositoryColor(proofRepository))}"></span><span>${escapeHtml(routeLabel)}${routeKind ? `<small>${escapeHtml(routeKind)}</small>` : ""}${leanDeclaration}${methodDescription}${directInputs}${auditNote}${delegationNote}</span></button><span class="proof-status">${escapeHtml(proof.status || "planned")}</span></div>`;
   }).join("");
   const dependencyButtons = (nodes) => {
     const shown = nodes.slice(0, 5);

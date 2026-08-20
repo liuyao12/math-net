@@ -13,13 +13,14 @@ import json
 import re
 import subprocess
 import sys
+from argparse import ArgumentParser
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def main() -> int:
+def main(json_output: bool = False) -> int:
     manifest = subprocess.run(
         ["tools/export-comparisons.sh"],
         cwd=ROOT,
@@ -71,11 +72,18 @@ def main() -> int:
         check.stdout,
         flags=re.DOTALL,
     )
-    native_routes = [
-        declaration
-        for declaration, axioms in axiom_blocks
-        if "native_decide" in axioms
-    ]
+    axiom_map = {declaration: axioms for declaration, axioms in axiom_blocks}
+    native_routes = [declaration for declaration in declarations if "native_decide" in axiom_map.get(declaration, "")]
+    if json_output:
+        print(json.dumps({
+            "schemaVersion": 1,
+            "routes": [{
+                "declaration": declaration,
+                "sorryFree": True,
+                "nativeDecide": declaration in native_routes,
+            } for declaration in declarations],
+        }, separators=(",", ":")))
+        return 0
     print(f"checked {len(declarations)} registered Lean routes: no sorryAx")
     if native_routes:
         print(
@@ -86,4 +94,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    parser = ArgumentParser(description=__doc__)
+    parser.add_argument("--json", action="store_true", help="emit a machine-readable per-route audit")
+    raise SystemExit(main(parser.parse_args().json))
