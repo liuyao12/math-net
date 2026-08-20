@@ -84,7 +84,10 @@ every imported theorem a “proof comparison.”
 3. **Checked presentation.** A single, complete theorem is already valuable
    as a benchmark or application. It is displayed with its actual proof
    dependencies and source, but never dressed up as a second proof. A later
-   matching route can promote it into either kind of comparison.
+   matching route can promote it into either kind of comparison. A concrete
+   one-route problem such as irrationality of √2 is grouped in the explorer
+   as a **checked benchmark**: this is a pedagogical label for a checked
+   presentation, not a claim of an exact merge.
 
 This progression is intentional: math-net can catalogue useful finished work
 now, while retaining a mechanically auditable path to future proof merging.
