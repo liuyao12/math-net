@@ -1449,6 +1449,9 @@ function renderInspector() {
   const routeContext = focusedTheorem && focusedRoute && node.id !== focusedTheorem.id
     ? `<div class="route-context"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(focusedRoute)))}"></span><span>Viewing a dependency of <button class="route-context-theorem" data-neighbor="${escapeHtml(focusedTheorem.id)}">${escapeHtml(displayLabelFor(focusedTheorem))}</button> via <strong>${escapeHtml(focusedRoute.label)}</strong>.</span></div>`
     : "";
+  const focusedGraphNote = state.graphPartial
+    ? `<div class="detail-block"><div class="detail-label">Focused dependency slice</div><p>This initial view contains ${escapeHtml(String(state.graph.partialUpstreamDepth))} upstream Lean proof-use generations for fast navigation.${(state.graph.partialBoundaryNodes || []).includes(node.id) ? " This declaration has additional indexed prerequisites; use its + marker or double-click it to load the complete landscape." : " Expand a boundary declaration to continue into the complete landscape."}</p></div>`
+    : "";
   const comparisonNote = comparison
     ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : comparison.alignment === "presentation" ? "Checked presentation" : "Checked comparison"}</div>${comparison.title ? `<h3 class="comparison-title">${escapeHtml(comparison.title)}</h3>` : ""}${comparison.description ? `<p>${escapeHtml(comparison.description)}</p>` : ""}<p class="muted-note">${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : comparison.alignment === "presentation" ? " This is one fully checked route, retained as an application and a future comparison target; it makes no claim of a second route." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.routeAudit ? `<p class="muted-note">${escapeHtml(comparison.routeAudit)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
     : "";
@@ -1543,6 +1546,7 @@ function renderInspector() {
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(displayLabelFor(node))}</h2>
     ${routeContext}
+    ${focusedGraphNote}
     <div class="detail-block declaration-signature"><div class="detail-label">${formalStatementHeading}</div>${allRouteStatement || `<pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre>`}</div>
     ${mergeNote}${comparisonNote}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
