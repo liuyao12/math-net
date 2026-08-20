@@ -1892,6 +1892,54 @@ function structuralRankPositions(nodesByRank, edges, ranks, width, allNodes) {
   return positions;
 }
 
+function proofBranchTargets(nodes, edges, width) {
+  // In an all-routes view, proof use itself determines a branch membership:
+  // start from each direct dependency edge of the focused proposition and
+  // carry that membership upstream. Nodes reached by more than one route are
+  // shared and stay in the centre. This is a graph-theoretic layout hint,
+  // rather than a repository-specific left/right convention.
+  const focus = state.focusId && nodeMap().get(state.focusId);
+  const routes = !state.selectedProofId && focus
+    ? (focus.proofs || []).filter((proof) => proof.proofKind !== "delegation")
+    : [];
+  if (routes.length < 2) return new Map();
+  const routeIndex = new Map(routes.map((proof, index) => [proof.id, index]));
+  const memberships = new Map(nodes.map((node) => [node.id, new Set()]));
+  const incoming = new Map();
+  edges.forEach((edge) => {
+    if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
+    incoming.get(edge.target.id).push(edge);
+  });
+  const queue = [];
+  (incoming.get(focus.id) || []).forEach((edge) => {
+    const index = routeIndex.get(edge.proof);
+    if (index == null) return;
+    memberships.get(edge.source.id)?.add(index);
+    queue.push([edge.source.id, index]);
+  });
+  while (queue.length) {
+    const [targetId, index] = queue.shift();
+    (incoming.get(targetId) || []).forEach((edge) => {
+      const membership = memberships.get(edge.source.id);
+      if (!membership || membership.has(index)) return;
+      membership.add(index);
+      queue.push([edge.source.id, index]);
+    });
+  }
+  const targets = new Map();
+  const center = width / 2;
+  nodes.forEach((node) => {
+    const membership = memberships.get(node.id);
+    if (!membership?.size || membership.size !== 1) return;
+    const [index] = membership;
+    // Keep each branch away from the viewport edge, leaving room for Lean
+    // labels while visibly separating alternative arguments.
+    targets.set(node.id, width * ((index + 1) / (routes.length + 1)));
+  });
+  targets.set(focus.id, center);
+  return targets;
+}
+
 function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
   // `directedLayout` supplies a stable seed before this constrained pass.
   // Later reveal batches retain that seed as a suggestion, but never freeze
@@ -1904,8 +1952,11 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
   // with several genuine intermediate lemmas would begin above the canvas.
   const rankGap = Math.max(24, Math.min(52,
     (height * FOCUS_Y_FRACTION - 42) / Math.max(1, focusRank)));
+  const branchTargets = proofBranchTargets(nodes, edges, width);
   nodes.forEach((node) => {
-    node.targetX = node.id === coreId || node.id === state.focusId ? width / 2 : node.targetX ?? node.x;
+    node.targetX = node.id === coreId || node.id === state.focusId
+      ? width / 2
+      : branchTargets.get(node.id) ?? node.targetX ?? node.x;
     node.targetY = height * FOCUS_Y_FRACTION - (focusRank - (ranks.get(node.id) || 0)) * rankGap;
     node.rankY = node.targetY;
     node.y = node.rankY;
@@ -1927,7 +1978,7 @@ function rankLockedLayout(nodes, edges, ranks, width, height, coreId) {
     node.fx = pinned ? pinned.x : node.id === coreId ? width / 2 : null;
   });
   d3.forceSimulation(nodes)
-    .force("x", d3.forceX((node) => node.targetX).strength(0.13))
+    .force("x", d3.forceX((node) => node.targetX).strength((node) => branchTargets.has(node.id) ? 0.28 : 0.13))
     .force("link", d3.forceLink(edges).id((node) => node.id).distance(92).strength(0.12))
     .force("charge", d3.forceManyBody().strength(-150))
     .force("collide", d3.forceCollide().radius((node) => Math.max(18, Math.min(52, labelFor(node, nodes).length * 3.3 + 14))).strength(0.9))
