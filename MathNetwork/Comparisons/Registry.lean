@@ -25,6 +25,8 @@ structure CheckedProof (statement : Prop) where
 
 structure CheckedComparison where
   id : String
+  title : String
+  description : String
   statement : Prop
   routes : List (CheckedProof statement)
 
@@ -34,12 +36,16 @@ equality: a separately checked representation bridge is required before the
 two declarations can become one Lean proposition. -/
 structure FoundationAlignedComparison where
   id : String
+  title : String
+  description : String
   note : String
   mathematicalCore : String
   routes : List (String × String × String)
 
 def irrationalSqrtTwo : CheckedComparison where
   id := "irrational-sqrt-two"
+  title := "Irrationality of √2"
+  description := "A concrete corollary whose upstream criterion is compared separately across real-number foundations."
   statement := Irrational (√2)
   routes := [
     {
@@ -56,6 +62,8 @@ the Gaussian-integer result supplied by Mathlib and the locally assembled
 Zagier involution proof establish precisely the same Lean proposition. -/
 def fermatTwoSquares : CheckedComparison where
   id := "fermat-prime-two-squares"
+  title := "Fermat's two-square theorem"
+  description := "Every prime congruent to 1 modulo 4 is a sum of two squares, with Gaussian-integer and involution proofs."
   statement := MathNetwork.Fermat.fermatPrimeTwoSquares
   routes := [
     {
@@ -82,6 +90,8 @@ The graph keeps their routes together while making the missing real-number
 bridge explicit. -/
 def irrationalSqrtRat : FoundationAlignedComparison where
   id := "irrational-sqrt-rational"
+  title := "Irrational square roots of rational numbers"
+  description := "The shared rational-square criterion, compared over completed and computable real-number representations."
   note := "The shared mathematical core is the rational-square criterion. Mathlib uses ℝ and computable-analysis uses RealRaw for the two analytic branches; a checked representation bridge is still required before Lean can identify their irrationality predicates."
   mathematicalCore := "MathNetwork.RationalSquares.isSquare_iff_computableIsSquare"
   routes := [
@@ -91,6 +101,8 @@ def irrationalSqrtRat : FoundationAlignedComparison where
 
 def effectiveFundamentalTheorem : FoundationAlignedComparison where
   id := "effective-fundamental-theorem-of-calculus"
+  title := "Fundamental theorem of calculus"
+  description := "Integral of a derivative equals an endpoint difference, viewed through standard and computable-real formulations."
   note := "Both routes express the fundamental theorem—an integral of a derivative equals an endpoint difference—but Mathlib uses interval integrals over completed real numbers while computable-analysis uses certified rational interval algorithms. A representation bridge is required before Lean can merge them."
   mathematicalCore := "integral of derivative = endpoint difference"
   routes := [

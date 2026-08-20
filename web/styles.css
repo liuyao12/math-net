@@ -218,6 +218,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .declaration-signature { margin-top: 16px; }
 .declaration-signature .proof-source { max-height: 210px; border-left-color: var(--teal); }
 .comparison-statements { display: grid; gap: 10px; }
+.comparison-title { margin: 3px 0 7px; font-size: 15px; line-height: 1.25; letter-spacing: -.02em; }
 .comparison-statement { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.34); }
 .comparison-statement-label { display: flex; align-items: center; gap: 7px; padding: 7px 9px 4px; color: var(--muted); font: 10px var(--mono); letter-spacing: .04em; text-transform: uppercase; }
 .comparison-statement .proof-source { max-height: 145px; margin: 0; border-left: 0; border-top: 1px solid var(--line); border-radius: 0; background: rgba(255,255,255,.54); }

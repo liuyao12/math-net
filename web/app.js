@@ -780,14 +780,15 @@ function populateComparisonSelect() {
   if (!select || !state.graph) return;
   const comparisons = state.graph.nodes
     .filter((node) => node.namespace?.startsWith("MathNetwork.") && node.comparison && (node.proofs || []).length > 1)
-    .sort((left, right) => displayLabelFor(left).localeCompare(displayLabelFor(right)));
+    .sort((left, right) => (left.comparison.title || displayLabelFor(left))
+      .localeCompare(right.comparison.title || displayLabelFor(right)));
   comparisons.forEach((node) => {
     const option = document.createElement("option");
     option.value = node.id;
     const alignment = node.comparison.alignment === "foundation-aligned"
       ? "foundation-aligned"
       : `${node.proofs.length} exact routes`;
-    option.textContent = `${displayLabelFor(node)} · ${alignment}`;
+    option.textContent = `${node.comparison.title || displayLabelFor(node)} · ${alignment}`;
     select.append(option);
   });
   select.addEventListener("change", (event) => {
@@ -1309,7 +1310,7 @@ function renderInspector() {
     ? `<div class="route-context"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(focusedRoute)))}"></span><span>Viewing a dependency of <button class="route-context-theorem" data-neighbor="${escapeHtml(focusedTheorem.id)}">${escapeHtml(displayLabelFor(focusedTheorem))}</button> via <strong>${escapeHtml(focusedRoute.label)}</strong>.</span></div>`
     : "";
   const comparisonNote = comparison
-    ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : "Checked comparison"}</div><p>${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
+    ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : "Checked comparison"}</div>${comparison.title ? `<h3 class="comparison-title">${escapeHtml(comparison.title)}</h3>` : ""}${comparison.description ? `<p>${escapeHtml(comparison.description)}</p>` : ""}<p class="muted-note">${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
     : "";
   const foundationAnchors = (comparison?.foundations || []).map((foundation) => {
     const anchor = state.graph.nodes.find((item) => item.namespace === foundation.declaration);

@@ -74,6 +74,8 @@ def comparison_manifest(path: str | None) -> dict[str, dict]:
     return {
         route["declaration"]: {
             "id": comparison["id"],
+            "comparisonTitle": comparison.get("title", ""),
+            "comparisonDescription": comparison.get("description", ""),
             "repository": route["repository"],
             "alignment": comparison.get("alignment", "exact"),
             "note": comparison.get("note", ""),
@@ -308,6 +310,8 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
                 ]
             if registered:
                 merged["comparison"]["registry"] = registered[0][1]["id"]
+                merged["comparison"]["title"] = registered[0][1].get("comparisonTitle", "")
+                merged["comparison"]["description"] = registered[0][1].get("comparisonDescription", "")
                 mathematical_core = registered[0][1].get("mathematicalCore")
                 if mathematical_core:
                     merged["comparison"]["mathematicalCore"] = mathematical_core

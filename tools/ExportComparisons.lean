@@ -15,12 +15,16 @@ private def routeJson {statement : Prop} (route : CheckedProof statement) : Json
 private def comparisonJson (comparison : CheckedComparison) : Json :=
   Json.mkObj [
     ("id", comparison.id),
+    ("title", comparison.title),
+    ("description", comparison.description),
     ("routes", Json.arr (comparison.routes.map routeJson).toArray)
   ]
 
 private def alignedComparisonJson (comparison : FoundationAlignedComparison) : Json :=
   Json.mkObj [
     ("id", comparison.id),
+    ("title", comparison.title),
+    ("description", comparison.description),
     ("alignment", "foundation-aligned"),
     ("note", comparison.note),
     ("mathematicalCore", comparison.mathematicalCore),
