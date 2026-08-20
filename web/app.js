@@ -1280,18 +1280,26 @@ function renderInspector() {
     const comparisons = (state.graph?.nodes || [])
       .filter((candidate) => candidate.comparison?.title)
       .sort((left, right) => left.comparison.title.localeCompare(right.comparison.title));
+    const comparisonCard = (candidate) => {
+      const comparison = candidate.comparison;
+      const routes = comparison.routes || [];
+      const alignment = comparison.alignment === "foundation-aligned"
+        ? "foundation-aligned"
+        : comparison.alignment === "presentation"
+          ? "checked presentation"
+          : `${routes.length} exact proof routes`;
+      const repositories = [...new Set(routes.map((route) => route.repository))];
+      return `<button class="comparison-overview-card" data-comparison-node="${escapeHtml(candidate.id)}"><span class="comparison-overview-title">${escapeHtml(comparison.title)}</span><span class="comparison-overview-description">${escapeHtml(comparison.description || comparison.note || "")}</span><span class="comparison-overview-meta">${repositories.map((repository) => `<span class="proof-color" style="background:${escapeHtml(repositoryColor(repository))}"></span>${escapeHtml((REPOSITORIES[repository] || REPOSITORIES.unknown).label)}`).join(" ")} · ${escapeHtml(alignment)}</span></button>`;
+    };
+    const overviewGroups = [
+      ["exact", "Exact merged propositions", "Lean has checked that the route statements are definitionally identical."],
+      ["foundation-aligned", "Foundation-aligned routes", "The mathematical target is aligned, but a representation bridge is still explicit."],
+      ["presentation", "Checked applications", "One complete route is ready for inspection and for a future comparison."],
+    ].map(([alignment, title, description]) => ({ alignment, title, description,
+      nodes: comparisons.filter((candidate) => candidate.comparison.alignment === alignment) }))
+      .filter((group) => group.nodes.length);
     const overview = comparisons.length
-      ? `<div class="comparison-overview"><div class="detail-label">Proof landscapes</div><p>Browse exact proof comparisons, explicit foundation boundaries, and single checked applications that are ready for a future comparison.</p><div class="comparison-overview-list">${comparisons.map((candidate) => {
-        const comparison = candidate.comparison;
-        const routes = comparison.routes || [];
-        const alignment = comparison.alignment === "foundation-aligned"
-          ? "foundation-aligned"
-          : comparison.alignment === "presentation"
-            ? "checked presentation"
-            : `${routes.length} exact proof routes`;
-        const repositories = [...new Set(routes.map((route) => route.repository))];
-        return `<button class="comparison-overview-card" data-comparison-node="${escapeHtml(candidate.id)}"><span class="comparison-overview-title">${escapeHtml(comparison.title)}</span><span class="comparison-overview-description">${escapeHtml(comparison.description || comparison.note || "")}</span><span class="comparison-overview-meta">${repositories.map((repository) => `<span class="proof-color" style="background:${escapeHtml(repositoryColor(repository))}"></span>${escapeHtml((REPOSITORIES[repository] || REPOSITORIES.unknown).label)}`).join(" ")} · ${escapeHtml(alignment)}</span></button>`;
-      }).join("")}</div></div>`
+      ? `<div class="comparison-overview"><div class="detail-label">Proof landscapes</div><p>Browse exact proof comparisons, explicit foundation boundaries, and single checked applications that are ready for a future comparison.</p>${overviewGroups.map((group) => `<section class="comparison-overview-group"><h3>${escapeHtml(group.title)}</h3><p>${escapeHtml(group.description)}</p><div class="comparison-overview-list">${group.nodes.map(comparisonCard).join("")}</div></section>`).join("")}</div>`
       : "";
     content.innerHTML = `<div class="empty-inspector"><div class="empty-glyph">◎</div><p>Select a declaration to inspect its Lean statement, verification status, and proof dependencies.</p>${overview}</div>`;
     content.querySelectorAll("[data-comparison-node]").forEach((button) => {
