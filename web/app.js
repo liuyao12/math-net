@@ -211,7 +211,10 @@ function sourceUrlFor(node, proof = null) {
   if (locator?.startsWith("computable-analysis/")) {
     return `https://raw.githubusercontent.com/liuyao12/computable-analysis/main/${file}`;
   }
-  return `${REPO_ROOT}${file}`;
+  // GitHub Pages publishes the web directory, not the repository root.
+  // Use the canonical raw source for math-net declarations so Lean code is
+  // available in the deployed inspector as well as during local development.
+  return `https://raw.githubusercontent.com/liuyao12/math-net/main/${file}`;
 }
 
 function githubUrlFor(node, item = null) {
