@@ -11,9 +11,11 @@ The intended release name, local folder, and GitHub repository name are all
 
 ## Interactive explorer
 
-The first network browser is in [`web/`](web/). By default it reads the
-generated project-wide Lean declaration graph, currently containing 1,861
-nodes and 9,219 checked body-level dependency edges. It supports theorem selection,
+The first network browser is in [`web/`](web/). Its landing page first reads
+the compact checked-comparison catalogue; it loads the generated project-wide
+Lean declaration graph only when a reader chooses a theorem, route, or
+declaration search. The graph currently contains 1,861 nodes and 9,219
+checked body-level dependency edges. It supports theorem selection,
 multi-level neighborhood fading, proposition search, strict proof-dependency
 edges, structural-landmark highlighting, background-detail suppression, and
 click-to-inspect Lean source. The default theorem view shows mathematical
@@ -23,6 +25,11 @@ places the strongest upstream bridge theorem at the center of the view. The
 choice is a navigation heuristic: it compares the focused proposition's
 elaborated statement with nearby mathematical theorems, rewarding distinctive
 shared mathematical terms and not proof-automation reuse.
+For an exact multi-route comparison, dependencies used only by one proof
+settle into separate horizontal bands, while dependencies shared by the routes
+remain centred. This arrangement is calculated from proof-use reachability,
+not repository names; colors still identify the repository supplying a node
+or edge.
 The theorem-centred index is
 [`theorem-catalogue.json`](MathNetwork/Graph/theorem-catalogue.json). Run
 `python3 -m http.server 4173` from the repository root and open
@@ -65,7 +72,10 @@ every imported theorem a “proof comparison.”
 
 1. **Exact comparison.** Two or more elaborated Lean declarations have the
    same proposition type. Lean's definitional-equality checker is run over
-   each route pair, and the graph merges at that declaration node.
+   each route pair, and the graph merges at that declaration node. Each route
+   advertised as an alternative must have an independent proof body and its
+   own direct `used-in-proof` edges; a delegated adapter is recorded as
+   provenance, not counted as another argument.
 2. **Foundation-aligned comparison.** Routes express the same mathematical
    criterion over genuinely different native representations—for example,
    Mathlib's completed reals and `ComputableAnalysis.RealRaw`. They appear
