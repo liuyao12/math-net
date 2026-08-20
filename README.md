@@ -12,8 +12,8 @@ The intended release name, local folder, and GitHub repository name are all
 ## Interactive explorer
 
 The first network browser is in [`web/`](web/). By default it reads the
-generated project-wide Lean declaration graph, currently containing 1,745
-nodes and 8,982 checked body-level dependency edges. It supports theorem selection,
+generated project-wide Lean declaration graph, currently containing 1,808
+nodes and 9,104 checked body-level dependency edges. It supports theorem selection,
 multi-level neighborhood fading, proposition search, strict proof-dependency
 edges, structural-landmark highlighting, background-detail suppression, and
 click-to-inspect Lean source. The default theorem view shows mathematical
@@ -57,6 +57,27 @@ For constants such as \(\pi\), the benchmark must record what the constant
 means in each development. `Real.pi`, a circumference-derived raw real, an
 inverse-function construction, and a rotation parameter are not silently
 treated as interchangeable. Their equivalence is part of the benchmark.
+
+### Three honest states for an indexed result
+
+The explorer deliberately distinguishes three states rather than calling
+every imported theorem a “proof comparison.”
+
+1. **Exact comparison.** Two or more elaborated Lean declarations have the
+   same proposition type. Lean's definitional-equality checker is run over
+   each route pair, and the graph merges at that declaration node.
+2. **Foundation-aligned comparison.** Routes express the same mathematical
+   criterion over genuinely different native representations—for example,
+   Mathlib's completed reals and `ComputableAnalysis.RealRaw`. They appear
+   together, but the graph explicitly refuses to merge them until a checked
+   bridge has been supplied.
+3. **Checked presentation.** A single, complete theorem is already valuable
+   as a benchmark or application. It is displayed with its actual proof
+   dependencies and source, but never dressed up as a second proof. A later
+   matching route can promote it into either kind of comparison.
+
+This progression is intentional: math-net can catalogue useful finished work
+now, while retaining a mechanically auditable path to future proof merging.
 
 ## Initial research questions
 
