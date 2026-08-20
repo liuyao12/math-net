@@ -214,6 +214,33 @@ def eulerIdentity : CheckedComparison where
     }
   ]
 
+/-- A finite, exact Fourier application.  This is deliberately presented as a
+four-point rational-coordinate theorem rather than as an infinite-transform
+or completeness result. -/
+def fourPointParseval : CheckedComparison where
+  id := "four-point-parseval"
+  title := "Four-point Parseval identity"
+  description := "The unnormalised four-point Fourier transform preserves energy up to the factor four, over exact rational coordinates."
+  statement := ∀ (x₀ x₁ x₂ x₃ : Rat),
+    ComputableAnalysis.QComplex.normSq
+        (ComputableAnalysis.fourPointFourierTransform x₀ x₁ x₂ x₃ 0) +
+        ComputableAnalysis.QComplex.normSq
+          (ComputableAnalysis.fourPointFourierTransform x₀ x₁ x₂ x₃ 1) +
+        ComputableAnalysis.QComplex.normSq
+          (ComputableAnalysis.fourPointFourierTransform x₀ x₁ x₂ x₃ 2) +
+        ComputableAnalysis.QComplex.normSq
+          (ComputableAnalysis.fourPointFourierTransform x₀ x₁ x₂ x₃ 3) =
+      4 * (x₀ ^ 2 + x₁ ^ 2 + x₂ ^ 2 + x₃ ^ 2)
+  routes := [
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.ComputableFourier.fourPointFourierTransform_parseval"
+      title := "Exact rational four-point transform"
+      description := "A checked finite Fourier energy identity using the rational quarter-turn roots."
+      proof := MathNetwork.ComputableFourier.fourPointFourierTransform_parseval
+    }
+  ]
+
 def all : List CheckedComparison :=
   [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
 
@@ -221,7 +248,8 @@ def all : List CheckedComparison :=
 not comparisons until a second route has been bridged to the same checked
 statement. -/
 def presentations : List CheckedComparison :=
-  [telescopingReciprocalSeries, sineTaylorIntervalBridge, finiteDeMoivre, eulerIdentity]
+  [telescopingReciprocalSeries, sineTaylorIntervalBridge, finiteDeMoivre,
+    eulerIdentity, fourPointParseval]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.
