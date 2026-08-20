@@ -203,6 +203,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .comparison-overview-description { color: var(--muted); font-size: 11px; line-height: 1.4; }
 .comparison-overview-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; color: var(--muted); font: 9px var(--mono); letter-spacing: .02em; text-transform: uppercase; }
 .comparison-overview-meta .proof-color { width: 9px; height: 9px; margin-right: -2px; }
+.comparison-overview-verification { width: fit-content; color: var(--teal); background: var(--teal-soft); border: 1px solid #bed6cd; border-radius: 4px; padding: 3px 5px; font: 9px var(--mono); letter-spacing: .01em; }
 .empty-glyph { color: var(--line-strong); font-size: 42px; line-height: 1; }
 .node-kind { display: inline-block; padding: 5px 7px; border-radius: 4px; color: var(--blue); background: var(--blue-soft); }
 .node-kind.proof-family { color: var(--gold); background: var(--gold-soft); }

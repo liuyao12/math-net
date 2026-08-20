@@ -1322,9 +1322,14 @@ function renderInspector() {
         : comparison.alignment === "presentation"
           ? "checked presentation"
           : `${routes.length} exact proof routes`;
+      const verification = comparison.alignment === "foundation-aligned"
+        ? "✓ routes Lean-checked · bridge pending"
+        : comparison.alignment === "presentation"
+          ? "✓ Lean-checked route"
+          : `✓ Lean exact merge · ${routes.length} routes`;
       const repositories = [...new Set(routes.map((route) => route.repository))];
       const href = `?comparison=${encodeURIComponent(comparison.id)}`;
-      return `<a class="comparison-overview-card" href="${escapeHtml(href)}"><span class="comparison-overview-title">${escapeHtml(comparison.title)}</span><span class="comparison-overview-description">${escapeHtml(comparison.description || comparison.note || "")}</span><span class="comparison-overview-meta">${repositories.map((repository) => `<span class="proof-color" style="background:${escapeHtml(repositoryColor(repository))}"></span>${escapeHtml((REPOSITORIES[repository] || REPOSITORIES.unknown).label)}`).join(" ")} · ${escapeHtml(alignment)}</span></a>`;
+      return `<a class="comparison-overview-card" href="${escapeHtml(href)}"><span class="comparison-overview-title">${escapeHtml(comparison.title)}</span><span class="comparison-overview-description">${escapeHtml(comparison.description || comparison.note || "")}</span><span class="comparison-overview-meta comparison-repositories">${repositories.map((repository) => `<span class="proof-color" style="background:${escapeHtml(repositoryColor(repository))}"></span>${escapeHtml((REPOSITORIES[repository] || REPOSITORIES.unknown).label)}`).join(" ")} · ${escapeHtml(alignment)}</span><span class="comparison-overview-verification">${escapeHtml(verification)}</span></a>`;
     };
     const overviewGroups = [
       ["exact", "Exact merged propositions", "Lean has checked that the route statements are definitionally identical."],
