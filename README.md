@@ -82,7 +82,9 @@ now, while retaining a mechanically auditable path to future proof merging.
 Every declaration registered in one of these three categories is also checked
 for the absence of Lean's `sorryAx` in its transitive axiom footprint. Run
 `tools/check-comparisons.sh` to check exact statement merges and this
-no-placeholder condition together.
+no-placeholder condition together. This is deliberately narrower than an
+axiom-free claim: the audit reports routes using `native_decide` computational
+certificates separately.
 
 ## Initial research questions
 

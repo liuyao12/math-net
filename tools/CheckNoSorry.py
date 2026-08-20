@@ -10,6 +10,7 @@ that depends on the placeholder axiom produced by `sorry`.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -65,7 +66,22 @@ def main() -> int:
         print("registered route depends on sorryAx:", file=sys.stderr)
         print(check.stdout, file=sys.stderr)
         return 1
+    axiom_blocks = re.findall(
+        r"'([^']+)' depends on axioms: \[(.*?)\]",
+        check.stdout,
+        flags=re.DOTALL,
+    )
+    native_routes = [
+        declaration
+        for declaration, axioms in axiom_blocks
+        if "native_decide" in axioms
+    ]
     print(f"checked {len(declarations)} registered Lean routes: no sorryAx")
+    if native_routes:
+        print(
+            "native_decide computational axioms occur in "
+            f"{len(native_routes)} route(s): {', '.join(native_routes)}"
+        )
     return 0
 
 
