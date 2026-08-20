@@ -40,6 +40,14 @@ theorem trig_addition_sine_real_route (x y : ℝ) :
     Real.sin (x + y) = Real.sin x * Real.cos y + Real.cos x * Real.sin y := by
   exact Real.sin_add x y
 
+theorem trig_subtraction_real_cos_route (x y : ℝ) :
+    Real.cos (x - y) = Real.cos x * Real.cos y + Real.sin x * Real.sin y := by
+  exact Real.cos_sub x y
+
+theorem trig_subtraction_real_sin_route (x y : ℝ) :
+    Real.sin (x - y) = Real.sin x * Real.cos y - Real.cos x * Real.sin y := by
+  exact Real.sin_sub x y
+
 theorem trig_addition_euler_route (x y : ℝ) :
     Real.cos (x + y) = Real.cos x * Real.cos y - Real.sin x * Real.sin y ∧
     Real.sin (x + y) = Real.sin x * Real.cos y + Real.cos x * Real.sin y := by
@@ -69,6 +77,20 @@ route. -/
 theorem trig_addition_euler_sin_route (x y : ℝ) :
     Real.sin (x + y) = Real.sin x * Real.cos y + Real.cos x * Real.sin y :=
   (trig_addition_euler_route x y).2
+
+/-- The cosine subtraction formula, obtained from the complex-derived
+addition formula by the geometric reversal `y ↦ -y`. -/
+theorem trig_subtraction_euler_cos_route (x y : ℝ) :
+    Real.cos (x - y) = Real.cos x * Real.cos y + Real.sin x * Real.sin y := by
+  have h := trig_addition_euler_cos_route x (-y)
+  simpa [sub_eq_add_neg, mul_neg, sub_neg_eq_add] using h
+
+/-- The sine subtraction formula, obtained from the same complex route by
+reversing the second angle. -/
+theorem trig_subtraction_euler_sin_route (x y : ℝ) :
+    Real.sin (x - y) = Real.sin x * Real.cos y - Real.cos x * Real.sin y := by
+  have h := trig_addition_euler_sin_route x (-y)
+  simpa [sub_eq_add_neg, mul_neg] using h
 
 def trigAdditionEulerRoute : Prop :=
   ∀ x y : ℝ,

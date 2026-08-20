@@ -140,6 +140,54 @@ def sineAddition : CheckedComparison where
     }
   ]
 
+/-- A second elementary trigonometric comparison: the complex-exponential
+route reaches the subtraction identity by reversing one angle. -/
+def cosineSubtraction : CheckedComparison where
+  id := "cosine-subtraction"
+  title := "Cosine subtraction formula"
+  description := "The standard real-trigonometric formula, compared with a complex-exponential derivation followed by angle reversal."
+  statement := ∀ x y : ℝ,
+    Real.cos (x - y) = Real.cos x * Real.cos y + Real.sin x * Real.sin y
+  routes := [
+    {
+      repository := "mathlib"
+      declaration := "Real.cos_sub"
+      title := "Real trigonometry"
+      description := "Mathlib's standard real cosine subtraction theorem."
+      proof := Real.cos_sub
+    },
+    {
+      repository := "math-net"
+      declaration := "MathNetwork.Euler.trig_subtraction_euler_cos_route"
+      title := "Complex exponential and angle reversal"
+      description := "Specialize the complex-derived addition formula at the reversed second angle."
+      proof := MathNetwork.Euler.trig_subtraction_euler_cos_route
+    }
+  ]
+
+def sineSubtraction : CheckedComparison where
+  id := "sine-subtraction"
+  title := "Sine subtraction formula"
+  description := "The standard real-trigonometric formula, compared with a complex-exponential derivation followed by angle reversal."
+  statement := ∀ x y : ℝ,
+    Real.sin (x - y) = Real.sin x * Real.cos y - Real.cos x * Real.sin y
+  routes := [
+    {
+      repository := "mathlib"
+      declaration := "Real.sin_sub"
+      title := "Real trigonometry"
+      description := "Mathlib's standard real sine subtraction theorem."
+      proof := Real.sin_sub
+    },
+    {
+      repository := "math-net"
+      declaration := "MathNetwork.Euler.trig_subtraction_euler_sin_route"
+      title := "Complex exponential and angle reversal"
+      description := "Specialize the complex-derived addition formula at the reversed second angle."
+      proof := MathNetwork.Euler.trig_subtraction_euler_sin_route
+    }
+  ]
+
 /-- A finished computable-analysis application that is useful in its own
 right, even before a Mathlib representation bridge identifies it with a
 completed-real series limit. -/
@@ -341,7 +389,8 @@ def nilakanthaLeibnizPi : CheckedComparison where
   ]
 
 def all : List CheckedComparison :=
-  [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
+  [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition,
+    cosineSubtraction, sineSubtraction]
 
 /-- Checked single-route applications belong in the landscape too. They are
 not comparisons until a second route has been bridged to the same checked
