@@ -20,6 +20,12 @@ def input_paths() -> list[Path]:
         ROOT / "lake-manifest.json",
         ROOT / "tools" / "build-graph.sh",
         ROOT / "tools" / "CombineRawGraphs.py",
+        ROOT / "tools" / "MergeGraph.py",
+        ROOT / "tools" / "ValidateGraph.py",
+        ROOT / "tools" / "GenerateExactMergeChecks.py",
+        ROOT / "tools" / "BuildCatalogue.py",
+        ROOT / "tools" / "GenerateComparisonSlices.py",
+        ROOT / "tools" / "ExportSourceRevisions.py",
         ROOT / "tools" / "GraphFreshness.py",
         ROOT / "MathNetwork" / "Graph" / "Extract.lean",
     ]

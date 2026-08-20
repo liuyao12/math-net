@@ -30,6 +30,7 @@
     "lake-manifest.json": "5e3644aa2813997d0d856b9a0dd9691a45894787d9221e41f1c2e114a6e18769",
     "lakefile.toml": "e7c4f3fc211bce0212cce204e3f57b1ee74e9a23f4fc1633c23bdc6ac9a97537",
     "lean-toolchain": "1ab4858b9fbf7d82b1fcefe249ae17495c0655c5cfed31b75e1f8e8d68370108",
+    "tools/BuildCatalogue.py": "63167fb741efccb2faa27713f9b0c0d67adb52b18d610f2f92d0ce3ff25cc00e",
     "tools/BuildGraph.lean": "67747a93bc1000232bc448e52aa7ceb8be6f259aa0f0660e027db724a41cd36e",
     "tools/BuildGraphComputableDeMoivre.lean": "28e79f76d83bef7e68b4cad6258ad6f01d5df0c44f3c45f0f4e44860b2a4076b",
     "tools/BuildGraphComputableFTC.lean": "b153773276398967b0e97e9aba15d98d7357bb452d65c28f81ed41c330c6a98e",
@@ -51,7 +52,12 @@
     "tools/BuildGraphList100Taylor.lean": "6b9e20355ef5c09e1c82f4c64d9ea7adfb700b0817c18485fc9f079b0429a3dc",
     "tools/BuildGraphMathlibSqrt.lean": "2d1b4f3bda359af26c307c0f4c082af1f2e55524b4af2a9a9278085564d0baad",
     "tools/CombineRawGraphs.py": "53ee2d1dbd845b2f4aafe299234ec81db5eb881d693892563b485edd04c8d886",
-    "tools/GraphFreshness.py": "7cf83ffbdaaab81112893a8cb05b73812aaf2b83e0733bcb8da348a368925430",
+    "tools/ExportSourceRevisions.py": "846a598fabf43ea10e760740805198cb43b12569c3ad8c43efb850f4aa05d015",
+    "tools/GenerateComparisonSlices.py": "9508a38cbab5368e3b6054fef493033c6f2155f1aaa954974de2f5cb41258de9",
+    "tools/GenerateExactMergeChecks.py": "6786e04e471707f6cb671e0f6e990367ff99da4eca624802a08fb10ee070255a",
+    "tools/GraphFreshness.py": "9ab37408bc2b93381f193fd4eb7b6f8e950257e3ec34fa78d46d26441a9a3520",
+    "tools/MergeGraph.py": "3f78256dc283a2116e13dad4039d0b3a97a545c9bda36fd128bc51d7193a1f5a",
+    "tools/ValidateGraph.py": "e701b38e550bb828c89cab727b527f1f6293bbd4a07ca5b21ce3742c93c24ad8",
     "tools/build-graph.sh": "d422dd668f4a963f535e981de12e3214a7ee94444a0749c32e710ec294bd96b2"
   },
   "schemaVersion": 1
