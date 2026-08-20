@@ -7,6 +7,7 @@ import MathNetwork.Comparisons.ComputableSeries
 import MathNetwork.Comparisons.ComputableDeMoivre
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
+import MathNetwork.Euler.Identity
 
 /-!
 # Checked proposition comparisons
@@ -195,6 +196,24 @@ def finiteDeMoivre : CheckedComparison where
     }
   ]
 
+/-- The canonical complex-exponential identity is an application landmark in
+its own right. A second foundation can later be added as a route to this same
+statement once a checked complex-number bridge is available. -/
+def eulerIdentity : CheckedComparison where
+  id := "euler-identity"
+  title := "Euler's identity"
+  description := "The complex exponential at πi is −1: a central landmark whose downstream uses include trigonometric identities, differential equations, and Fourier analysis."
+  statement := Complex.exp ((Real.pi : ℂ) * Complex.I) = -1
+  routes := [
+    {
+      repository := "mathlib"
+      declaration := "MathNetwork.Euler.exp_pi_mul_I"
+      title := "Complex exponential"
+      description := "Mathlib's checked complex-exponential theorem, presented under a stable landscape declaration."
+      proof := MathNetwork.Euler.exp_pi_mul_I
+    }
+  ]
+
 def all : List CheckedComparison :=
   [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition]
 
@@ -202,7 +221,7 @@ def all : List CheckedComparison :=
 not comparisons until a second route has been bridged to the same checked
 statement. -/
 def presentations : List CheckedComparison :=
-  [telescopingReciprocalSeries, sineTaylorIntervalBridge, finiteDeMoivre]
+  [telescopingReciprocalSeries, sineTaylorIntervalBridge, finiteDeMoivre, eulerIdentity]
 
 /-- The two general irrational-square-root criteria are the same comparison
 question over Mathlib's completed reals and computable-analysis raw reals.
