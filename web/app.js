@@ -1291,6 +1291,8 @@ function renderInspector() {
   const proofList = node.proofs || [];
   const independentProofs = proofList.filter((proof) => proof.proofKind !== "delegation");
   const hasProofComparison = Boolean(node.comparison);
+  const isCheckedPresentation = node.comparison?.alignment === "presentation";
+  const isExactComparison = node.comparison?.alignment === "exact";
   // A checked alias is navigable provenance, but it does not contribute a
   // proof branch or a mathematical difference between routes.
   const proofDependencies = proofDependencySummaries(node.id, independentProofs);
@@ -1304,7 +1306,7 @@ function renderInspector() {
   // For a theorem with aliases, the theorem body is the natural statement and
   // source to show first. An adapter remains inspectable below, but does not
   // displace the underlying proof as the reader's starting point.
-  const activeProof = selectedProof || (!hasProofComparison
+  const activeProof = selectedProof || (!hasProofComparison || isCheckedPresentation
     ? (independentProofs[0] || proofList[0] || null)
     : (proofList.length === 1 ? proofList[0] : null));
   const formalizations = (node.formalizations || []).map((item) => {
@@ -1315,7 +1317,7 @@ function renderInspector() {
   }).join("");
   const tags = (node.tags || []).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
   const routes = node.assumptions ? node.assumptions.map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("") : "";
-  const mergeNote = node.declarationCount > 1 && node.comparison?.alignment !== "foundation-aligned"
+  const mergeNote = node.declarationCount > 1 && node.comparison?.alignment !== "foundation-aligned" && !isCheckedPresentation
     ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations.${hasProofComparison ? " The independent proof bodies below remain separate routes." : " Some declarations are checked aliases of another theorem; they are retained as provenance, not counted as alternative proofs."}</p></div>`
     : "";
   const comparison = node.comparison;
@@ -1359,7 +1361,7 @@ function renderInspector() {
   const presentation = node.presentation
     ? `<div class="detail-block"><div class="detail-label">Graph role</div><p><strong>${escapeHtml(node.presentation.category)}</strong> · ${escapeHtml(node.presentation.reason)}</p><p class="muted-note">Presentation heuristic, not a logical distinction in Lean.</p></div>`
     : "";
-  const allProofsControl = hasProofComparison && proofList.length > 1
+  const allProofsControl = isExactComparison && proofList.length > 1
     ? `<button class="proof-all ${state.selectedProofId ? "" : "selected"}" data-all-proofs><span class="proof-all-glyph">◎</span>All proof routes <small>merged comparison</small></button>`
     : "";
   const proofs = proofList.map((proof) => {
@@ -1376,7 +1378,7 @@ function renderInspector() {
       : proof.repository
         ? proofRepositoryLabel
         : (ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind);
-    const directInputs = summary && hasProofComparison
+    const directInputs = summary && isExactComparison
       ? `<small class="proof-dependency-summary">${summary.total} direct inputs · ${summary.routeOnly} route-only · ${summary.shared} shared</small>`
       : "";
     const delegationNote = delegated ? `<small class="proof-delegation">delegates to ${escapeHtml(delegated)}</small>` : "";
@@ -1389,7 +1391,7 @@ function renderInspector() {
     const more = nodes.length > shown.length ? `<span class="route-more">+${nodes.length - shown.length} more</span>` : "";
     return `${shown.map((dependency) => `<button class="neighbor" data-neighbor="${escapeHtml(dependency.id)}">${escapeHtml(displayLabelFor(dependency))}</button>`).join("")}${more}`;
   };
-  const routeDifference = hasProofComparison && proofDifference && proofList.length > 1 &&
+  const routeDifference = isExactComparison && proofDifference && proofList.length > 1 &&
     (proofDifference.shared.length || proofDifference.routes.some((route) => route.routeOnly.length))
     ? `<div class="detail-block route-difference"><div class="detail-label">Where proof routes diverge · direct mathematical inputs</div>${proofDifference.shared.length ? `<div class="route-difference-row"><span class="route-difference-name">Shared</span><div class="tag-list">${dependencyButtons(proofDifference.shared)}</div></div>` : ""}${proofDifference.routes.map(({ proof, routeOnly }) => routeOnly.length ? `<div class="route-difference-row"><span class="route-difference-name"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} only</span><div class="tag-list">${dependencyButtons(routeOnly)}</div></div>` : "").join("")}</div>`
     : "";
@@ -1422,7 +1424,7 @@ function renderInspector() {
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
-    ${proofs ? `<div class="detail-block"><div class="detail-label">${hasProofComparison ? "Proof routes and checked aliases · select a route to filter dependencies" : "Lean declarations and checked aliases"}</div><div class="proof-list">${allProofsControl}${proofs}</div></div>` : ""}
+    ${proofs ? `<div class="detail-block"><div class="detail-label">${isCheckedPresentation ? "Checked Lean route and adapter" : hasProofComparison ? "Proof routes and checked aliases · select a route to filter dependencies" : "Lean declarations and checked aliases"}</div><div class="proof-list">${allProofsControl}${proofs}</div></div>` : ""}
     ${routeDifference}
     ${mathematicalCoreAnchor}
     ${foundationAnchors ? `<div class="detail-block"><div class="detail-label">Native real foundations</div><div class="tag-list">${foundationAnchors}</div></div>` : ""}
