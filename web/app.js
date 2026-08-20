@@ -1419,7 +1419,13 @@ function renderInspector() {
     (proofDifference.shared.length || proofDifference.routes.some((route) => route.routeOnly.length))
     ? `<div class="detail-block route-difference"><div class="detail-label">Where proof routes diverge · direct mathematical inputs</div>${proofDifference.shared.length ? `<div class="route-difference-row"><span class="route-difference-name">Shared</span><div class="tag-list">${dependencyButtons(proofDifference.shared)}</div></div>` : ""}${proofDifference.routes.map(({ proof, routeOnly }) => routeOnly.length ? `<div class="route-difference-row"><span class="route-difference-name"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} only</span><div class="tag-list">${dependencyButtons(routeOnly)}</div></div>` : "").join("")}</div>`
     : "";
-  const proofSources = (node.proofs || []).map((proof) => `<div class="detail-block proof-source-route"><div class="detail-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} · ${escapeHtml(proof.declaration)}</div><pre class="proof-source pending" data-proof-source="${escapeHtml(proof.id)}"><code>Loading declaration…</code></pre></div>`).join("");
+  const proofSources = (node.proofs || []).map((proof) => {
+    const proofGithub = githubUrlFor(node, proof);
+    const sourceLink = proofGithub
+      ? ` <a class="source-route-link" href="${escapeHtml(proofGithub)}" target="_blank" rel="noreferrer">Open on GitHub ↗</a>`
+      : "";
+    return `<div class="detail-block proof-source-route"><div class="detail-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} · ${escapeHtml(proof.declaration)}${sourceLink}</div><pre class="proof-source pending" data-proof-source="${escapeHtml(proof.id)}"><code>Loading declaration…</code></pre></div>`;
+  }).join("");
   const incoming = neighbors.filter(({ direction }) => direction === "in");
   const outgoing = neighbors.filter(({ direction }) => direction === "out");
   const relationRows = (entries, label) => entries.length
