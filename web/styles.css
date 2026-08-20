@@ -194,6 +194,8 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .comparison-overview-group:first-of-type { margin-top: 0; }
 .comparison-overview-group h3 { margin: 0; color: var(--ink); font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
 .comparison-overview-group > p { margin: 4px 0 7px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.comparison-area-group { margin: 11px 0 0; }
+.comparison-area-group h4 { margin: 0 0 5px; color: var(--faint); font: 10px "DM Mono", ui-monospace, monospace; letter-spacing: .05em; text-transform: uppercase; }
 .comparison-overview-list { display: grid; gap: 8px; }
 .comparison-overview-card { display: grid; gap: 5px; width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 11px; background: rgba(255,255,255,.42); color: var(--ink); text-align: left; cursor: pointer; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
 .comparison-overview-card:hover { border-color: var(--blue); background: rgba(219,236,238,.55); transform: translateY(-1px); }

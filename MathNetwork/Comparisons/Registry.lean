@@ -33,6 +33,7 @@ structure CheckedComparison where
   id : String
   title : String
   description : String
+  area : String := "General mathematics"
   statement : Prop
   routes : List (CheckedProof statement)
 
@@ -144,6 +145,7 @@ def telescopingReciprocalSeries : CheckedComparison where
   id := "telescoping-reciprocal-series"
   title := "Telescoping reciprocal series"
   description := "A certified rational-interval computation of the exact value of the reciprocal triangular series."
+  area := "Series"
   statement := ComputableAnalysis.Series.triangularTelescopingRaw.Equiv
     (ComputableAnalysis.RealRaw.ofRat 2)
   routes := [
@@ -164,6 +166,7 @@ def sineTaylorIntervalBridge : CheckedComparison where
   id := "sine-alternating-taylor-bridge"
   title := "Sine: alternating series and Taylor intervals"
   description := "A checked identification of the computable alternating-series enclosure with the corresponding sine Taylor partial-sum interval."
+  area := "Trigonometry and series"
   statement := ∀ {x : Rat} (hx : 0 <= x) (hterms : ComputableAnalysis.qabs x <= 2) (n : Nat),
     (ComputableAnalysis.Series.AlternatingRaw.sineAlternatingRaw x hterms).interval n =
       ComputableAnalysis.Series.evenOddInterval
@@ -182,6 +185,7 @@ def finiteDeMoivre : CheckedComparison where
   id := "finite-de-moivre-rational-circle"
   title := "Finite De Moivre on the rational circle"
   description := "Taking a natural power commutes with multiplication of rational unit-circle points: a geometric form of De Moivre without angles, exp, or completed complex numbers."
+  area := "Geometry and algebra"
   statement := ∀ (p q : ComputableAnalysis.PiCirclePoint) (n : Nat),
     ComputableAnalysis.RationalCircle.Trigonometry.pointPow
       (ComputableAnalysis.RationalCircle.Trigonometry.pointMul p q) n =
@@ -205,6 +209,7 @@ def eulerIdentity : CheckedComparison where
   id := "euler-identity"
   title := "Euler's identity"
   description := "The complex exponential at πi is −1: a central landmark whose downstream uses include trigonometric identities, differential equations, and Fourier analysis."
+  area := "Complex analysis and trigonometry"
   statement := Complex.exp ((Real.pi : ℂ) * Complex.I) = -1
   routes := [
     {
@@ -223,6 +228,7 @@ def fourPointParseval : CheckedComparison where
   id := "four-point-parseval"
   title := "Four-point Parseval identity"
   description := "The unnormalised four-point Fourier transform preserves energy up to the factor four, over exact rational coordinates."
+  area := "Fourier analysis"
   statement := ∀ (x₀ x₁ x₂ x₃ : Rat),
     ComputableAnalysis.QComplex.normSq
         (ComputableAnalysis.fourPointFourierTransform x₀ x₁ x₂ x₃ 0) +
@@ -249,6 +255,7 @@ def piCircleAreaGeometricArctangent : CheckedComparison where
   id := "pi-circle-area-geometric-arctangent"
   title := "π: circle area equals four geometric arctangents"
   description := "The circle-area algorithm and four unit geometric arctangent sectors are certified to represent the same computable real number π."
+  area := "Geometry and trigonometry"
   statement :=
     (((4 : Nat) * ComputableAnalysis.ArctanGeometry.arctanGeom (1 : Rat) :
       ComputableAnalysis.RealRaw).Equiv ComputableAnalysis.piCircleArea)
@@ -267,6 +274,7 @@ def logTwoSeriesReciprocalIntegral : CheckedComparison where
   id := "log-two-series-reciprocal-integral"
   title := "log 2: alternating series equals reciprocal integral"
   description := "The alternating harmonic series and the certified reciprocal integral of 1/x on [1,2] represent the same computable real number."
+  area := "Calculus and series"
   statement :=
     ComputableAnalysis.Logarithm.logTwoSeries.Equiv
       ComputableAnalysis.Logarithm.logTwoReciprocalIntegral

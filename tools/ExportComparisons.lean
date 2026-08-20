@@ -17,6 +17,7 @@ private def comparisonJson (comparison : CheckedComparison) : Json :=
     ("id", comparison.id),
     ("title", comparison.title),
     ("description", comparison.description),
+    ("area", comparison.area),
     ("routes", Json.arr (comparison.routes.map routeJson).toArray)
   ]
 
@@ -42,6 +43,7 @@ private def presentationJson (presentation : CheckedComparison) : Json :=
     ("id", presentation.id),
     ("title", presentation.title),
     ("description", presentation.description),
+    ("area", presentation.area),
     ("alignment", "presentation"),
     ("routes", Json.arr (presentation.routes.map routeJson).toArray)
   ]

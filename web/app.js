@@ -1298,8 +1298,21 @@ function renderInspector() {
     ].map(([alignment, title, description]) => ({ alignment, title, description,
       nodes: comparisons.filter((candidate) => candidate.comparison.alignment === alignment) }))
       .filter((group) => group.nodes.length);
+    const groupedCards = (group) => {
+      if (group.alignment !== "presentation") return `<div class="comparison-overview-list">${group.nodes.map(comparisonCard).join("")}</div>`;
+      const areas = new Map();
+      group.nodes.forEach((node) => {
+        const area = node.comparison.area || "General mathematics";
+        if (!areas.has(area)) areas.set(area, []);
+        areas.get(area).push(node);
+      });
+      return [...areas.entries()]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([area, nodes]) => `<section class="comparison-area-group"><h4>${escapeHtml(area)}</h4><div class="comparison-overview-list">${nodes.map(comparisonCard).join("")}</div></section>`)
+        .join("");
+    };
     const overview = comparisons.length
-      ? `<div class="comparison-overview"><div class="detail-label">Proof landscapes</div><p>Browse exact proof comparisons, explicit foundation boundaries, and single checked applications that are ready for a future comparison.</p>${overviewGroups.map((group) => `<section class="comparison-overview-group"><h3>${escapeHtml(group.title)}</h3><p>${escapeHtml(group.description)}</p><div class="comparison-overview-list">${group.nodes.map(comparisonCard).join("")}</div></section>`).join("")}</div>`
+      ? `<div class="comparison-overview"><div class="detail-label">Proof landscapes</div><p>Browse exact proof comparisons, explicit foundation boundaries, and single checked applications that are ready for a future comparison.</p>${overviewGroups.map((group) => `<section class="comparison-overview-group"><h3>${escapeHtml(group.title)}</h3><p>${escapeHtml(group.description)}</p>${groupedCards(group)}</section>`).join("")}</div>`
       : "";
     content.innerHTML = `<div class="empty-inspector"><div class="empty-glyph">◎</div><p>Select a declaration to inspect its Lean statement, verification status, and proof dependencies.</p>${overview}</div>`;
     content.querySelectorAll("[data-comparison-node]").forEach((button) => {

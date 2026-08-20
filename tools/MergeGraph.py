@@ -76,6 +76,7 @@ def comparison_manifest(path: str | None) -> dict[str, dict]:
             "id": comparison["id"],
             "comparisonTitle": comparison.get("title", ""),
             "comparisonDescription": comparison.get("description", ""),
+            "area": comparison.get("area", "General mathematics"),
             "repository": route["repository"],
             "alignment": comparison.get("alignment", "exact"),
             "note": comparison.get("note", ""),
@@ -321,6 +322,7 @@ def merge(graph: dict, manifest_path: str | None = None) -> dict:
                 merged["comparison"]["registry"] = registered[0][1]["id"]
                 merged["comparison"]["title"] = registered[0][1].get("comparisonTitle", "")
                 merged["comparison"]["description"] = registered[0][1].get("comparisonDescription", "")
+                merged["comparison"]["area"] = registered[0][1].get("area", "General mathematics")
                 merged["comparison"]["routeAudit"] = (
                     "Every registered route is checked for the absence of Lean's "
                     "sorryAx when this graph is generated. Computational "
