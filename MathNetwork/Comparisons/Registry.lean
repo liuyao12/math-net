@@ -65,6 +65,7 @@ structure FoundationAlignedComparison where
   note : String
   mathematicalCore : String
   routes : List (String × String × String)
+  externalRoutes : List ExternalRoute := []
 
 def irrationalSqrtTwo : CheckedComparison where
   id := "irrational-sqrt-two"
@@ -528,6 +529,16 @@ def effectiveFundamentalTheorem : FoundationAlignedComparison where
   routes := [
     ("mathlib", "MathNetwork.List100.fundamentalTheoremOfCalculus", "Real / intervalIntegral"),
     ("computable-analysis", "MathNetwork.ComputableFTC.effectiveFTC_equiv_endpoint", "ComputableAnalysis.RealRaw")
+  ]
+  externalRoutes := [
+    {
+      repository := "tao-analysis"
+      declaration := "integ_eq_antideriv_sub"
+      sourceUrl := "https://github.com/teorth/analysis/blob/8f9e0fc5f063d0839f9b2bfc3ed9607b417877fb/Analysis/Section_11_9.lean"
+      status := "upstream-sorry"
+      title := "Riemann integral of an antiderivative"
+      description := "Tao Analysis states the Riemann-integral endpoint formula in its own `BoundedInterval` interface. The current source contains an admitted subproof, and its integral representation is not definitionally the same as either indexed route."
+    }
   ]
 
 def aligned : List FoundationAlignedComparison :=

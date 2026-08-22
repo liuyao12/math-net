@@ -10,7 +10,7 @@ statement, and proof status support one.
 |---|---|---|---|---|
 | Formal derivative of `x²` over the finite rational evaluator | Direct normalization in `MathNetwork.Calculus.quadratic_derivative_mathlib_route` | `ComputableAnalysis.Polynomial.eval_derivative_quadratic` | `HasDerivWithinAt.of_pow` is the analogous real derivative theorem | Exact two-route merge; Tao is an external `upstream-sorry` reference |
 | Formal derivative of `x³` over the finite rational evaluator | Direct normalization in `MathNetwork.Calculus.cubic_derivative_mathlib_route` | `ComputableAnalysis.Polynomial.eval_derivative_cubic` | `HasDerivWithinAt.of_pow` specializes to the cubic | Exact two-route merge; Tao is an external `upstream-sorry` reference |
-| Effective fundamental theorem of calculus | Completed-real calculus in Mathlib | Certified interval integration in ComputableAnalysis | Tao's Riemann-integration development is relevant | Foundation-aligned: the completed real and raw-real representations are not silently identified |
+| Effective fundamental theorem of calculus | Completed-real calculus in Mathlib | Certified interval integration in ComputableAnalysis | `integ_eq_antideriv_sub` in Tao's Riemann-integral interface | Foundation-aligned between the two checked routes; Tao is an external `upstream-sorry` reference |
 | Derivative rules for powers | Mathlib's real derivative API | Finite, executable polynomial derivative API | `Analysis/Section_10_1.lean` | A promising bridge family; only the two finite rational targets above are exact today |
 
 ## Why the first exact targets are finite polynomials
@@ -27,6 +27,15 @@ identical before the graph merges them.
 That is a narrow but useful first comparison: the graph can show two real
 proof-use branches without making a false claim about completeness or real
 number representation.
+
+`ComputableAnalysis.Rat` is Lean's lightweight kernel rational type from
+`Init.Grind.Ordered.Rat`; it deliberately does not expose Mathlib's full
+`CommRing` interface.  Consequently, an attractive-looking theorem such as
+Mathlib's finite geometric-sum identity cannot simply be reused on a
+ComputableAnalysis rational recurrence.  MathNet records such a pair as a
+foundation/representation boundary until an explicit homomorphism bridge is
+checked.  It does not manufacture a Mathlib-labelled proof edge by treating
+the two rational APIs as interchangeable.
 
 ## Tao Analysis status
 
