@@ -1,5 +1,6 @@
 {
   "inputs": {
+    "MathNetwork/Calculus/DerivativeUniqueness.lean": "f7da49aea73618bbc0d274154cb9ec2e2f9e4fe117398d175752cae87b171997",
     "MathNetwork/Calculus/FinitePolynomialDerivatives.lean": "9317003c0b3c8d6952ee775d694c11ecf677c4d2643943f90560a82f61f7ef6a",
     "MathNetwork/Comparisons/ComputableDeMoivre.lean": "99404e26fd523205c9be84c2b4e99db07336475899b054ccde52d8ea738a1f73",
     "MathNetwork/Comparisons/ComputableFTC.lean": "97738a06f4d6c22cbb9048e8334dbe08dcf59d03587af0adbaf3dbd040376c31",
@@ -20,7 +21,7 @@
     "MathNetwork/Comparisons/List100/Taylor.lean": "c10276624f7527183de52aacecaecb804a5448bc4b0f6de012262d7dce695380",
     "MathNetwork/Comparisons/MathlibIrrationalSqrt.lean": "2699fe4a3088ac3b693f596c51b37a26fdde8b154333f48a308fc900ec0d0a37",
     "MathNetwork/Comparisons/RationalSquares.lean": "1f58749c7558feb68642bb41468a1e2835f97a293e8c9be524fa95e7ab17a3bb",
-    "MathNetwork/Comparisons/Registry.lean": "cad5c5b738bf48f670665389f23ae8dbbe4201dc16f7f139d214aff43ee85856",
+    "MathNetwork/Comparisons/Registry.lean": "f175559b1a0f1565f7c09b2873fe5f1d5321c702ea0dd04ef99dc2d0c4e17f4c",
     "MathNetwork/Euler/Applications.lean": "161ffa962d6095962b02f12921d45c5debcd8338576066166ea333efbeb3a9a1",
     "MathNetwork/Euler/Identity.lean": "43f83131d9343ad2ae645db0b150a052af087ee6b3eb5f24f2e8439d11887844",
     "MathNetwork/Fermat/Basic.lean": "3a28bf6f315f107df78158400d06d280e1f554b6a1a6790c0d153154f632f637",
@@ -44,6 +45,7 @@
     "tools/BuildGraphComputableSeries.lean": "38f257d45d5aacee4bcd1b77e8feecb51094320e3435f57d6f3405e8e2be6651",
     "tools/BuildGraphComputableSqrt.lean": "142c231b05312e30d1c1ad9941b45861b3238dd22d306a4ee89ea13c5ff1ca2a",
     "tools/BuildGraphComputableTrigSpecialValues.lean": "655ee6aca9d5feb43fd26ee446f9fef30dc88a00ba54641373b06d4618509aa4",
+    "tools/BuildGraphDerivativeUniqueness.lean": "33492e3d7401d5d58554629321175f89e0d3886a8fd49fe7493d8e57a46670b5",
     "tools/BuildGraphEuler.lean": "f956a5020657a782a2f04db59f0b3826a9faf19ea144ff9e5fe63397d668faac",
     "tools/BuildGraphFermatBasic.lean": "152ea143bfa064e0dc1ca70bacd31ffc63b88beb8de4103aa69648309dfbf76b",
     "tools/BuildGraphFermatRegistry.lean": "74d2a22d768a4446cb37beb58649449db5bbdb30b23ad499e90c4c8e3ee0cfcd",
@@ -57,11 +59,11 @@
     "tools/CombineRawGraphs.py": "53ee2d1dbd845b2f4aafe299234ec81db5eb881d693892563b485edd04c8d886",
     "tools/ExportSourceRevisions.py": "d875bcc09466651f9ab119554b7d719517416713de85c85b334872060d024d06",
     "tools/GenerateComparisonSlices.py": "9508a38cbab5368e3b6054fef493033c6f2155f1aaa954974de2f5cb41258de9",
-    "tools/GenerateExactMergeChecks.py": "266cb89a74928c2bc067ea15cd552216a97362f5c20b7da0598af0c431f72fa2",
+    "tools/GenerateExactMergeChecks.py": "6d1ac67b43543e39c838cf3924795e7c47ec1c61616b9bd7a6340378b57c763c",
     "tools/GraphFreshness.py": "d16b5e804198806c55a9315b4484efdf5ea8f4e72e856bc4a9b1c10e56ce2741",
     "tools/MergeGraph.py": "7e9a502f4d75e605c7117d82163047dae992a9ae23e776a9a228c1ae3ad20343",
     "tools/ValidateGraph.py": "947ac04ee9371712cc42379e90d8038d2dbcccd03c4befb4a60a309e0c59bf2e",
-    "tools/build-graph.sh": "7c51aa238251847140ab3d7b36fa6c7f9a2077ad896136d458b95d6269a010ce",
+    "tools/build-graph.sh": "1ac9ce4a5e82c431f93cb5c82c9df09dccd43fbcd95db3fe5b99a76db71b33b0",
     "tools/export-comparisons.sh": "6019fc2847601b20da5b9b2a9b7612573f84cd1d6fc3d352f6d33eda1f4011e7"
   },
   "schemaVersion": 1

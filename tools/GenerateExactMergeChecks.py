@@ -19,6 +19,7 @@ IMPORTS = (
     "MathNetwork.Comparisons.ComputableFTC",
     "MathNetwork.Comparisons.ComputableFourier",
     "MathNetwork.Calculus.FinitePolynomialDerivatives",
+    "MathNetwork.Calculus.DerivativeUniqueness",
 )
 
 

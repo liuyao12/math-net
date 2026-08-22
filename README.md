@@ -14,7 +14,7 @@ The intended release name, local folder, and GitHub repository name are all
 The first network browser is in [`web/`](web/). Its landing page first reads
 the compact checked-comparison catalogue; it loads the generated project-wide
 Lean declaration graph only when a reader chooses a theorem, route, or
-declaration search. The graph currently contains 1,880 nodes and 9,416
+declaration search. The graph currently contains 2,071 nodes and 10,408
 checked body-level dependency edges. It supports theorem selection,
 multi-level neighborhood fading, proposition search, strict proof-dependency
 edges, structural-landmark highlighting, background-detail suppression, and

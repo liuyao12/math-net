@@ -10,6 +10,7 @@ statement, and proof status support one.
 |---|---|---|---|---|
 | Formal derivative of `x²` over the finite rational evaluator | Direct normalization in `MathNetwork.Calculus.quadratic_derivative_mathlib_route` | `ComputableAnalysis.Polynomial.eval_derivative_quadratic` | `HasDerivWithinAt.of_pow` is the analogous real derivative theorem | Exact two-route merge; Tao is an external `upstream-sorry` reference |
 | Formal derivative of `x³` over the finite rational evaluator | Direct normalization in `MathNetwork.Calculus.cubic_derivative_mathlib_route` | `ComputableAnalysis.Polynomial.eval_derivative_cubic` | `HasDerivWithinAt.of_pow` specializes to the cubic | Exact two-route merge; Tao is an external `upstream-sorry` reference |
+| Uniqueness of a within-derivative at an accumulation point | Direct slope-limit route | — | `Chapter10.derivative_unique` | Exact Mathlib/Tao comparison: Tao's complete source proof is source-preservingly ported and checked against the current Lake environment |
 | Effective fundamental theorem of calculus | Completed-real calculus in Mathlib | Certified interval integration in ComputableAnalysis | `integ_eq_antideriv_sub` in Tao's Riemann-integral interface | Foundation-aligned between the two checked routes; Tao is an external `upstream-sorry` reference |
 | Derivative rules for powers | Mathlib's real derivative API | Finite, executable polynomial derivative API | `Analysis/Section_10_1.lean` | A promising bridge family; only the two finite rational targets above are exact today |
 
@@ -49,3 +50,10 @@ source-pinned, external comparison candidate in the inspector rather than
 importing it, drawing invented dependency edges, or granting it a Lean
 checkmark.  Once that route is sorry-free and a shared statement has been
 proved, it can be promoted to an exact or foundation-aligned comparison.
+
+`Chapter10.derivative_unique` is the exception currently used as a checked
+Tao route: its source body is complete.  Because the project pins a different
+Mathlib revision, MathNet carries a source-preserving port in
+`MathNetwork.Calculus.DerivativeUniqueness`; Lean checks that port locally and
+the explorer identifies it as a Tao Analysis route rather than pretending the
+incompatible Lake dependency was imported directly.

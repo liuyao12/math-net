@@ -11,6 +11,7 @@ import MathNetwork.Comparisons.ComputableNilakantha
 import MathNetwork.Comparisons.ComputableRotationODE
 import MathNetwork.Comparisons.ComputableTrigSpecialValues
 import MathNetwork.Calculus.FinitePolynomialDerivatives
+import MathNetwork.Calculus.DerivativeUniqueness
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 import MathNetwork.Euler.Identity
@@ -270,6 +271,35 @@ def cubicPolynomialDerivative : CheckedComparison where
   ]
   externalRoutes := quadraticPolynomialDerivative.externalRoutes
 
+/-- A complete Tao Analysis source proof can be compared directly with a
+Mathlib route once it is source-preservingly ported to the current Lake
+environment.  Unlike the admitted Tao power-rule and FTC theorems, both
+routes below are kernel-checked and have exactly the same proposition. -/
+def derivativeUniqueness : CheckedComparison where
+  id := "derivative-uniqueness"
+  title := "Uniqueness of the derivative"
+  description := "At an accumulation point, two within-derivative values coincide. The Mathlib slope route and a source-preserving port of Tao Analysis Section 10.1 are checked against one identical proposition."
+  area := "Calculus foundations"
+  statement := ∀ {X : Set ℝ} {x₀ : ℝ},
+    ClusterPt x₀ (.principal (X \ {x₀})) → ∀ {f : ℝ → ℝ} {L L' : ℝ},
+      HasDerivWithinAt f L X x₀ → HasDerivWithinAt f L' X x₀ → L = L'
+  routes := [
+    {
+      repository := "mathlib"
+      declaration := "MathNetwork.Calculus.derivative_unique_mathlib_route"
+      title := "Mathlib slope characterization"
+      description := "Use Mathlib's direct slope-limit characterization of `HasDerivWithinAt` and uniqueness of limits in a Hausdorff space."
+      proof := MathNetwork.Calculus.derivative_unique_mathlib_route
+    },
+    {
+      repository := "tao-analysis"
+      declaration := "MathNetwork.Calculus.derivative_unique_tao_route"
+      title := "Tao Analysis Section 10.1 (ported)"
+      description := "A source-preserving port of `Chapter10.derivative_unique` from teorth/analysis at 8f9e0fc; ported because that repository pins a different Mathlib revision, then kernel-checked here."
+      proof := MathNetwork.Calculus.derivative_unique_tao_route
+    }
+  ]
+
 /-- A finished computable-analysis application that is useful in its own
 right, even before a Mathlib representation bridge identifies it with a
 completed-real series limit. -/
@@ -495,7 +525,7 @@ def nilakanthaLeibnizPi : CheckedComparison where
 def all : List CheckedComparison :=
   [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition,
     cosineSubtraction, sineSubtraction, quadraticPolynomialDerivative,
-    cubicPolynomialDerivative]
+    cubicPolynomialDerivative, derivativeUniqueness]
 
 /-- Checked single-route applications belong in the landscape too. They are
 not comparisons until a second route has been bridged to the same checked
