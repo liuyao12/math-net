@@ -241,6 +241,12 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .declaration-signature .proof-source { max-height: 210px; border-left-color: var(--teal); }
 .comparison-statements { display: grid; gap: 10px; }
 .comparison-title { margin: 3px 0 7px; font-size: 15px; line-height: 1.25; letter-spacing: -.02em; }
+.external-route-list { display: grid; gap: 7px; margin-top: 14px; padding: 10px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255,255,255,.3); }
+.external-route-list .detail-label { margin-bottom: 0; }
+.external-route { display: flex; align-items: flex-start; gap: 7px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.external-route > span:last-child { display: grid; gap: 2px; }
+.external-route a { color: var(--blue); font-weight: 600; text-decoration: none; }
+.external-route small { color: var(--faint); font-size: 10px; }
 .comparison-statement { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.34); }
 .comparison-statement-label { display: flex; align-items: center; gap: 7px; padding: 7px 9px 4px; color: var(--muted); font: 10px var(--mono); letter-spacing: .04em; text-transform: uppercase; }
 .comparison-statement .proof-source { max-height: 145px; margin: 0; border-left: 0; border-top: 1px solid var(--line); border-radius: 0; background: rgba(255,255,255,.54); }

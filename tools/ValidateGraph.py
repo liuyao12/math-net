@@ -71,8 +71,18 @@ def main(path: str, manifest_path: str | None = None) -> None:
                 and edge.get("target", {}).get("id") == node["id"]
                 and edge.get("proof") in independent
             }
-            if direct_routes != independent:
-                missing = sorted(independent - direct_routes)
+            computational = {
+                proof["id"]
+                for proof in node.get("proofs", [])
+                if proof.get("proofKind") == "computation"
+            }
+            # A finite expression may close by definitional reduction, leaving
+            # no named theorem in its elaborated proof body.  This is neither
+            # an alias nor a missing edge: it is explicitly marked as a
+            # kernel-reduced computation by MergeGraph.
+            expected_direct = independent - computational
+            if direct_routes != expected_direct:
+                missing = sorted(expected_direct - direct_routes)
                 fail(
                     f"exact comparison {node['id']} has proof body/bodies without "
                     f"direct proof-use edges: {', '.join(missing)}"

@@ -20,6 +20,14 @@ def main(manifest_path: str) -> None:
         for name, package in selected.items()
         if package.get("url") and package.get("rev")
     }
+    # Tao Analysis is consulted as an external research source rather than a
+    # Lake dependency: it currently pins an older Mathlib revision and some
+    # calculus proofs are admitted.  Record the exact reviewed commit so the
+    # explorer can link to the same source without implying it is imported.
+    repositories["tao-analysis"] = {
+        "repository": "https://github.com/teorth/analysis.git",
+        "revision": "8f9e0fc5f063d0839f9b2bfc3ed9607b417877fb",
+    }
     json.dump({"schemaVersion": 1, "repositories": repositories}, sys.stdout, separators=(",", ":"))
     sys.stdout.write("\n")
 

@@ -10,6 +10,7 @@ import MathNetwork.Comparisons.ComputableLogarithm
 import MathNetwork.Comparisons.ComputableNilakantha
 import MathNetwork.Comparisons.ComputableRotationODE
 import MathNetwork.Comparisons.ComputableTrigSpecialValues
+import MathNetwork.Calculus.FinitePolynomialDerivatives
 import MathNetwork.Fermat.Registry
 import MathNetwork.Euler.Applications
 import MathNetwork.Euler.Identity
@@ -32,6 +33,18 @@ structure CheckedProof (statement : Prop) where
   description : String
   proof : statement
 
+/-- A useful external theorem that is deliberately not represented as a
+checked proof route.  This records a comparison target without allowing an
+unfinished or incompatible upstream development to borrow the kernel-checked
+status of the local landscape. -/
+structure ExternalRoute where
+  repository : String
+  declaration : String
+  sourceUrl : String
+  status : String
+  title : String
+  description : String
+
 structure CheckedComparison where
   id : String
   title : String
@@ -39,6 +52,7 @@ structure CheckedComparison where
   area : String := "General mathematics"
   statement : Prop
   routes : List (CheckedProof statement)
+  externalRoutes : List ExternalRoute := []
 
 /-- A visual alignment between checked declarations expressed over different
 foundations.  Unlike `CheckedComparison`, this does not assert definitional
@@ -188,6 +202,72 @@ def sineSubtraction : CheckedComparison where
       proof := MathNetwork.Euler.trig_subtraction_euler_sin_route
     }
   ]
+
+/-- A common rational statement exposes two independently maintained
+calculus routes without identifying computable reals with Mathlib reals.
+The finite polynomial derivative is executable in `computable-analysis`, and
+Mathlib's tactic layer independently normalizes its shared rational
+polynomial expression. -/
+def quadraticPolynomialDerivative : CheckedComparison where
+  id := "quadratic-polynomial-derivative"
+  title := "Formal derivative of x²"
+  description := "A finite rational polynomial derivative, with Mathlib normalization and computable-analysis polynomial-calculus routes proving one identical statement."
+  area := "Calculus foundations"
+  statement := ∀ x : Rat,
+    ComputableAnalysis.Polynomial.eval
+      (ComputableAnalysis.Polynomial.derivative [0, 0, 1]) x = 2 * x
+  routes := [
+    {
+      repository := "mathlib"
+      declaration := "MathNetwork.Calculus.quadratic_derivative_mathlib_route"
+      title := "Mathlib rational normalization"
+      description := "Unfold the shared finite polynomial evaluator and normalize the rational algebra directly."
+      proof := MathNetwork.Calculus.quadratic_derivative_mathlib_route
+    },
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.Calculus.quadratic_derivative_computable_route"
+      title := "Computable polynomial derivative"
+      description := "Use the reusable finite polynomial derivative theorem maintained in computable-analysis."
+      proof := MathNetwork.Calculus.quadratic_derivative_computable_route
+    }
+  ]
+  externalRoutes := [
+    {
+      repository := "tao-analysis"
+      declaration := "HasDerivWithinAt.of_pow"
+      sourceUrl := "https://github.com/teorth/analysis/blob/8f9e0fc5f063d0839f9b2bfc3ed9607b417877fb/Analysis/Section_10_1.lean"
+      status := "upstream-sorry"
+      title := "Real derivative of a power"
+      description := "Tao Analysis gives the corresponding real `HasDerivWithinAt` theorem. Its current upstream body contains `sorry`, and its completed-real statement still needs a bridge to this finite rational evaluator."
+    }
+  ]
+
+def cubicPolynomialDerivative : CheckedComparison where
+  id := "cubic-polynomial-derivative"
+  title := "Formal derivative of x³"
+  description := "The cubic companion to the shared rational polynomial derivative comparison."
+  area := "Calculus foundations"
+  statement := ∀ x : Rat,
+    ComputableAnalysis.Polynomial.eval
+      (ComputableAnalysis.Polynomial.derivative [0, 0, 0, 1]) x = 3 * x ^ 2
+  routes := [
+    {
+      repository := "mathlib"
+      declaration := "MathNetwork.Calculus.cubic_derivative_mathlib_route"
+      title := "Mathlib rational normalization"
+      description := "Direct rational normalization of the shared finite evaluator."
+      proof := MathNetwork.Calculus.cubic_derivative_mathlib_route
+    },
+    {
+      repository := "computable-analysis"
+      declaration := "MathNetwork.Calculus.cubic_derivative_computable_route"
+      title := "Computable polynomial derivative"
+      description := "The reusable finite cubic derivative theorem from computable-analysis."
+      proof := MathNetwork.Calculus.cubic_derivative_computable_route
+    }
+  ]
+  externalRoutes := quadraticPolynomialDerivative.externalRoutes
 
 /-- A finished computable-analysis application that is useful in its own
 right, even before a Mathlib representation bridge identifies it with a
@@ -413,7 +493,8 @@ def nilakanthaLeibnizPi : CheckedComparison where
 
 def all : List CheckedComparison :=
   [irrationalSqrtTwo, fermatTwoSquares, cosineAddition, sineAddition,
-    cosineSubtraction, sineSubtraction]
+    cosineSubtraction, sineSubtraction, quadraticPolynomialDerivative,
+    cubicPolynomialDerivative]
 
 /-- Checked single-route applications belong in the landscape too. They are
 not comparisons until a second route has been bridged to the same checked

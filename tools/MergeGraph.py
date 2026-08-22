@@ -79,6 +79,7 @@ def comparison_manifest(path: str | None) -> dict[str, dict]:
             "repository": route["repository"],
             "alignment": comparison.get("alignment", "exact"),
             "note": comparison.get("note", ""),
+            "externalRoutes": comparison.get("externalRoutes", []),
             "foundation": route.get("foundation"),
             "mathematicalCore": comparison.get("mathematicalCore"),
             "title": route.get("title", ""),
@@ -356,6 +357,9 @@ def merge(graph: dict, manifest_path: str | None = None, audit_path: str | None 
                 merged["comparison"]["title"] = registered[0][1].get("comparisonTitle", "")
                 merged["comparison"]["description"] = registered[0][1].get("comparisonDescription", "")
                 merged["comparison"]["area"] = registered[0][1].get("area", "General mathematics")
+                external_routes = registered[0][1].get("externalRoutes", [])
+                if external_routes:
+                    merged["comparison"]["externalRoutes"] = external_routes
                 merged["comparison"]["routeAudit"] = (
                     "Every registered route is checked for the absence of Lean's "
                     "sorryAx when this graph is generated. Computational "
@@ -443,6 +447,24 @@ def merge(graph: dict, manifest_path: str | None = None, audit_path: str | None 
                 proof["repository"] = metadata["repository"]
                 proof["routeTitle"] = metadata.get("title", "")
                 proof["routeDescription"] = metadata.get("description", "")
+
+        # Some small, finite propositions are established solely by kernel
+        # reduction after elaboration (for example, normalizing a rational
+        # polynomial calculation).  They are genuine proof bodies, not
+        # aliases, but contain no named declaration to draw as a `used in
+        # proof` edge.  Keep that fact explicit rather than inventing an
+        # implementation-detail node merely to make a branch nonempty.
+        direct_proofs = {
+            edge.get("proof") for edge in edges
+            if edge.get("target", {}).get("id") == node["id"]
+        }
+        for proof in node.get("proofs", []):
+            if proof.get("proofKind") == "body" and proof["id"] not in direct_proofs:
+                proof["proofKind"] = "computation"
+                proof["note"] = (
+                    "Kernel-reduced finite calculation; its proof term has no named "
+                    "declaration dependency to draw."
+                )
 
         comparison = node.get("comparison")
         if comparison and comparison.get("alignment") == "exact":

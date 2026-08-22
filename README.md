@@ -14,7 +14,7 @@ The intended release name, local folder, and GitHub repository name are all
 The first network browser is in [`web/`](web/). Its landing page first reads
 the compact checked-comparison catalogue; it loads the generated project-wide
 Lean declaration graph only when a reader chooses a theorem, route, or
-declaration search. The graph currently contains 1,861 nodes and 9,219
+declaration search. The graph currently contains 1,880 nodes and 9,416
 checked body-level dependency edges. It supports theorem selection,
 multi-level neighborhood fading, proposition search, strict proof-dependency
 edges, structural-landmark highlighting, background-detail suppression, and
@@ -34,6 +34,11 @@ The theorem-centred index is
 [`theorem-catalogue.json`](MathNetwork/Graph/theorem-catalogue.json). Run
 `python3 -m http.server 4173` from the repository root and open
 <http://localhost:4173/web/>.
+
+The first calculus intake across Mathlib, ComputableAnalysis, and Tao Analysis
+is tracked in [the three-repository inventory](docs/calculus-three-repository-inventory.md).
+It distinguishes routes that Lean can merge today from source-pinned external
+results that still need a completed proof or representation bridge.
 
 The first comparison is between:
 

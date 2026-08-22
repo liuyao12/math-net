@@ -67,6 +67,7 @@ const DECLARATION_BACKGROUNDS = {
 const REPOSITORIES = {
   mathlib: { label: "mathlib", color: "#3f7f8f" },
   "computable-analysis": { label: "computable-analysis", color: "#a45b38" },
+  "tao-analysis": { label: "Tao Analysis", color: "#65799b" },
   "math-net": { label: "math-net", color: "#7a6397" },
   unknown: { label: "unclassified source", color: "#7f8589" },
 };
@@ -1453,7 +1454,7 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Focused dependency slice</div><p>This initial view contains ${escapeHtml(String(state.graph.partialUpstreamDepth))} upstream Lean proof-use generations for fast navigation.${(state.graph.partialBoundaryNodes || []).includes(node.id) ? " This declaration has additional indexed prerequisites; use its + marker or double-click it to load the complete landscape." : " Expand a boundary declaration to continue into the complete landscape."}</p></div>`
     : "";
   const comparisonNote = comparison
-    ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : comparison.alignment === "presentation" ? "Checked presentation" : "Checked comparison"}</div>${comparison.title ? `<h3 class="comparison-title">${escapeHtml(comparison.title)}</h3>` : ""}${comparison.description ? `<p>${escapeHtml(comparison.description)}</p>` : ""}<p class="muted-note">${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : comparison.alignment === "presentation" ? " This is one fully checked route, retained as an application and a future comparison target; it makes no claim of a second route." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.routeAudit ? `<p class="muted-note">${escapeHtml(comparison.routeAudit)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
+    ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : comparison.alignment === "presentation" ? "Checked presentation" : "Checked comparison"}</div>${comparison.title ? `<h3 class="comparison-title">${escapeHtml(comparison.title)}</h3>` : ""}${comparison.description ? `<p>${escapeHtml(comparison.description)}</p>` : ""}<p class="muted-note">${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : comparison.alignment === "presentation" ? " This is one fully checked route, retained as an application and a future comparison target; it makes no claim of a second route." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.routeAudit ? `<p class="muted-note">${escapeHtml(comparison.routeAudit)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${(comparison.externalRoutes || []).length ? `<div class="external-route-list"><div class="detail-label">Related external routes · not merged</div>${comparison.externalRoutes.map((route) => `<div class="external-route"><span class="proof-color" style="background:${escapeHtml(repositoryColor(route.repository))}"></span><span><a href="${escapeHtml(route.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(route.repository)} · ${escapeHtml(route.title)} ↗</a><small>${escapeHtml(route.status)} · ${escapeHtml(route.declaration)}</small><small>${escapeHtml(route.description)}</small></span></div>`).join("")}</div>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
     : "";
   const foundationAnchors = (comparison?.foundations || []).map((foundation) => {
     const anchor = state.graph.nodes.find((item) => item.namespace === foundation.declaration);
@@ -1491,11 +1492,15 @@ function renderInspector() {
       : `${proofRepositoryLabel} · ${proof.routeTitle || declarationName}`;
     const routeKind = proof.proofKind === "delegation"
       ? "checked adapter"
-      : proof.repository
+      : proof.proofKind === "computation"
+        ? "kernel-reduced calculation"
+        : proof.repository
         ? proofRepositoryLabel
         : (ROUTE_KIND_LABELS[proof.routeKind] || proof.routeKind);
     const directInputs = summary && isExactComparison
-      ? `<small class="proof-dependency-summary">${summary.total} direct inputs · ${summary.routeOnly} route-only · ${summary.shared} shared</small>`
+      ? proof.proofKind === "computation"
+        ? `<small class="proof-dependency-summary">0 named direct inputs · kernel reduction</small>`
+        : `<small class="proof-dependency-summary">${summary.total} direct inputs · ${summary.routeOnly} route-only · ${summary.shared} shared</small>`
       : "";
     const auditNote = proof.audit?.nativeDecide
       ? `<small class="proof-audit computational">sorry-free · uses native_decide computation</small>`

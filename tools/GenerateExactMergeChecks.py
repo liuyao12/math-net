@@ -18,6 +18,7 @@ IMPORTS = (
     "MathNetwork.Comparisons.ComputableIrrationalSqrt",
     "MathNetwork.Comparisons.ComputableFTC",
     "MathNetwork.Comparisons.ComputableFourier",
+    "MathNetwork.Calculus.FinitePolynomialDerivatives",
 )
 
 

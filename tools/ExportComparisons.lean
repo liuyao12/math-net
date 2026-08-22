@@ -12,13 +12,24 @@ private def routeJson {statement : Prop} (route : CheckedProof statement) : Json
     ("description", route.description)
   ]
 
+private def externalRouteJson (route : ExternalRoute) : Json :=
+  Json.mkObj [
+    ("repository", route.repository),
+    ("declaration", route.declaration),
+    ("sourceUrl", route.sourceUrl),
+    ("status", route.status),
+    ("title", route.title),
+    ("description", route.description)
+  ]
+
 private def comparisonJson (comparison : CheckedComparison) : Json :=
   Json.mkObj [
     ("id", comparison.id),
     ("title", comparison.title),
     ("description", comparison.description),
     ("area", comparison.area),
-    ("routes", Json.arr (comparison.routes.map routeJson).toArray)
+    ("routes", Json.arr (comparison.routes.map routeJson).toArray),
+    ("externalRoutes", Json.arr (comparison.externalRoutes.map externalRouteJson).toArray)
   ]
 
 private def alignedComparisonJson (comparison : FoundationAlignedComparison) : Json :=
@@ -45,7 +56,8 @@ private def presentationJson (presentation : CheckedComparison) : Json :=
     ("description", presentation.description),
     ("area", presentation.area),
     ("alignment", "presentation"),
-    ("routes", Json.arr (presentation.routes.map routeJson).toArray)
+    ("routes", Json.arr (presentation.routes.map routeJson).toArray),
+    ("externalRoutes", Json.arr (presentation.externalRoutes.map externalRouteJson).toArray)
   ]
 
 private def manifest : Json :=
