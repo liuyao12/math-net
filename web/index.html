@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="./styles.css?v=route-audit-1" />
+<link rel="stylesheet" href="./styles.css?v=progressive-detail-1" />
 
 <div class="app-shell" id="app">
   <header class="topbar">
@@ -75,8 +75,9 @@
         <div class="control-group">
           <div class="field-label">Lean declaration kinds</div>
           <div class="check-grid compact" id="kind-filters"></div>
-          <label class="filter-option implementation-toggle"><input id="show-supporting" type="checkbox"><span class="filter-dot inductive"></span><span>Show supporting foundations</span></label>
-          <label class="filter-option implementation-toggle"><input id="show-implementation" type="checkbox"><span class="filter-dot source"></span><span>Show routine and implementation details</span></label>
+          <p class="control-note">Default view: named mathematics and familiar structures. Reveal further Lean detail only when it helps answer a specific question.</p>
+          <label class="filter-option implementation-toggle"><input id="show-supporting" type="checkbox"><span class="filter-dot inductive"></span><span>Reveal supporting prerequisites</span></label>
+          <label class="filter-option implementation-toggle"><input id="show-implementation" type="checkbox"><span class="filter-dot source"></span><span>Reveal routine Lean details</span></label>
           <label class="filter-option implementation-toggle"><input id="show-landmarks" type="checkbox" checked><span class="filter-dot landmark"></span><span>Highlight structural landmarks</span></label>
         </div>
         <div class="inspector-actions">
@@ -94,4 +95,4 @@
   </main>
 </div>
 
-<script type="module" src="./app.js?v=mathematical-reading-order-1"></script>
+<script type="module" src="./app.js?v=progressive-detail-1"></script>

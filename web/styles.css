@@ -125,6 +125,7 @@ input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgb
 .check-grid.compact { grid-template-columns: 1fr 1fr; gap: 7px 10px; }
 .filter-option { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
 .filter-option input { accent-color: var(--blue); }
+.control-note { margin: 8px 0 2px; color: var(--faint); font-size: 10px; line-height: 1.45; }
 .implementation-toggle { margin-top: 10px; color: var(--faint); }
 .filter-dot, .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
 .repository-dot { box-shadow: 0 0 0 1px rgba(38, 48, 54, 0.16); }
