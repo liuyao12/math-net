@@ -542,6 +542,13 @@ function comparisonNode(comparisonId) {
     (candidate.proofs || []).some((proof) => declarations.has(proof.declaration)));
 }
 
+function comparisonRecordForNode(node) {
+  if (!node) return null;
+  if (node.comparison) return node.comparison;
+  const declaration = node.namespace || "";
+  return state.comparisons.find((comparison) => (comparison.routes || []).some((route) => route.declaration === declaration)) || null;
+}
+
 function focusDistances(nodeId, edges) {
   const distances = new Map([[nodeId, 0]]);
   const adjacency = new Map();
@@ -1472,9 +1479,10 @@ function renderInspector() {
   const focusedRoute = focusedTheorem && (focusedTheorem.proofs || []).find((proof) => proof.id === state.selectedProofId);
   const proofList = node.proofs || [];
   const independentProofs = proofList.filter((proof) => proof.proofKind !== "delegation");
-  const hasProofComparison = Boolean(node.comparison);
-  const isCheckedPresentation = node.comparison?.alignment === "presentation";
-  const isExactComparison = node.comparison?.alignment === "exact";
+  const comparison = comparisonRecordForNode(node);
+  const hasProofComparison = Boolean(comparison);
+  const isCheckedPresentation = comparison?.alignment === "presentation";
+  const isExactComparison = comparison?.alignment === "exact";
   // A checked alias is navigable provenance, but it does not contribute a
   // proof branch or a mathematical difference between routes.
   const proofDependencies = proofDependencySummaries(node.id, independentProofs);
@@ -1508,11 +1516,18 @@ function renderInspector() {
   const mergeNote = node.declarationCount > 1 && node.comparison?.alignment !== "foundation-aligned" && !isCheckedPresentation
     ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations.${hasProofComparison ? " The independent proof bodies below remain separate routes." : " Some declarations are checked aliases of another theorem; they are retained as provenance, not counted as alternative proofs."}</p></div>`
     : "";
-  const comparison = node.comparison;
-  const readerStatement = comparison?.registry && state.readerStatements[comparison.registry];
+  const comparisonId = comparison?.registry || comparison?.id;
+  const readerStatement = comparisonId && state.readerStatements[comparisonId];
   const readerStatementPanel = readerStatement?.statement
     ? `<div class="detail-block reader-statement"><div class="detail-label">Mathematical statement</div><p>${escapeHtml(readerStatement.statement)}</p><p class="muted-note">Reader-oriented summary; the checked Lean statement follows.</p></div>`
     : "";
+  const comparisonIdentity = comparison?.identity || (comparison?.alignment === "foundation-aligned"
+    ? "The mathematical target is aligned across two distinct formal foundations"
+    : comparison?.alignment === "presentation"
+      ? "A checked application retained as a future comparison target"
+      : proofList.length > 1
+        ? "The independent routes are checked against one identical Lean proposition"
+        : "A checked concrete benchmark");
   const allRouteStatement = !activeProof && hasProofComparison && proofList.length > 1
     ? comparison?.alignment === "foundation-aligned"
       ? `<div class="comparison-statements">${proofList.map((proof) => `<div class="comparison-statement"><div class="comparison-statement-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} route</div><pre class="proof-source pending" data-route-statement="${escapeHtml(proof.id)}"><code>Loading Lean declaration…</code></pre></div>`).join("")}</div>`
@@ -1532,7 +1547,7 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Focused dependency slice</div><p>This initial view is an adaptive mathematical neighborhood: it follows actual Lean proof-use dependencies beyond structures, while reserving space for substantive declarations rather than stopping after a fixed number of generations.${(state.graph.partialBoundaryNodes || []).includes(node.id) ? " This declaration has additional indexed prerequisites; use its + marker or double-click it to load the complete landscape." : " Expand a boundary declaration to continue into the complete landscape."}</p></div>`
     : "";
   const comparisonNote = comparison
-    ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : comparison.alignment === "presentation" ? "Checked presentation" : "Checked comparison"}</div>${comparison.title ? `<h3 class="comparison-title">${escapeHtml(comparison.title)}</h3>` : ""}${comparison.description ? `<p>${escapeHtml(comparison.description)}</p>` : ""}<p class="muted-note">${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : comparison.alignment === "presentation" ? " This is one fully checked route, retained as an application and a future comparison target; it makes no claim of a second route." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.routeAudit ? `<p class="muted-note">${escapeHtml(comparison.routeAudit)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${(comparison.externalRoutes || []).length ? `<div class="external-route-list"><div class="detail-label">Related external routes · not merged</div>${comparison.externalRoutes.map((route) => `<div class="external-route"><span class="proof-color" style="background:${escapeHtml(repositoryColor(route.repository))}"></span><span><a href="${escapeHtml(route.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(route.repository)} · ${escapeHtml(route.title)} ↗</a><small>${escapeHtml(route.status)} · ${escapeHtml(route.declaration)}</small><small>${escapeHtml(route.description)}</small></span></div>`).join("")}</div>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
+    ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : comparison.alignment === "presentation" ? "Checked presentation" : "Checked comparison"}</div>${comparison.title ? `<h3 class="comparison-title">${escapeHtml(comparison.title)}</h3>` : ""}${comparison.description ? `<p>${escapeHtml(comparison.description)}</p>` : ""}<p class="muted-note">${escapeHtml(comparisonIdentity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : comparison.alignment === "presentation" ? " This is one fully checked route, retained as an application and a future comparison target; it makes no claim of a second route." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.routeAudit ? `<p class="muted-note">${escapeHtml(comparison.routeAudit)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${(comparison.externalRoutes || []).length ? `<div class="external-route-list"><div class="detail-label">Related external routes · not merged</div>${comparison.externalRoutes.map((route) => `<div class="external-route"><span class="proof-color" style="background:${escapeHtml(repositoryColor(route.repository))}"></span><span><a href="${escapeHtml(route.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(route.repository)} · ${escapeHtml(route.title)} ↗</a><small>${escapeHtml(route.status)} · ${escapeHtml(route.declaration)}</small><small>${escapeHtml(route.description)}</small></span></div>`).join("")}</div>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
     : "";
   const foundationAnchors = (comparison?.foundations || []).map((foundation) => {
     const anchor = state.graph.nodes.find((item) => item.namespace === foundation.declaration);
