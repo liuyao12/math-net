@@ -28,7 +28,7 @@
     "MathNetwork/Fermat/Registry.lean": "8b66a25b17a45d3a731589e2e3cd6115520c826c9f1a616b0c6d6acface386f4",
     "MathNetwork/Fermat/Zagier.lean": "47c8d183d1b50b031ca1a415a8a9b8d30509e030a0610c1c770ad24f4c6c8f02",
     "MathNetwork/Graph/Extract.lean": "cf266cfb728611ad07a459e366ff4853eecf62adbb5b57b8cd734aa82fac2386",
-    "MathNetwork/Graph/declaration-notes.json": "80ef7e47654e6d69206d4df49200b8b9da79ee9bb13353c7085c638064f13d05",
+    "MathNetwork/Graph/declaration-notes.json": "e8932eac6ad46f2c6bf5ab59b9d288012a3f3c068be84f241a91c0121e74aeef",
     "MathNetwork/Graph/reader-statements.json": "6ee930ea11d8026e013eed07a319229d5e3cf06b783905e3c30f3e5de4ab0099",
     "MathNetwork/Graph/route-notes.json": "1fe0b61d105dce8b44237ebbb4360ded408f5dc018166f654fa299f4c997d097",
     "MathNetwork/Graph/semantic-roles.json": "3c98c96e55bdfb999851cb370eeea5913173c8777d41c500a697c6462c1e5533",
