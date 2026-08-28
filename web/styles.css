@@ -234,6 +234,12 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .inspector h2 { margin: 13px 0 8px; font-size: 20px; line-height: 1.15; letter-spacing: -0.035em; }
 .statement { margin: 0 0 18px; color: var(--ink); line-height: 1.55; }
 .detail-block { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--line); }
+.mathematical-status { margin-top: 18px; padding: 13px 14px; border: 1px solid var(--line-strong); border-radius: 8px; background: rgba(255,255,255,.42); }
+.mathematical-status.foundation { border-color: rgba(182, 130, 28, .72); background: linear-gradient(135deg, rgba(255,250,235,.92), rgba(255,255,255,.42)); }
+.mathematical-status h3 { margin: 0 0 6px; color: var(--ink); font-size: 13px; line-height: 1.35; letter-spacing: -.01em; }
+.mathematical-status p + p { margin-top: 7px; }
+.status-action { margin-top: 10px; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: 5px; color: var(--blue); background: var(--paper); font: 600 11px Manrope, sans-serif; }
+.status-action:hover, .status-action:focus { border-color: var(--blue); background: var(--blue-soft); outline: none; }
 .provenance { margin-top: 22px; border-top: 1px solid var(--line); }
 .provenance summary { padding: 14px 0; color: var(--muted); cursor: pointer; font: 10px "DM Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
 .provenance summary::marker { color: var(--blue); }

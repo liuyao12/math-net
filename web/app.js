@@ -1619,6 +1619,9 @@ function renderInspector() {
   const semanticRole = node.mathematicalRole
     ? `<div class="detail-block"><div class="detail-label">Mathematical role</div><p><strong>${escapeHtml(node.mathematicalRole.label || node.mathematicalRole.category)}</strong> · ${escapeHtml(node.mathematicalRole.reason)}</p><p class="muted-note">${escapeHtml(node.mathematicalRole.source)}. ${isMathematicalFoundation(node) ? "The default view stops here; use the + marker or double-click to inspect its formal construction." : "This classification affects presentation, never Lean checking."}</p></div>`
     : "";
+  const mathematicalStatus = isStructureNode(node) && node.mathematicalRole
+    ? `<section class="mathematical-status ${escapeHtml(node.mathematicalRole.category)}"><div class="detail-label">Mathematical reading</div><h3>${isMathematicalFoundation(node) ? "Established mathematical structure" : "Lean structure with a formal role"} · ${escapeHtml(node.mathematicalRole.label || node.label)}</h3><p>${escapeHtml(node.mathematicalRole.reason)}</p>${isMathematicalFoundation(node) ? `<p class="muted-note">This is a deliberate endpoint in the first reading of the proof. Its Lean construction is still available if you want to follow the formal foundations.</p><button class="status-action" data-expand-node="${escapeHtml(node.id)}">Reveal Lean construction</button>` : `<p class="muted-note">This describes how the declaration is presented in the landscape; it does not alter the checked Lean dependency graph.</p>`}</section>`
+    : "";
   const allProofsControl = isExactComparison && proofList.length > 1
     ? `<button class="proof-all ${state.selectedProofId ? "" : "selected"}" data-all-proofs><span class="proof-all-glyph">◎</span>All proof routes <small>merged comparison</small></button>`
     : "";
@@ -1696,6 +1699,7 @@ function renderInspector() {
     ${routeContext}
     ${focusedGraphNote}
     ${readerStatementPanel}
+    ${mathematicalStatus}
     ${proofIdeaPanel}
     <div class="detail-block declaration-signature"><div class="detail-label">${formalStatementHeading}</div>${allRouteStatement || `<pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre>`}</div>
     ${mergeNote}${comparisonNote}
@@ -1712,6 +1716,7 @@ function renderInspector() {
     ${provenance ? `<details class="provenance"><summary>Checked provenance and formalization</summary><div class="provenance-content">${provenance}</div></details>` : ""}
   `;
   content.querySelectorAll("[data-neighbor]").forEach((button) => button.addEventListener("click", () => selectNode(button.dataset.neighbor)));
+  content.querySelector("[data-expand-node]")?.addEventListener("click", () => expandNodeDependencies(node.id));
   content.querySelectorAll("[data-proof]").forEach((button) => button.addEventListener("click", () => selectProof(button.dataset.proof)));
   content.querySelector("[data-all-proofs]")?.addEventListener("click", selectAllProofs);
   if (node.proofs?.length) {
