@@ -194,6 +194,9 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .share-button:hover { color: var(--ink); border-color: var(--line-strong); }
 .inspector-content { padding: 20px; }
 .empty-inspector { display: grid; justify-items: start; gap: 11px; padding-top: 44px; }
+.reader-guide { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; background: rgba(219,236,238,.25); }
+.reader-guide ol { margin: 7px 0 0 18px; padding: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.reader-guide li + li { margin-top: 4px; }
 .comparison-overview { width: 100%; margin-top: 12px; }
 .comparison-overview > p { margin: 5px 0 13px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .comparison-overview-group { margin: 16px 0 0; }

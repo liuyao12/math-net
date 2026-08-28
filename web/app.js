@@ -1459,7 +1459,8 @@ function renderInspector() {
     const overview = comparisons.length
       ? `<div class="comparison-overview"><div class="detail-label">Proof landscapes</div><p>Browse exact proof comparisons, explicit foundation boundaries, and single checked applications that are ready for a future comparison.</p>${overviewGroups.map((group) => `<section class="comparison-overview-group"><h3>${escapeHtml(group.title)}</h3><p>${escapeHtml(group.description)}</p>${groupedCards(group)}</section>`).join("")}</div>`
       : "";
-    content.innerHTML = `<div class="empty-inspector"><div class="empty-glyph">◎</div><p>Select a declaration to inspect its Lean statement, verification status, and proof dependencies.</p>${overview}</div>`;
+    const readerGuide = `<section class="reader-guide"><div class="detail-label">How to read a proof landscape</div><ol><li>Choose a concrete problem or comparison. The selected result stays low in the graph.</li><li>Read upward: every arrow means the upper declaration is <em>used in the Lean proof</em> of the lower one.</li><li>Colors identify the repository supplying a proof route. Select a route to see its own mathematical prerequisites.</li><li>Click any node for its checked statement and source; gold-outlined squares are familiar mathematical foundations, while faded nodes are formal plumbing.</li></ol></section>`;
+    content.innerHTML = `<div class="empty-inspector"><div class="empty-glyph">◎</div><p>Select a declaration to inspect its Lean statement, verification status, and proof dependencies.</p>${readerGuide}${overview}</div>`;
     return;
   }
   const sourceRequest = ++state.sourceRequest;
