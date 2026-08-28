@@ -17,6 +17,7 @@ const THEOREMS_URL = versionedAsset("./theorems.json");
 const COMPARISONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/comparisons.json`);
 const READER_STATEMENTS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/reader-statements.json`);
 const ROUTE_NOTES_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/route-notes.json`);
+const DECLARATION_NOTES_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/declaration-notes.json`);
 const SOURCE_REVISIONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/source-revisions.json`);
 const DATA_URLS = [versionedAsset(`${REPO_ROOT}MathNetwork/Graph/project.json`)];
 const comparisonSliceUrl = (comparisonId) => versionedAsset(
@@ -103,6 +104,7 @@ const state = {
   comparisonsByDeclaration: new Map(),
   readerStatements: {},
   routeNotes: {},
+  declarationNotes: {},
   sourceRevisions: {},
   graphPromise: null,
   graphPartial: false,
@@ -1570,6 +1572,9 @@ function renderInspector() {
   const readerStatementPanel = readerStatement?.statement
     ? `<div class="detail-block reader-statement"><div class="detail-label">Mathematical statement</div><p>${escapeHtml(readerStatement.statement)}</p><p class="muted-note">Reader-oriented summary; the checked Lean statement follows.</p></div>`
     : "";
+  const declarationNotePanel = !readerStatement && node.readerNote?.statement
+    ? `<div class="detail-block reader-statement declaration-note"><div class="detail-label">Mathematical description · ${escapeHtml(node.readerNote.title || "checked declaration")}</div><p>${escapeHtml(node.readerNote.statement)}</p>${node.readerNote.why ? `<p class="muted-note">${escapeHtml(node.readerNote.why)}</p>` : ""}<p class="muted-note">Curated reading note; the checked Lean declaration follows below.</p></div>`
+    : "";
   const focusedCoreNode = node.id === state.focusId && state.coreId ? nodeMap().get(state.coreId) : null;
   const explicitCore = comparison?.mathematicalCore && focusedCoreNode?.namespace === comparison.mathematicalCore;
   const proofMap = focusedCoreNode && focusedCoreNode.id !== node.id
@@ -1727,6 +1732,7 @@ function renderInspector() {
     ${formalDetailStatus}
     ${focusedGraphNote}
     ${readerStatementPanel}
+    ${declarationNotePanel}
     ${mathematicalStatus}
     ${proofMap}
     ${proofIdeaPanel}
@@ -2525,6 +2531,14 @@ function applyRouteNotes(graph) {
   return graph;
 }
 
+function applyDeclarationNotes(graph) {
+  (graph.nodes || []).forEach((node) => {
+    const declaration = node.namespace || (node.proofs || []).find((proof) => state.declarationNotes[proof.declaration])?.declaration;
+    if (declaration && state.declarationNotes[declaration]) node.readerNote = state.declarationNotes[declaration];
+  });
+  return graph;
+}
+
 function applyRouteNotesToComparisons(comparisons) {
   return comparisons.map((comparison) => ({
     ...comparison,
@@ -2537,6 +2551,7 @@ function applyRouteNotesToComparisons(comparisons) {
 
 function installGraph(graph, sourceName) {
   applyRouteNotes(graph);
+  applyDeclarationNotes(graph);
   state.graph = graph;
   state.graphPartial = Boolean(graph.partial);
   const scope = state.graphPartial ? "focused" : "project";
@@ -2569,15 +2584,17 @@ async function loadComparisonSlice(comparisonId) {
 
 async function load() {
   try {
-    const [theoremResponse, comparisonResponse, sourceRevisionResponse, readerStatementsResponse, routeNotesResponse] = await Promise.all([
+    const [theoremResponse, comparisonResponse, sourceRevisionResponse, readerStatementsResponse, routeNotesResponse, declarationNotesResponse] = await Promise.all([
       fetch(THEOREMS_URL),
       fetch(COMPARISONS_URL),
       fetch(SOURCE_REVISIONS_URL),
       fetch(READER_STATEMENTS_URL),
       fetch(ROUTE_NOTES_URL),
+      fetch(DECLARATION_NOTES_URL),
     ]);
     if (theoremResponse.ok) state.theorems = await theoremResponse.json();
     if (routeNotesResponse.ok) state.routeNotes = (await routeNotesResponse.json()).notes || {};
+    if (declarationNotesResponse.ok) state.declarationNotes = (await declarationNotesResponse.json()).notes || {};
     if (comparisonResponse.ok) {
       state.comparisons = applyRouteNotesToComparisons((await comparisonResponse.json()).comparisons || []);
       state.comparisonsByDeclaration = new Map(state.comparisons.flatMap((comparison) =>

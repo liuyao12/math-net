@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1.0",
+  "purpose": "Human-readable descriptions for important internal Lean declarations. These notes explain checked nodes but never alter their statement, dependencies, or verification status.",
+  "notes": {
+    "MathNetwork.RationalSquares.isSquare_iff_computableIsSquare": {
+      "title": "Rational-square bridge",
+      "statement": "A rational number is a square in Mathlib exactly when it is a square according to computable-analysis's rational predicate.",
+      "why": "This is the common arithmetic core beneath the two irrational-square-root routes. It separates the number-theoretic question ‘is q a rational square?’ from either project's construction of real numbers."
+    },
+    "MathNetwork.RationalSquares.nonsquare_iff_computableNonsquare": {
+      "title": "Rational nonsquare bridge",
+      "statement": "A rational number fails to be a square in Mathlib exactly when it fails the computable-analysis square test.",
+      "why": "It transports the negative form of the rational-square criterion between the two libraries, so the comparison can focus on the distinct square-root constructions rather than on notation for nonsquares."
+    }
+  }
+}
