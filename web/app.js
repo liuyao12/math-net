@@ -409,6 +409,15 @@ function isMathematicalFoundation(node) {
   return mathematicalRole(node) === "foundation";
 }
 
+function isReaderFacingStructure(node) {
+  // Lean's `structure` is a representation choice, not evidence that the
+  // declaration belongs in a mathematical first reading. Foundations always
+  // remain visible; other interfaces must also be structurally important in
+  // the indexed proof landscape. Every omitted structure remains reachable
+  // through the ordinary expansion controls.
+  return isMathematicalFoundation(node) || (isStructureNode(node) && isLandmark(node) && !isImplementationNode(node));
+}
+
 function readingPriority(node) {
   if (!node) return -Infinity;
   if (node.comparison?.routes?.length > 1) return 9000;
@@ -687,13 +696,13 @@ function visibleGraph() {
   // A structure used directly by the focus is part of the mathematical
   // statement readers need first; its construction details stay collapsed.
   const focusStructures = new Set(state.focusId
-    ? edgeData.filter((edge) => edge.target.id === state.focusId && isStructureNode(edge.source)).map((edge) => edge.source.id)
+    ? edgeData.filter((edge) => edge.target.id === state.focusId && isReaderFacingStructure(edge.source)).map((edge) => edge.source.id)
     : []);
   const ambientIds = ambientNodesForFocus(state.graph.nodes);
   const forcedIds = new Set([...corePath, ...coreDependencies, ...foundationPaths, ...focusStructures, ...ambientIds]);
   const manuallyExpandedIds = new Set(state.expandedDistances.keys());
   const candidateNodes = state.graph.nodes.filter((node) => state.kinds.has(declarationKindFor(node)) &&
-    (!isSuppressedNode(node) || isStructureNode(node) || node.id === state.focusId || node.id === state.selectedId || forcedIds.has(node.id) || manuallyExpandedIds.has(node.id)));
+    (!isSuppressedNode(node) || isReaderFacingStructure(node) || node.id === state.focusId || node.id === state.selectedId || forcedIds.has(node.id) || manuallyExpandedIds.has(node.id)));
   state.expandedDistances.forEach((distance, id) => {
     if (!state.focusDistances.has(id) || distance < state.focusDistances.get(id)) state.focusDistances.set(id, distance);
   });
@@ -950,7 +959,7 @@ function beginProgressiveReveal() {
     // generations.  It lets a narrow route continue through structures and
     // implementation details while preventing broad infrastructure fans from
     // taking over the initial canvas.
-    const interestingNode = (node) => Boolean(node?.comparison) || isMathematicalNode(node) || isLandmark(node) || isStructureNode(node);
+    const interestingNode = (node) => Boolean(node?.comparison) || isMathematicalNode(node) || isLandmark(node) || isReaderFacingStructure(node);
     const maxInterestingNodes = 56;
     const maxVisibleNodes = 92;
     let interestingCount = interestingNode(nodeMap().get(state.focusId)) ? 1 : 0;
@@ -971,11 +980,11 @@ function beginProgressiveReveal() {
         .forEach((neighbor) => {
         if (!nodeIds.has(neighbor)) return;
         if (seen.has(neighbor)) {
-          if (!isSuppressedNode(nodeMap().get(neighbor)) || isStructureNode(nodeMap().get(neighbor))) existing.push(neighbor);
+          if (!isSuppressedNode(nodeMap().get(neighbor)) || isReaderFacingStructure(nodeMap().get(neighbor))) existing.push(neighbor);
           return;
         }
         const neighborNode = nodeMap().get(neighbor);
-        const visibleNeighbor = !isSuppressedNode(neighborNode) || isStructureNode(neighborNode);
+        const visibleNeighbor = !isSuppressedNode(neighborNode) || isReaderFacingStructure(neighborNode);
         const countsAsInteresting = visibleNeighbor && interestingNode(neighborNode);
         if (visibleNeighbor && (visibleSeen.size >= maxVisibleNodes || children.length >= branchBudget ||
           (countsAsInteresting && (interestingCount >= maxInterestingNodes || branchInterestingCount >= branchBudget)))) {
@@ -1119,7 +1128,7 @@ function verificationText(node) {
 }
 
 function isMajorNode(node) {
-  return isMathematicalNode(node) || isStructureNode(node);
+  return isMathematicalNode(node) || isReaderFacingStructure(node);
 }
 
 function repositoryForProof(proof) {
@@ -1263,7 +1272,7 @@ function proofDependencyDifference(nodeId, proofs) {
   dependencies.forEach((ids) => ids.forEach((id) => useCount.set(id, (useCount.get(id) || 0) + 1)));
   const readable = (ids) => [...ids]
     .map((id) => nodeMap().get(id))
-    .filter((node) => node && (isMathematicalNode(node) || isStructureNode(node)))
+    .filter((node) => node && (isMathematicalNode(node) || isReaderFacingStructure(node)))
     .sort((left, right) => readingPriority(right) - readingPriority(left) || displayLabelFor(left).localeCompare(displayLabelFor(right)));
   return {
     shared: readable([...useCount].filter(([, count]) => count === proofs.length).map(([id]) => id)),
@@ -1296,7 +1305,7 @@ function mathematicalPrerequisites(nodeId, proofId, limit = 7) {
     const candidate = map.get(current.id);
     if (!candidate) continue;
     const meaningful = isMathematicalNode(candidate) || isMathematicalFoundation(candidate) ||
-      (current.distance === 1 && isStructureNode(candidate));
+      (current.distance === 1 && isReaderFacingStructure(candidate));
     if (meaningful) {
       const previous = results.get(candidate.id);
       if (!previous || current.through < previous.through) results.set(candidate.id, { ...current, node: candidate });
