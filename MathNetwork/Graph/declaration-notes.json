@@ -31,6 +31,11 @@
       "title": "Effective fundamental theorem equivalence",
       "statement": "Given a certified derivative on a rational interval, the computable Riemann-sum algorithm and the endpoint-difference algorithm represent the same computable real number.",
       "why": "This is the computable-analysis analogue of the fundamental theorem in the displayed comparison: it relates two certified algorithms rather than invoking an already completed real-valued integral."
+    },
+    "GaussianInt.sq_add_sq_of_nat_prime_of_not_irreducible": {
+      "title": "Gaussian-integer criterion for a sum of two squares",
+      "statement": "If a natural prime p factors nontrivially in the Gaussian integers, then p can be written as a² + b².",
+      "why": "This is the decisive bridge in Mathlib’s algebraic route to Fermat’s two-square theorem. The preceding Gaussian-integer work shows that a prime p ≡ 1 mod 4 is not irreducible there; this theorem converts that factorization fact into the desired integer representation."
     }
   }
 }
