@@ -545,6 +545,9 @@ function comparisonNode(comparisonId) {
 
 function comparisonRecordForNode(node) {
   if (!node) return null;
+  const focusedSliceComparison = node.id === state.focusId && state.graph?.focusComparison;
+  const focusedSliceRecord = focusedSliceComparison && state.comparisons.find((comparison) => comparison.id === focusedSliceComparison);
+  if (focusedSliceRecord) return focusedSliceRecord;
   const registeredId = node.comparison?.registry;
   const registered = registeredId && state.comparisons.find((comparison) => comparison.id === registeredId);
   if (registered) return registered;
