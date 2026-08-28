@@ -1488,10 +1488,12 @@ function renderInspector() {
   const activeProof = selectedProof || (!hasProofComparison || isCheckedPresentation
     ? (independentProofs[0] || proofList[0] || null)
     : (proofList.length === 1 ? proofList[0] : null));
-  const routePrerequisites = mathematicalPrerequisites(node.id, activeProof?.id);
+  const routePrerequisites = activeProof ? mathematicalPrerequisites(node.id, activeProof.id) : [];
   const routePrerequisiteNote = routePrerequisites.length
-    ? `<div class="detail-block mathematical-prerequisites"><div class="detail-label">Mathematical prerequisites in this route</div><p>Nearest named results on actual Lean proof-use paths. Compiler and representation details are folded, never removed.</p><div class="tag-list">${routePrerequisites.map(({ node: prerequisite, through }) => `<button class="neighbor" data-neighbor="${escapeHtml(prerequisite.id)}">${escapeHtml(displayLabelFor(prerequisite))}${through ? ` <small>through ${through} formal detail${through === 1 ? "" : "s"}</small>` : ""}</button>`).join("")}</div></div>`
-    : "";
+    ? `<div class="detail-block mathematical-prerequisites"><div class="detail-label">Mathematical prerequisites in this route</div><p>Nearest named results on actual Lean proof-use paths. Compiler and representation details are folded, never removed.</p><div class="tag-list">${routePrerequisites.map(({ node: prerequisite, through }) => `<button class="neighbor" data-neighbor="${escapeHtml(prerequisite.id)}">${escapeHtml(labelFor(prerequisite, state.graph.nodes))}${through ? ` <small>through ${through} formal detail${through === 1 ? "" : "s"}</small>` : ""}</button>`).join("")}</div></div>`
+    : proofList.length > 1
+      ? `<div class="detail-block mathematical-prerequisites"><div class="detail-label">Mathematical prerequisites</div><p>Select a colored proof route above to see its nearest named prerequisites. The displayed graph can still show all routes together.</p></div>`
+      : "";
   const formalizations = (node.formalizations || []).map((item) => {
     const file = item.file ? `<br><span>${escapeHtml(item.file)}${item.anchor ? ` · ${escapeHtml(item.anchor)}` : ""}</span>` : "";
     const github = githubUrlFor(node, item);
