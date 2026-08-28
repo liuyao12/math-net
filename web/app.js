@@ -99,6 +99,7 @@ const state = {
   graph: null,
   theorems: [],
   comparisons: [],
+  comparisonsByDeclaration: new Map(),
   readerStatements: {},
   sourceRevisions: {},
   graphPromise: null,
@@ -544,9 +545,11 @@ function comparisonNode(comparisonId) {
 
 function comparisonRecordForNode(node) {
   if (!node) return null;
-  if (node.comparison) return node.comparison;
-  const declaration = node.namespace || "";
-  return state.comparisons.find((comparison) => (comparison.routes || []).some((route) => route.declaration === declaration)) || null;
+  const registeredId = node.comparison?.registry;
+  const registered = registeredId && state.comparisons.find((comparison) => comparison.id === registeredId);
+  if (registered) return registered;
+  const declarations = [node.namespace, ...(node.proofs || []).map((proof) => proof.declaration)].filter(Boolean);
+  return declarations.map((declaration) => state.comparisonsByDeclaration.get(declaration)).find(Boolean) || node.comparison || null;
 }
 
 function focusDistances(nodeId, edges) {
@@ -2476,7 +2479,12 @@ async function load() {
       fetch(READER_STATEMENTS_URL),
     ]);
     if (theoremResponse.ok) state.theorems = await theoremResponse.json();
-    if (comparisonResponse.ok) state.comparisons = (await comparisonResponse.json()).comparisons || [];
+    if (comparisonResponse.ok) {
+      state.comparisons = (await comparisonResponse.json()).comparisons || [];
+      state.comparisonsByDeclaration = new Map(state.comparisons.flatMap((comparison) =>
+        (comparison.routes || []).map((route) => [route.declaration, comparison]),
+      ));
+    }
     if (sourceRevisionResponse.ok) state.sourceRevisions = (await sourceRevisionResponse.json()).repositories || {};
     if (readerStatementsResponse.ok) state.readerStatements = (await readerStatementsResponse.json()).statements || {};
     const exact = state.comparisons.filter((comparison) => !comparison.alignment && comparison.routes?.length > 1).length;
