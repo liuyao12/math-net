@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0",
+  "purpose": "Reader-facing mathematical roles. These annotations do not alter Lean declarations or proof checking.",
+  "overrides": {
+    "Real": {
+      "category": "foundation",
+      "label": "real numbers",
+      "reason": "Canonical mathematical object. Its chosen Cauchy-completion implementation is intentionally behind an explicit expander."
+    }
+  }
+}

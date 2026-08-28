@@ -278,6 +278,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .node-structure.hidden { display: none; }
 .node-structure.selected { stroke: var(--ink); stroke-width: 3.5; }
 .node-structure.dimmed { opacity: 0.16; }
+.node-structure.foundation { stroke: var(--gold); stroke-width: 3.25; filter: drop-shadow(0 0 3px rgba(182, 130, 28, 0.34)); }
 .graph-node:has(.node-structure) .node-label.structure { font-weight: 700; }
 .node-pie { pointer-events: none; }
 .node-pie.dimmed { opacity: 0.16; }

@@ -226,7 +226,55 @@ def annotate_presentation(nodes: list[dict]) -> None:
         node["presentation"] = {"category": category, "reason": reason}
 
 
-def merge(graph: dict, manifest_path: str | None = None, audit_path: str | None = None) -> dict:
+def annotate_mathematical_roles(nodes: list[dict], roles_path: str | None = None) -> None:
+    """Separate mathematical meaning from Lean's declaration kind.
+
+    Lean's ``structure`` / ``inductive`` distinction says how an object is
+    represented in the kernel.  It cannot say whether readers should treat it
+    as a familiar object (the real numbers), a proof interface (a normed
+    space), or a construction detail.  We use transparent, general signals
+    and a deliberately small, reviewable override file for canonical objects.
+    """
+    overrides = {}
+    if roles_path:
+        overrides = json.loads(Path(roles_path).read_text()).get("overrides", {})
+
+    construction_words = {"cauchy", "completion", "quotient", "setoid", "raw", "repr", "representation"}
+
+    for node in nodes:
+        namespace = node.get("namespace", node.get("label", ""))
+        override = overrides.get(namespace)
+        if override:
+            node["mathematicalRole"] = {**override, "source": "curated mathematical annotation"}
+            continue
+
+        terminal = namespace.rsplit(".", 1)[-1].lower()
+        components = {part.lower() for part in namespace.replace("_", ".").split(".")}
+        locator = node.get("locator", "").lower()
+        if node.get("presentation", {}).get("category") == "implementation":
+            category = "implementation"
+            reason = "Kernel/elaboration machinery rather than a mathematical object."
+        elif construction_words & components or any(word in locator for word in ("cauchy", "completion", "quotient")):
+            category = "construction"
+            reason = "A representation or completion construction used to implement a mathematical object."
+        elif node.get("role") == "structure" or node.get("declarationKind") == "inductive":
+            category = "interface"
+            reason = "A Lean bundled structure or typeclass interface; it records assumptions or maps, rather than automatically being a foundational object."
+        elif node.get("presentation", {}).get("category") == "mathematical":
+            category = "mathematical"
+            reason = "A mathematical definition or proposition in the displayed proof route."
+        else:
+            category = "supporting"
+            reason = "Supporting declaration in the formal proof environment."
+        node["mathematicalRole"] = {
+            "category": category,
+            "reason": reason,
+            "source": "declaration kind, public namespace, and representation signals",
+        }
+
+
+def merge(graph: dict, manifest_path: str | None = None, audit_path: str | None = None,
+          roles_path: str | None = None) -> dict:
     registered_routes = comparison_manifest(manifest_path)
     audited_routes = route_audit(audit_path)
     nodes = graph["nodes"]
@@ -486,6 +534,7 @@ def merge(graph: dict, manifest_path: str | None = None, audit_path: str | None 
     result["edges"] = edges
     annotate_importance(result["nodes"], result["edges"])
     annotate_presentation(result["nodes"])
+    annotate_mathematical_roles(result["nodes"], roles_path)
     result["merge"] = {
         "key": "exact elaborated proposition statement across local and imported declarations",
         "definitions": "one node per declaration",
@@ -497,18 +546,21 @@ def merge(graph: dict, manifest_path: str | None = None, audit_path: str | None 
 if __name__ == "__main__":
     manifest = None
     audit = None
+    roles = None
     arguments = sys.argv[1:]
     while arguments:
         option = arguments.pop(0)
         if not arguments:
-            raise SystemExit("usage: MergeGraph.py [--comparisons manifest.json] [--route-audit audit.json]")
+            raise SystemExit("usage: MergeGraph.py [--comparisons manifest.json] [--route-audit audit.json] [--semantic-roles roles.json]")
         value = arguments.pop(0)
         if option == "--comparisons":
             manifest = value
         elif option == "--route-audit":
             audit = value
+        elif option == "--semantic-roles":
+            roles = value
         else:
-            raise SystemExit("usage: MergeGraph.py [--comparisons manifest.json] [--route-audit audit.json]")
+            raise SystemExit("usage: MergeGraph.py [--comparisons manifest.json] [--route-audit audit.json] [--semantic-roles roles.json]")
     graph = json.load(sys.stdin)
-    json.dump(merge(graph, manifest, audit), sys.stdout, separators=(",", ":"), sort_keys=True)
+    json.dump(merge(graph, manifest, audit, roles), sys.stdout, separators=(",", ":"), sort_keys=True)
     sys.stdout.write("\n")

@@ -77,7 +77,7 @@ if [[ ! -s "$raw_graph_tmp" ]]; then
   echo "BuildGraph.lean produced no graph JSON" >&2
   exit 1
 fi
-python3 tools/MergeGraph.py --comparisons "$manifest" --route-audit "$route_audit_tmp" < "$raw_graph_tmp" > "$project_tmp"
+python3 tools/MergeGraph.py --comparisons "$manifest" --route-audit "$route_audit_tmp" --semantic-roles MathNetwork/Graph/semantic-roles.json < "$raw_graph_tmp" > "$project_tmp"
 python3 tools/ValidateGraph.py "$project_tmp" --comparisons "$manifest"
 python3 tools/GenerateExactMergeChecks.py "$project_tmp" > "$checks_tmp"
 lake env lean "$checks_tmp"

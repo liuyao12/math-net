@@ -394,20 +394,27 @@ function isLandmark(node) {
   return Boolean(node?.importance?.landmark);
 }
 
-function isExpansionBoundary(node) {
-  return node?.role === "structure" || declarationKindFor(node) === "inductive";
-}
-
 function isStructureNode(node) {
   return node?.role === "structure";
 }
 
+function mathematicalRole(node) {
+  return node?.mathematicalRole?.category || (isStructureNode(node) ? "interface" : "supporting");
+}
+
+function isMathematicalFoundation(node) {
+  return mathematicalRole(node) === "foundation";
+}
+
 function readingPriority(node) {
   if (!node) return -Infinity;
-  if (isStructureNode(node)) return 10000;
   if (node.comparison?.routes?.length > 1) return 9000;
-  if (node.importance?.landmark) return 8000 + (node.importance?.score || 0);
-  if (isMathematicalNode(node)) return 4000 + (node.importance?.score || 0);
+  if (isMathematicalNode(node)) return 7000 + (node.importance?.score || 0);
+  if (node.importance?.landmark) return 6000 + (node.importance?.score || 0);
+  // Structures remain visible, but are foundations along a proof route rather
+  // than privileged roots of every focused graph.
+  if (isMathematicalFoundation(node)) return 5000 + (node.importance?.score || 0);
+  if (isStructureNode(node)) return 3500 + (node.importance?.score || 0);
   if (presentationCategory(node) === "supporting") return 1000 + (node.importance?.score || 0);
   return node.importance?.score || 0;
 }
@@ -533,7 +540,7 @@ function comparisonNode(comparisonId) {
     (candidate.proofs || []).some((proof) => declarations.has(proof.declaration)));
 }
 
-function focusDistances(nodeId, edges, maxDepth = 3) {
+function focusDistances(nodeId, edges) {
   const distances = new Map([[nodeId, 0]]);
   const adjacency = new Map();
   edges.forEach((edge) => {
@@ -544,7 +551,9 @@ function focusDistances(nodeId, edges, maxDepth = 3) {
     adjacency.get(edge.target.id).push(edge.source.id);
   });
   let frontier = [nodeId];
-  for (let depth = 1; depth <= maxDepth; depth += 1) {
+  let depth = 0;
+  while (frontier.length) {
+    depth += 1;
     const next = [];
     frontier.forEach((current) => (adjacency.get(current) || []).forEach((neighbor) => {
       if (!distances.has(neighbor)) { distances.set(neighbor, depth); next.push(neighbor); }
@@ -639,7 +648,7 @@ function visibleGraph() {
     // nothing useful in a dependency view and cannot be top-down.
     .filter((edge) => edge.source && edge.target && edge.source.id !== edge.target.id);
   const edgeData = proofRouteEdges(allEdgeData, state.focusId, state.selectedProofId);
-  state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData, 5) : new Map();
+  state.focusDistances = state.focusId ? focusDistances(state.focusId, edgeData) : new Map();
   const coreId = coreNodeFor(state.graph.nodes);
   state.coreId = coreId;
   const corePath = coreId ? upstreamPath(state.focusId, coreId, edgeData) : new Set();
@@ -922,16 +931,26 @@ function beginProgressiveReveal() {
     const steps = [];
     const seen = new Set([state.focusId]);
     const visibleSeen = new Set([state.focusId]);
-    const maxFocusNodes = 48;
+    // This is a budget of reader-facing mathematics, not a number of Lean
+    // generations.  It lets a narrow route continue through structures and
+    // implementation details while preventing broad infrastructure fans from
+    // taking over the initial canvas.
+    const interestingNode = (node) => Boolean(node?.comparison) || isMathematicalNode(node) || isLandmark(node) || isStructureNode(node);
+    const maxInterestingNodes = 56;
+    const maxVisibleNodes = 92;
+    let interestingCount = interestingNode(nodeMap().get(state.focusId)) ? 1 : 0;
     const queue = [{ id: state.focusId, depth: 0 }];
     state.revealCapped = false;
     while (queue.length) {
       const parent = queue.shift();
-      const parentNode = nodeIds.has(parent.id) ? nodeMap().get(parent.id) : null;
-      if (isExpansionBoundary(parentNode)) continue;
+      // A familiar mathematical object is a useful default endpoint. This is
+      // deliberately narrower than Lean's `structure` kind: interfaces and
+      // representation constructions still reveal their prerequisites.
+      if (isMathematicalFoundation(nodeMap().get(parent.id))) continue;
       const children = [];
       const existing = [];
-      const branchBudget = parent.depth === 0 ? 16 : 12;
+      const branchBudget = parent.depth === 0 ? 8 : parent.depth === 1 ? 6 : 4;
+      let branchInterestingCount = 0;
       (adjacency.get(parent.id) || []).slice()
         .sort((left, right) => readingPriority(nodeMap().get(right)) - readingPriority(nodeMap().get(left)) || left.localeCompare(right))
         .forEach((neighbor) => {
@@ -942,7 +961,9 @@ function beginProgressiveReveal() {
         }
         const neighborNode = nodeMap().get(neighbor);
         const visibleNeighbor = !isSuppressedNode(neighborNode) || isStructureNode(neighborNode);
-        if (visibleNeighbor && (visibleSeen.size >= maxFocusNodes || children.length >= branchBudget)) {
+        const countsAsInteresting = visibleNeighbor && interestingNode(neighborNode);
+        if (visibleNeighbor && (visibleSeen.size >= maxVisibleNodes || children.length >= branchBudget ||
+          (countsAsInteresting && (interestingCount >= maxInterestingNodes || branchInterestingCount >= branchBudget)))) {
           state.revealCapped = true;
           return;
         }
@@ -950,6 +971,10 @@ function beginProgressiveReveal() {
         if (visibleNeighbor) {
           visibleSeen.add(neighbor);
           children.push(neighbor);
+          if (countsAsInteresting) {
+            interestingCount += 1;
+            branchInterestingCount += 1;
+          }
         }
         // Hidden Lean infrastructure is traversed so a later mathematical
         // theorem can still be discovered, but it does not create an empty
@@ -1451,7 +1476,7 @@ function renderInspector() {
     ? `<div class="route-context"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(focusedRoute)))}"></span><span>Viewing a dependency of <button class="route-context-theorem" data-neighbor="${escapeHtml(focusedTheorem.id)}">${escapeHtml(displayLabelFor(focusedTheorem))}</button> via <strong>${escapeHtml(focusedRoute.label)}</strong>.</span></div>`
     : "";
   const focusedGraphNote = state.graphPartial
-    ? `<div class="detail-block"><div class="detail-label">Focused dependency slice</div><p>This initial view contains ${escapeHtml(String(state.graph.partialUpstreamDepth))} upstream Lean proof-use generations for fast navigation.${(state.graph.partialBoundaryNodes || []).includes(node.id) ? " This declaration has additional indexed prerequisites; use its + marker or double-click it to load the complete landscape." : " Expand a boundary declaration to continue into the complete landscape."}</p></div>`
+    ? `<div class="detail-block"><div class="detail-label">Focused dependency slice</div><p>This initial view is an adaptive mathematical neighborhood: it follows actual Lean proof-use dependencies beyond structures, while reserving space for substantive declarations rather than stopping after a fixed number of generations.${(state.graph.partialBoundaryNodes || []).includes(node.id) ? " This declaration has additional indexed prerequisites; use its + marker or double-click it to load the complete landscape." : " Expand a boundary declaration to continue into the complete landscape."}</p></div>`
     : "";
   const comparisonNote = comparison
     ? `<div class="detail-block comparison-block"><div class="detail-label">${comparison.alignment === "foundation-aligned" ? "Foundation-aligned comparison" : comparison.alignment === "presentation" ? "Checked presentation" : "Checked comparison"}</div>${comparison.title ? `<h3 class="comparison-title">${escapeHtml(comparison.title)}</h3>` : ""}${comparison.description ? `<p>${escapeHtml(comparison.description)}</p>` : ""}<p class="muted-note">${escapeHtml(comparison.identity)}.${comparison.alignment === "foundation-aligned" ? " The colored routes remain distinct Lean declarations; their dependencies expose the two foundations rather than claiming definitional equality." : comparison.alignment === "presentation" ? " This is one fully checked route, retained as an application and a future comparison target; it makes no claim of a second route." : " The routes below are proof terms for this one proposition; their dependency edges can therefore meet at this node."}</p>${comparison.kernelCheck ? `<p class="muted-note">${escapeHtml(comparison.kernelCheck)}</p>` : ""}${comparison.routeAudit ? `<p class="muted-note">${escapeHtml(comparison.routeAudit)}</p>` : ""}${comparison.note ? `<p class="muted-note">${escapeHtml(comparison.note)}</p>` : ""}${(comparison.externalRoutes || []).length ? `<div class="external-route-list"><div class="detail-label">Related external routes · not merged</div>${comparison.externalRoutes.map((route) => `<div class="external-route"><span class="proof-color" style="background:${escapeHtml(repositoryColor(route.repository))}"></span><span><a href="${escapeHtml(route.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(route.repository)} · ${escapeHtml(route.title)} ↗</a><small>${escapeHtml(route.status)} · ${escapeHtml(route.declaration)}</small><small>${escapeHtml(route.description)}</small></span></div>`).join("")}</div>` : ""}${comparison.registry ? `<div class="comparison-registry">Registry: <code>${escapeHtml(comparison.registry)}</code></div>` : ""}</div>`
@@ -1470,13 +1495,16 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Dependency layer</div><p>Imported declaration · layer ${node.dependencyDepth}.${node.dependencyBoundary ? " Expansion stops at this boundary; use the + marker or double-click to inspect its indexed dependencies." : ""}</p></div>`
     : "";
   const structureNote = isStructureNode(node)
-    ? `<div class="detail-block structure-note"><div class="detail-label">Structure boundary</div><p>This is a Lean <code>structure</code> (kernel representation: an inductive declaration). Its fields and construction details are intentionally collapsed in the mathematical view.</p></div>`
+    ? `<div class="detail-block structure-note"><div class="detail-label">Lean declaration kind</div><p>This is a Lean <code>structure</code> (kernel representation: an inductive declaration). That technical kind is separate from its mathematical role below.</p></div>`
     : "";
   const importance = node.importance
     ? `<div class="detail-block"><div class="detail-label">Structural importance</div><p><strong>${escapeHtml(node.importance.score)}</strong>/100 · ${escapeHtml(node.importance.directUses)} direct proof uses · ${escapeHtml(node.importance.downstreamNodes)} downstream declarations.</p><p class="muted-note">Heuristic based on reuse and downstream reach, not proof length. ${escapeHtml(node.importance.landmark ? "Marked as a structural landmark." : "Not currently marked as a landmark.")}</p></div>`
     : "";
   const presentation = node.presentation
     ? `<div class="detail-block"><div class="detail-label">Graph role</div><p><strong>${escapeHtml(node.presentation.category)}</strong> · ${escapeHtml(node.presentation.reason)}</p><p class="muted-note">Presentation heuristic, not a logical distinction in Lean.</p></div>`
+    : "";
+  const semanticRole = node.mathematicalRole
+    ? `<div class="detail-block"><div class="detail-label">Mathematical role</div><p><strong>${escapeHtml(node.mathematicalRole.label || node.mathematicalRole.category)}</strong> · ${escapeHtml(node.mathematicalRole.reason)}</p><p class="muted-note">${escapeHtml(node.mathematicalRole.source)}. ${isMathematicalFoundation(node) ? "The default view stops here; use the + marker or double-click to inspect its formal construction." : "This classification affects presentation, never Lean checking."}</p></div>`
     : "";
   const allProofsControl = isExactComparison && proofList.length > 1
     ? `<button class="proof-all ${state.selectedProofId ? "" : "selected"}" data-all-proofs><span class="proof-all-glyph">◎</span>All proof routes <small>merged comparison</small></button>`
@@ -1539,6 +1567,7 @@ function renderInspector() {
   ].join("");
   const provenance = [
     structureNote,
+    semanticRole,
     depthNote,
     presentation,
     importance,
@@ -2194,11 +2223,12 @@ function draw() {
     // not turn into a field of tiny overlapping triangles.
     .attr("marker-end", (edge) => edge.source.y + 5 < edge.target.y && (isMajorNode(edge.source) || isMajorNode(edge.target)) ? "url(#arrow-used-in-proof)" : null);
   link.append("title").text((edge) => `proof: ${labels.get(edge.proof) || edge.proof || "unknown"}\n${edge.description || "used in proof"}`);
-  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => displayLabelFor(item)).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("core-node", (item) => item.id === coreId).classed("focus-node", (item) => item.id === state.focusId).classed("ambient-node", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).on("dblclick", (event, item) => { event.stopPropagation(); if (hasHiddenDependencies(item.id, nodes)) expandNodeDependencies(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.rankY ?? item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = item.rankY ?? item.y; item.fx = event.x; item.fy = item.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.rankY ?? item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
+  const node = root.append("g").selectAll("g").data(nodes, (item) => item.id).join("g").attr("role", "button").attr("aria-label", (item) => displayLabelFor(item)).classed("graph-node", true).classed("major-node", (item) => isMajorNode(item)).classed("foundation-node", isMathematicalFoundation).classed("core-node", (item) => item.id === coreId).classed("focus-node", (item) => item.id === state.focusId).classed("ambient-node", (item) => ambientIds.has(item.id)).classed("direct-dependency", (item) => focusDependencyIds.has(item.id)).classed("implementation-node", (item) => presentationCategory(item) === "implementation").classed("landmark-node", (item) => state.showLandmarks && isLandmark(item)).on("click", (event, item) => { event.stopPropagation(); selectNode(item.id); }).on("dblclick", (event, item) => { event.stopPropagation(); if (hasHiddenDependencies(item.id, nodes)) expandNodeDependencies(item.id); }).call(d3.drag().on("start", (event, item) => { state.simulation?.stop(); item.fx = item.x; item.fy = item.rankY ?? item.y; }).on("drag", (event, item) => { item.x = event.x; item.y = item.rankY ?? item.y; item.fx = event.x; item.fy = item.y; node.attr("transform", (candidate) => `translate(${candidate.x},${candidate.y})`); link.attr("d", (edge) => routedLinkPath(edge, nodes)); }).on("end", (event, item) => { item.fx = null; item.fy = null; state.layoutPositions.set(item.id, { x: item.x, y: item.y }); state.pinnedPositions.set(item.id, { x: item.x, y: item.rankY ?? item.y }); if (state.selectedId === item.id) state.inspectionAnchor = { id: item.id, x: item.x, y: item.y }; resumeRevealIfVisible(); }));
   // Lean encodes structures as inductives internally. Their rounded cards
   // mark a representation boundary: they are substantial objects, but their
   // fields and construction details remain collapsed until expanded.
   node.append("rect").attr("class", "node-structure")
+    .classed("foundation", isMathematicalFoundation)
     .classed("hidden", (item) => !isStructureNode(item))
     .attr("x", -16).attr("y", -12).attr("width", 32).attr("height", 24).attr("rx", 6)
     .attr("fill", (item) => repositoryColor(repositoriesForNode(item)[0]));

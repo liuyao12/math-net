@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Emit small upstream dependency graphs for individual comparison views.
+"""Emit adaptive upstream dependency graphs for individual comparison views.
 
-The complete project graph remains the authoritative graph.  These slices are
-only a fast first view: they contain the selected proposition and five actual
-Lean proof-use generations above it.  The browser can load the full graph on
-demand when a reader expands beyond that boundary.
+The complete project graph remains authoritative.  A focused slice is a fast
+first view, but it is deliberately *not* a fixed number of proof-use
+generations: fixed-depth slices make structures look like arbitrary top-level
+ancestors.  Instead, the traversal continues through structures and routine
+Lean machinery while reserving its visual budget for mathematical
+declarations.  The browser can still load the complete landscape on demand.
 """
 
 from __future__ import annotations
@@ -15,26 +17,85 @@ from collections import defaultdict, deque
 from pathlib import Path
 
 
-MAX_UPSTREAM_DEPTH = 3
+MAX_INTERESTING_NODES = 56
+MAX_TOTAL_NODES = 160
 
 
-def upstream_ids(root_id: str, edges: list[dict]) -> tuple[set[str], set[str]]:
+def presentation_category(node: dict) -> str:
+    return node.get("presentation", {}).get("category", "supporting")
+
+
+def is_interesting(node: dict) -> bool:
+    """Count reader-facing mathematical landmarks against the slice budget."""
+    return (
+        presentation_category(node) == "mathematical"
+        or node.get("role") == "structure"
+        or bool(node.get("importance", {}).get("landmark"))
+        or bool(node.get("comparison"))
+    )
+
+
+def is_foundation(node: dict) -> bool:
+    return node.get("mathematicalRole", {}).get("category") == "foundation"
+
+
+def reading_priority(node: dict) -> tuple[float, str]:
+    """Prefer mathematical content without making structures artificial roots."""
+    importance = node.get("importance", {}).get("score", 0)
+    if len(node.get("comparison", {}).get("routes", [])) > 1:
+        return (9000 + importance, node["id"])
+    if presentation_category(node) == "mathematical":
+        return (7000 + importance, node["id"])
+    if node.get("importance", {}).get("landmark"):
+        return (6000 + importance, node["id"])
+    if node.get("role") == "structure":
+        return (3500 + importance, node["id"])
+    if presentation_category(node) == "supporting":
+        return (1000 + importance, node["id"])
+    return (importance, node["id"])
+
+
+def upstream_ids(root_id: str, nodes: list[dict], edges: list[dict]) -> tuple[set[str], set[str]]:
     incoming: dict[str, list[str]] = defaultdict(list)
     for edge in edges:
         incoming[edge["target"]["id"]].append(edge["source"]["id"])
+    by_id = {node["id"]: node for node in nodes}
     included = {root_id}
     boundary = set()
+    queued = {root_id}
+    interesting = int(is_interesting(by_id[root_id]))
     queue = deque([(root_id, 0)])
     while queue:
         target, depth = queue.popleft()
-        if depth >= MAX_UPSTREAM_DEPTH:
+        # A mathematical foundation is a meaningful endpoint for the default
+        # reader view. Its construction remains available by explicit expand.
+        if is_foundation(by_id[target]):
             if incoming[target]:
                 boundary.add(target)
             continue
-        for source in incoming[target]:
-            if source not in included:
-                included.add(source)
-                queue.append((source, depth + 1))
+        # Wide, shallow fan-out is much less readable than a path that reaches
+        # several mathematical ideas.  This is a local breadth budget, not a
+        # graph-depth cap: an unbranched proof path can continue indefinitely.
+        branch_budget = 8 if depth == 0 else 6 if depth == 1 else 4
+        accepted_here = 0
+        sources = sorted(incoming[target], key=lambda source: reading_priority(by_id.get(source, {"id": source})), reverse=True)
+        for source in sources:
+            if source in queued:
+                continue
+            source_node = by_id.get(source)
+            if not source_node:
+                continue
+            consumes_interest = int(is_interesting(source_node))
+            if accepted_here >= branch_budget or len(included) >= MAX_TOTAL_NODES or interesting + consumes_interest > MAX_INTERESTING_NODES:
+                boundary.add(target)
+                continue
+            queued.add(source)
+            included.add(source)
+            interesting += consumes_interest
+            accepted_here += 1
+            queue.append((source, depth + 1))
+        if any(source not in included for source in incoming[target]):
+            boundary.add(target)
     return included, boundary
 
 
@@ -62,13 +123,15 @@ def build(graph: dict, comparisons: dict, output_dir: Path) -> list[str]:
     for comparison_id, root in by_comparison.items():
         if not comparison_id:
             continue
-        included, boundary = upstream_ids(root["id"], edges)
+        included, boundary = upstream_ids(root["id"], nodes, edges)
         slice_graph = {
             "schemaVersion": graph.get("schemaVersion", "1.0"),
             "graphId": f"{graph.get('graphId', 'math-net-project')}:{comparison_id}",
             "label": f"Focused dependency view: {comparison_id}",
             "partial": True,
-            "partialUpstreamDepth": MAX_UPSTREAM_DEPTH,
+            "partialStrategy": "adaptive-interesting-budget",
+            "partialInterestingBudget": MAX_INTERESTING_NODES,
+            "partialNodeBudget": MAX_TOTAL_NODES,
             "partialBoundaryNodes": sorted(boundary),
             "focusComparison": comparison_id,
             "nodes": [node for node in nodes if node["id"] in included],

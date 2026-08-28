@@ -21,6 +21,8 @@ def input_paths() -> list[Path]:
         ROOT / "tools" / "build-graph.sh",
         ROOT / "tools" / "CombineRawGraphs.py",
         ROOT / "tools" / "MergeGraph.py",
+        ROOT / "tools" / "RefreshSemanticRoles.py",
+        ROOT / "MathNetwork" / "Graph" / "semantic-roles.json",
         ROOT / "tools" / "ValidateGraph.py",
         ROOT / "tools" / "GenerateExactMergeChecks.py",
         ROOT / "tools" / "BuildCatalogue.py",
