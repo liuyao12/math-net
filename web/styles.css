@@ -197,6 +197,11 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .reader-guide { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; background: rgba(219,236,238,.25); }
 .reader-guide ol { margin: 7px 0 0 18px; padding: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .reader-guide li + li { margin-top: 4px; }
+.reading-glossary { margin-top: 11px; border-top: 1px solid var(--line); }
+.reading-glossary summary { padding-top: 10px; color: var(--blue); cursor: pointer; font: 600 10px "DM Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: .06em; }
+.reading-glossary dl { display: grid; grid-template-columns: max-content 1fr; gap: 7px 9px; margin: 10px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+.reading-glossary dt { color: var(--ink); font-weight: 700; }
+.reading-glossary dd { margin: 0; }
 .reader-statement { border-left: 3px solid var(--teal); background: rgba(220, 235, 229, .32); }
 .reader-statement p { margin: 6px 0 0; color: var(--ink); font-size: 13px; line-height: 1.5; }
 .reader-statement .muted-note { color: var(--muted); font-size: 10px; }
