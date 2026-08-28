@@ -1325,7 +1325,10 @@ function mathematicalPrerequisites(nodeId, proofId, limit = 7) {
       (current.distance === 1 && isReaderFacingStructure(candidate));
     if (meaningful) {
       const previous = results.get(candidate.id);
-      if (!previous || current.through < previous.through) results.set(candidate.id, { ...current, node: candidate });
+      const routeProof = current.repository && (candidate.proofs || []).find((proof) => repositoryForProof(proof) === current.repository);
+      if (!previous || current.through < previous.through) {
+        results.set(candidate.id, { ...current, node: candidate, routeDeclaration: routeProof?.declaration || "" });
+      }
       continue;
     }
     (incoming.get(current.id) || []).forEach((sourceId) => queue.push({
@@ -1533,7 +1536,7 @@ function renderInspector() {
     : (proofList.length === 1 ? proofList[0] : null));
   const routePrerequisites = activeProof ? mathematicalPrerequisites(node.id, activeProof.id) : [];
   const routePrerequisiteNote = routePrerequisites.length
-    ? `<div class="detail-block mathematical-prerequisites"><div class="detail-label">Mathematical prerequisites in this route</div><p>Nearest named results on actual Lean proof-use paths. Compiler and representation details are folded, never removed.</p><div class="tag-list">${routePrerequisites.map(({ node: prerequisite, through }) => `<button class="neighbor" data-neighbor="${escapeHtml(prerequisite.id)}">${escapeHtml(labelFor(prerequisite, state.graph.nodes))}${through ? ` <small>through ${through} formal detail${through === 1 ? "" : "s"}</small>` : ""}</button>`).join("")}</div></div>`
+    ? `<div class="detail-block mathematical-prerequisites"><div class="detail-label">Mathematical prerequisites in this route</div><p>Nearest named results on actual Lean proof-use paths. Compiler and representation details are folded, never removed.</p><div class="tag-list">${routePrerequisites.map(({ node: prerequisite, through, routeDeclaration }) => { const routeName = routeDeclaration ? routeDeclaration.split(".").slice(-2).join(".") : labelFor(prerequisite, state.graph.nodes); return `<button class="neighbor" data-neighbor="${escapeHtml(prerequisite.id)}">${escapeHtml(routeName)}${through ? ` <small>through ${through} formal detail${through === 1 ? "" : "s"}</small>` : ""}</button>`; }).join("")}</div></div>`
     : proofList.length > 1
       ? `<div class="detail-block mathematical-prerequisites"><div class="detail-label">Mathematical prerequisites</div><p>Select a colored proof route above to see its nearest named prerequisites. The displayed graph can still show all routes together.</p></div>`
       : "";
