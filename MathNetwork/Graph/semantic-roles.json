@@ -6,6 +6,11 @@
       "category": "foundation",
       "label": "real numbers",
       "reason": "Canonical mathematical object. Its chosen Cauchy-completion implementation is intentionally behind an explicit expander."
+    },
+    "Complex": {
+      "category": "foundation",
+      "label": "complex numbers",
+      "reason": "Canonical mathematical object. Its pair-of-real-components implementation is intentionally behind an explicit expander."
     }
   }
 }

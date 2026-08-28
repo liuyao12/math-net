@@ -28,7 +28,7 @@
     "MathNetwork/Fermat/Registry.lean": "8b66a25b17a45d3a731589e2e3cd6115520c826c9f1a616b0c6d6acface386f4",
     "MathNetwork/Fermat/Zagier.lean": "47c8d183d1b50b031ca1a415a8a9b8d30509e030a0610c1c770ad24f4c6c8f02",
     "MathNetwork/Graph/Extract.lean": "cf266cfb728611ad07a459e366ff4853eecf62adbb5b57b8cd734aa82fac2386",
-    "MathNetwork/Graph/semantic-roles.json": "deeb1356727cab2f3bf8da4a7185c57a09a5e228b7ad318c80f2e7e5c16162af",
+    "MathNetwork/Graph/semantic-roles.json": "3c98c96e55bdfb999851cb370eeea5913173c8777d41c500a697c6462c1e5533",
     "MathNetwork/Machin/Basic.lean": "402587fe549eb22c3966702d7ad24a231784eb6146363f7c104216fd7f4611de",
     "lake-manifest.json": "5e3644aa2813997d0d856b9a0dd9691a45894787d9221e41f1c2e114a6e18769",
     "lakefile.toml": "e7c4f3fc211bce0212cce204e3f57b1ee74e9a23f4fc1633c23bdc6ac9a97537",
