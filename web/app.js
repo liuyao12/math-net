@@ -1259,6 +1259,45 @@ function proofDependencyDifference(nodeId, proofs) {
   };
 }
 
+function mathematicalPrerequisites(nodeId, proofId, limit = 7) {
+  if (!nodeId || !state.graph) return [];
+  const map = nodeMap();
+  const incoming = new Map();
+  proofRouteEdges(
+    state.graph.edges.filter((edge) => edge.relation === "used-in-proof"),
+    nodeId,
+    proofId,
+  ).forEach((edge) => {
+    if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
+    incoming.get(edge.target.id).push(edge.source.id);
+  });
+  const results = new Map();
+  const queue = (incoming.get(nodeId) || []).map((id) => ({ id, through: 0, distance: 1 }));
+  const seen = new Set([nodeId]);
+  while (queue.length) {
+    const current = queue.shift();
+    if (seen.has(current.id)) continue;
+    seen.add(current.id);
+    const candidate = map.get(current.id);
+    if (!candidate) continue;
+    const meaningful = isMathematicalNode(candidate) || isMathematicalFoundation(candidate) ||
+      (current.distance === 1 && isStructureNode(candidate));
+    if (meaningful) {
+      const previous = results.get(candidate.id);
+      if (!previous || current.through < previous.through) results.set(candidate.id, { ...current, node: candidate });
+      continue;
+    }
+    (incoming.get(current.id) || []).forEach((sourceId) => queue.push({
+      id: sourceId,
+      through: current.through + 1,
+      distance: current.distance + 1,
+    }));
+  }
+  return [...results.values()]
+    .sort((left, right) => readingPriority(right.node) - readingPriority(left.node) || left.through - right.through || displayLabelFor(left.node).localeCompare(displayLabelFor(right.node)))
+    .slice(0, limit);
+}
+
 function selectNode(nodeId, redraw = false) {
   const hadFocus = Boolean(state.focusId);
   if (hadFocus) {
@@ -1449,6 +1488,10 @@ function renderInspector() {
   const activeProof = selectedProof || (!hasProofComparison || isCheckedPresentation
     ? (independentProofs[0] || proofList[0] || null)
     : (proofList.length === 1 ? proofList[0] : null));
+  const routePrerequisites = mathematicalPrerequisites(node.id, activeProof?.id);
+  const routePrerequisiteNote = routePrerequisites.length
+    ? `<div class="detail-block mathematical-prerequisites"><div class="detail-label">Mathematical prerequisites in this route</div><p>Nearest named results on actual Lean proof-use paths. Compiler and representation details are folded, never removed.</p><div class="tag-list">${routePrerequisites.map(({ node: prerequisite, through }) => `<button class="neighbor" data-neighbor="${escapeHtml(prerequisite.id)}">${escapeHtml(displayLabelFor(prerequisite))}${through ? ` <small>through ${through} formal detail${through === 1 ? "" : "s"}</small>` : ""}</button>`).join("")}</div></div>`
+    : "";
   const formalizations = (node.formalizations || []).map((item) => {
     const file = item.file ? `<br><span>${escapeHtml(item.file)}${item.anchor ? ` · ${escapeHtml(item.anchor)}` : ""}</span>` : "";
     const github = githubUrlFor(node, item);
@@ -1589,6 +1632,7 @@ function renderInspector() {
     ${routes ? `<div class="detail-block"><div class="detail-label">Assumptions</div><div class="tag-list">${routes}</div></div>` : ""}
     ${proofs ? `<div class="detail-block"><div class="detail-label">${isCheckedPresentation ? "Checked Lean route and adapter" : hasProofComparison ? "Proof routes and checked aliases · select a route to filter dependencies" : "Lean declarations and checked aliases"}</div><div class="proof-list">${allProofsControl}${proofs}</div></div>` : ""}
     ${routeDifference}
+    ${routePrerequisiteNote}
     ${mathematicalCoreAnchor}
     ${foundationAnchors ? `<div class="detail-block"><div class="detail-label">Native real foundations</div><div class="tag-list">${foundationAnchors}</div></div>` : ""}
     ${proofSources || `<div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>`}
