@@ -60,6 +60,9 @@ The explorer is designed to be useful before the reader knows Lean.
 The published explorer is available at
 <https://liuyao12.github.io/math-net/>.
 
+For three worked first readings—√2, Fermat’s two-square theorem, and cosine
+addition via Euler—see the [reader journeys](docs/reader-journeys.md).
+
 The first calculus intake across Mathlib, ComputableAnalysis, and Tao Analysis
 is tracked in [the three-repository inventory](docs/calculus-three-repository-inventory.md).
 It distinguishes routes that Lean can merge today from source-pinned external
