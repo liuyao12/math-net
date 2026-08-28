@@ -232,6 +232,9 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .verification-badge.planned { color: var(--faint); background: transparent; }
 .verification-badge.informal { color: var(--plum); border-color: #d9c8d7; background: var(--plum-soft); }
 .inspector h2 { margin: 13px 0 8px; font-size: 20px; line-height: 1.15; letter-spacing: -0.035em; }
+.proof-position { display: flex; align-items: flex-start; gap: 7px; margin: 10px 0 2px; padding: 8px 9px; border-left: 2px solid var(--teal); border-radius: 0 5px 5px 0; color: var(--muted); background: rgba(63,127,143,.07); font-size: 11px; line-height: 1.45; }
+.proof-position-glyph { color: var(--teal); font-size: 14px; font-weight: 700; line-height: 1; }
+.proof-position .route-context-theorem { font-size: inherit; }
 .statement { margin: 0 0 18px; color: var(--ink); line-height: 1.55; }
 .detail-block { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--line); }
 .mathematical-status { margin-top: 18px; padding: 13px 14px; border: 1px solid var(--line-strong); border-radius: 8px; background: rgba(255,255,255,.42); }

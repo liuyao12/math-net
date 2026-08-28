@@ -1588,6 +1588,12 @@ function renderInspector() {
   const routeContext = focusedTheorem && focusedRoute && node.id !== focusedTheorem.id
     ? `<div class="route-context"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(focusedRoute)))}"></span><span>Viewing a dependency of <button class="route-context-theorem" data-neighbor="${escapeHtml(focusedTheorem.id)}">${escapeHtml(displayLabelFor(focusedTheorem))}</button> via <strong>${escapeHtml(focusedRoute.label)}</strong>.</span></div>`
     : "";
+  const proofDistance = state.focusId && node.id !== state.focusId ? state.focusDistances.get(node.id) : null;
+  const proofPosition = Number.isInteger(proofDistance)
+    ? `<div class="proof-position"><span class="proof-position-glyph" aria-hidden="true">↑</span><span>${proofDistance === 1
+      ? `Used directly in the displayed proof of <button class="route-context-theorem" data-neighbor="${escapeHtml(state.focusId)}">${escapeHtml(displayLabelFor(focusedTheorem))}</button>.`
+      : `An upstream prerequisite of <button class="route-context-theorem" data-neighbor="${escapeHtml(state.focusId)}">${escapeHtml(displayLabelFor(focusedTheorem))}</button>, reached through ${proofDistance - 1} intervening declaration${proofDistance === 2 ? "" : "s"}.`}</span></div>`
+    : "";
   const focusedGraphNote = state.graphPartial
     ? `<div class="detail-block"><div class="detail-label">Focused dependency slice</div><p>This initial view is an adaptive mathematical neighborhood: it follows actual Lean proof-use dependencies beyond structures, while reserving space for substantive declarations rather than stopping after a fixed number of generations.${(state.graph.partialBoundaryNodes || []).includes(node.id) ? " This declaration has additional indexed prerequisites; use its + marker or double-click it to load the complete landscape." : " Expand a boundary declaration to continue into the complete landscape."}</p></div>`
     : "";
@@ -1697,6 +1703,7 @@ function renderInspector() {
     <h2>${escapeHtml(displayLabelFor(node))}</h2>
     ${readerTitle}
     ${routeContext}
+    ${proofPosition}
     ${focusedGraphNote}
     ${readerStatementPanel}
     ${mathematicalStatus}
