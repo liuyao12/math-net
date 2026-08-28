@@ -1530,6 +1530,11 @@ function renderInspector() {
   const readerStatementPanel = readerStatement?.statement
     ? `<div class="detail-block reader-statement"><div class="detail-label">Mathematical statement</div><p>${escapeHtml(readerStatement.statement)}</p><p class="muted-note">Reader-oriented summary; the checked Lean statement follows.</p></div>`
     : "";
+  const proofIdeaPanel = activeProof?.routeDescription
+    ? `<div class="detail-block proof-idea"><div class="detail-label">Proof idea · ${escapeHtml((REPOSITORIES[repositoryForProof(activeProof)] || REPOSITORIES.unknown).label)}${activeProof.routeTitle ? ` · ${escapeHtml(activeProof.routeTitle)}` : ""}</div><p>${escapeHtml(activeProof.routeDescription)}</p><p class="muted-note">Curated route description; the dependency graph and checked Lean source below record its formal realization.</p></div>`
+    : proofList.length > 1
+      ? `<div class="detail-block proof-idea"><div class="detail-label">Proof ideas</div><p>Select a colored proof route to read its mathematical strategy and inspect its own prerequisites.</p></div>`
+      : "";
   const comparisonIdentity = comparison?.identity || (comparison?.alignment === "foundation-aligned"
     ? "The mathematical target is aligned across two distinct formal foundations"
     : comparison?.alignment === "presentation"
@@ -1660,6 +1665,7 @@ function renderInspector() {
     ${routeContext}
     ${focusedGraphNote}
     ${readerStatementPanel}
+    ${proofIdeaPanel}
     <div class="detail-block declaration-signature"><div class="detail-label">${formalStatementHeading}</div>${allRouteStatement || `<pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre>`}</div>
     ${mergeNote}${comparisonNote}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}

@@ -200,6 +200,9 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .reader-statement { border-left: 3px solid var(--teal); background: rgba(220, 235, 229, .32); }
 .reader-statement p { margin: 6px 0 0; color: var(--ink); font-size: 13px; line-height: 1.5; }
 .reader-statement .muted-note { color: var(--muted); font-size: 10px; }
+.proof-idea { border-left: 3px solid var(--plum); background: rgba(234, 223, 232, .35); }
+.proof-idea p { margin: 6px 0 0; color: var(--ink); font-size: 12px; line-height: 1.5; }
+.proof-idea .muted-note { color: var(--muted); font-size: 10px; }
 .comparison-overview { width: 100%; margin-top: 12px; }
 .comparison-overview > p { margin: 5px 0 13px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .comparison-overview-group { margin: 16px 0 0; }
