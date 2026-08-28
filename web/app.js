@@ -1518,6 +1518,9 @@ function renderInspector() {
     : "";
   const comparisonId = comparison?.registry || comparison?.id;
   const readerStatement = comparisonId && state.readerStatements[comparisonId];
+  const readerTitle = comparison?.title && comparison.title !== displayLabelFor(node)
+    ? `<p class="reader-title">${escapeHtml(comparison.title)}</p>`
+    : "";
   const readerStatementPanel = readerStatement?.statement
     ? `<div class="detail-block reader-statement"><div class="detail-label">Mathematical statement</div><p>${escapeHtml(readerStatement.statement)}</p><p class="muted-note">Reader-oriented summary; the checked Lean statement follows.</p></div>`
     : "";
@@ -1647,6 +1650,7 @@ function renderInspector() {
     <span class="node-kind ${escapeHtml(declarationClassFor(node))}" style="color:${escapeHtml(declarationColorFor(node))};background:${escapeHtml(declarationBackgroundFor(node))}">${escapeHtml(declarationKindFor(node))}</span>
     <div class="verification-badge ${verificationFor(node).className}"><span>${verificationFor(node).glyph}</span>${verificationText(node)}</div>
     <h2>${escapeHtml(displayLabelFor(node))}</h2>
+    ${readerTitle}
     ${routeContext}
     ${focusedGraphNote}
     ${readerStatementPanel}
@@ -1688,11 +1692,12 @@ function updateWorkspaceContext() {
   const map = nodeMap();
   const focus = state.focusId ? map.get(state.focusId) : null;
   const selected = state.selectedId ? map.get(state.selectedId) : null;
-  context.textContent = focus ? `Theorem · ${focus.label}` : "Choose a theorem to begin";
+  const focusTitle = comparisonRecordForNode(focus)?.title || focus?.label;
+  context.textContent = focus ? `Theorem · ${focusTitle}` : "Choose a theorem to begin";
   const title = $("#network-title");
-  if (title) title.textContent = focus ? `${focus.label} · dependency neighborhood` : "Mathematical landscape";
+  if (title) title.textContent = focus ? `${focusTitle} · dependency neighborhood` : "Mathematical landscape";
   back.hidden = !focus || !selected || selected.id === focus.id;
-  back.setAttribute("aria-label", focus ? `Return to theorem ${focus.label}` : "Return to theorem");
+  back.setAttribute("aria-label", focus ? `Return to theorem ${focusTitle}` : "Return to theorem");
   if (copyLink) copyLink.hidden = !focus;
 }
 

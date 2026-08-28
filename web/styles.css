@@ -253,6 +253,7 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .declaration-signature .proof-source { max-height: 210px; border-left-color: var(--teal); }
 .comparison-statements { display: grid; gap: 10px; }
 .comparison-title { margin: 3px 0 7px; font-size: 15px; line-height: 1.25; letter-spacing: -.02em; }
+.reader-title { margin: -4px 0 9px; color: var(--teal); font-size: 13px; font-weight: 700; line-height: 1.3; }
 .external-route-list { display: grid; gap: 7px; margin-top: 14px; padding: 10px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255,255,255,.3); }
 .external-route-list .detail-label { margin-bottom: 0; }
 .external-route { display: flex; align-items: flex-start; gap: 7px; color: var(--muted); font-size: 11px; line-height: 1.45; }
