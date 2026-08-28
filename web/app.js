@@ -512,7 +512,7 @@ function renderSearchResults() {
     return;
   }
   const matches = searchCandidates(state.search);
-  container.innerHTML = matches.map((node) => `<button class="search-result" role="option" data-search-node="${escapeHtml(node.id)}"><span class="search-result-name">${escapeHtml(node.label)}</span><span class="search-result-meta">${escapeHtml(declarationKindFor(node))}${node.namespace ? ` · ${escapeHtml(node.namespace)}` : ""}</span></button>`).join("");
+  container.innerHTML = matches.map((node) => `<button class="search-result" role="option" data-search-node="${escapeHtml(node.id)}"><span class="search-result-name">${escapeHtml(node.label)}</span><span class="search-result-meta">${escapeHtml(declarationKindFor(node))}${node.namespace ? ` · ${escapeHtml(node.namespace)}` : ""}${node.readerNote?.title ? ` · ${escapeHtml(node.readerNote.title)}` : ""}</span></button>`).join("");
   container.querySelectorAll("[data-search-node]").forEach((button) => button.addEventListener("click", () => focusDeclaration(button.dataset.searchNode)));
 }
 
