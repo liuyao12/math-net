@@ -589,30 +589,47 @@ function focusDistances(nodeId, edges) {
 
 function proofRouteEdges(edges, focusId, proofId) {
   if (!proofId || !focusId) return edges;
-  // A proof selection identifies the proof term at the focus node. Its
-  // dependencies are themselves declarations with their own proof edges, so
-  // retain the entire upstream closure after selecting the focus edge. The
-  // old implementation kept only one proof id and silently removed the
-  // theorems used by that proof's dependencies.
+  // A selected proof has a repository provenance. When its closure reaches a
+  // merged proposition with several proof bodies, follow the body from that
+  // same repository whenever available. This keeps a Mathlib route from
+  // silently acquiring computable-analysis prerequisites (and conversely),
+  // while retaining all edges when no provenance-preserving choice exists.
+  const proofById = new Map();
+  (state.graph?.nodes || []).forEach((node) => (node.proofs || []).forEach((proof) => proofById.set(proof.id, proof)));
+  const repositoryForEdge = (edge) => edge.proof ? repositoryForProof(proofById.get(edge.proof)) : null;
+  const incoming = new Map();
+  edges.forEach((edge) => {
+    if (!incoming.has(edge.target.id)) incoming.set(edge.target.id, []);
+    incoming.get(edge.target.id).push(edge);
+  });
   const selected = edges.filter((edge) => edge.target.id === focusId && edge.proof === proofId);
   const result = [];
   const includedEdges = new Set();
-  const frontier = new Set();
+  const rootRepository = repositoryForProof(proofById.get(proofId));
+  const frontier = [];
+  const seenStates = new Set();
   selected.forEach((edge) => {
     result.push(edge);
     includedEdges.add(edge.id);
-    frontier.add(edge.source.id);
+    const repository = repositoryForEdge(edge) || rootRepository;
+    frontier.push({ id: edge.source.id, repository });
   });
-  while (frontier.size) {
-    const next = new Set();
-    edges.forEach((edge) => {
-      if (!frontier.has(edge.target.id) || includedEdges.has(edge.id)) return;
+  while (frontier.length) {
+    const current = frontier.shift();
+    const stateKey = `${current.id}:${current.repository || "unknown"}`;
+    if (seenStates.has(stateKey)) continue;
+    seenStates.add(stateKey);
+    const candidates = incoming.get(current.id) || [];
+    const sameRepository = current.repository
+      ? candidates.filter((edge) => repositoryForEdge(edge) === current.repository)
+      : [];
+    const chosen = sameRepository.length ? sameRepository : candidates;
+    chosen.forEach((edge) => {
+      if (includedEdges.has(edge.id)) return;
       includedEdges.add(edge.id);
       result.push(edge);
-      next.add(edge.source.id);
+      frontier.push({ id: edge.source.id, repository: repositoryForEdge(edge) || current.repository });
     });
-    frontier.clear();
-    next.forEach((id) => frontier.add(id));
   }
   return result;
 }
