@@ -30,6 +30,7 @@ checks_tmp="$(mktemp)"
 route_audit_tmp="$(mktemp)"
 trap 'rm -f "$raw_fermat_basic_tmp" "$raw_fermat_registry_tmp" "$raw_euler_tmp" "$raw_list100_basel_tmp" "$raw_list100_demoivre_tmp" "$raw_list100_leibniz_tmp" "$raw_list100_taylor_tmp" "$raw_list100_ftc_tmp" "$raw_mathlib_sqrt_tmp" "$raw_computable_sqrt_tmp" "$raw_computable_ftc_tmp" "$raw_computable_fourier_tmp" "$raw_computable_series_tmp" "$raw_computable_demoivre_tmp" "$raw_computable_trig_special_values_tmp" "$raw_computable_pi_geometry_tmp" "$raw_computable_logarithm_tmp" "$raw_computable_nilakantha_tmp" "$raw_computable_rotation_ode_tmp" "$raw_calculus_polynomials_tmp" "$raw_calculus_derivative_uniqueness_tmp" "$raw_graph_tmp" "$project_tmp" "$catalogue_tmp" "$checks_tmp" "$route_audit_tmp"' EXIT
 tools/export-comparisons.sh > "$manifest"
+python3 tools/ValidateReaderMetadata.py "$manifest" MathNetwork/Graph/reader-statements.json MathNetwork/Graph/route-notes.json
 python3 tools/CheckNoSorry.py --json > "$route_audit_tmp"
 # Each extractor sees a real elaborated Lean environment, but only for a
 # coherent mathematical domain. Loading all of mathlib's calculus imports and
