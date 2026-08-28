@@ -19,7 +19,7 @@ checked body-level dependency edges. It supports theorem selection,
 multi-level neighborhood fading, proposition search, strict proof-dependency
 edges, structural-landmark highlighting, background-detail suppression, and
 click-to-inspect Lean source. The default theorem view shows mathematical
-declarations only; supporting foundations and implementation details can be
+declarations only; supporting prerequisites and implementation details can be
 revealed independently. When the focus is a corollary or adapter, the explorer
 places the strongest upstream bridge theorem at the center of the view. The
 choice is a navigation heuristic: it compares the focused proposition's
@@ -34,6 +34,31 @@ The theorem-centred index is
 [`theorem-catalogue.json`](MathNetwork/Graph/theorem-catalogue.json). Run
 `python3 -m http.server 4173` from the repository root and open
 <http://localhost:4173/web/>.
+
+### Reading one proof
+
+The explorer is designed to be useful before the reader knows Lean.
+
+1. Choose a concrete theorem or comparison from the catalogue. Its ordinary
+   mathematical statement appears in the inspector; the exact Lean statement
+   remains available below it.
+2. Read the graph upward. An arrow from `A` to `B` means that Lean's checked
+   proof of `B` uses `A`; it does not mean a loose conceptual relationship.
+3. Select a colored proof route to see its mathematical strategy and its
+   nearest named prerequisites. Repository colors apply to both routes and
+   their proof-use arrows.
+4. Gold-outlined square nodes are familiar mathematical foundations such as
+   `Real` and `Complex`. They are deliberate endpoints in the first view;
+   their Lean construction can be expanded when needed. Faded nodes are
+   supporting or implementation detail, but remain genuine checked
+   dependencies and explain themselves when selected.
+5. An **exact merge** means Lean has checked that routes conclude one identical
+   proposition. A **foundation-aligned** comparison is intentionally weaker:
+   the mathematics is aligned across different representations, but a checked
+   bridge is still needed before the graph may merge them.
+
+The published explorer is available at
+<https://liuyao12.github.io/math-net/>.
 
 The first calculus intake across Mathlib, ComputableAnalysis, and Tao Analysis
 is tracked in [the three-repository inventory](docs/calculus-three-repository-inventory.md).
