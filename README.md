@@ -129,6 +129,11 @@ no-placeholder condition together. This is deliberately narrower than an
 axiom-free claim: the audit reports routes using `native_decide` computational
 certificates separately.
 
+To verify the browser's code-reading promise against the pinned public source
+revisions, run `node tools/ValidateRouteSources.mjs`. It checks that each
+curated route can retrieve and isolate its authored Lean declaration; it is a
+networked release check and does not replace the Lean kernel checks above.
+
 ## Initial research questions
 
 1. Which theorem statements are genuinely common to both developments?
