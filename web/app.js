@@ -1718,7 +1718,6 @@ function renderInspector() {
     ${mathematicalStatus}
     ${proofMap}
     ${proofIdeaPanel}
-    <div class="detail-block declaration-signature"><div class="detail-label">${formalStatementHeading}</div>${allRouteStatement || `<pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre>`}</div>
     ${mergeNote}${comparisonNote}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
     ${tags ? `<div class="detail-block"><div class="detail-label">Tags</div><div class="tag-list">${tags}</div></div>` : ""}
@@ -1728,6 +1727,7 @@ function renderInspector() {
     ${routePrerequisiteNote}
     ${mathematicalCoreAnchor}
     ${foundationAnchors ? `<div class="detail-block"><div class="detail-label">Native real foundations</div><div class="tag-list">${foundationAnchors}</div></div>` : ""}
+    <div class="detail-block declaration-signature"><div class="detail-label">${formalStatementHeading}</div>${allRouteStatement || `<pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre>`}</div>
     ${proofSources || `<div class="detail-block"><div class="detail-label">Lean proof source</div><pre class="proof-source pending" id="proof-source"><code>Loading declaration…</code></pre></div>`}
     ${neighborRows ? `<div class="detail-block"><div class="neighbor-list">${neighborRows}</div></div>` : ""}
     ${provenance ? `<details class="provenance"><summary>Checked provenance and formalization</summary><div class="provenance-content">${provenance}</div></details>` : ""}
