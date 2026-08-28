@@ -1603,6 +1603,10 @@ function renderInspector() {
       ? `Used directly in the displayed proof of <button class="route-context-theorem" data-neighbor="${escapeHtml(state.focusId)}">${escapeHtml(displayLabelFor(focusedTheorem))}</button>.`
       : `An upstream prerequisite of <button class="route-context-theorem" data-neighbor="${escapeHtml(state.focusId)}">${escapeHtml(displayLabelFor(focusedTheorem))}</button>, reached through ${proofDistance - 1} intervening declaration${proofDistance === 2 ? "" : "s"}.`}</span></div>`
     : "";
+  const presentationKind = presentationCategory(node);
+  const formalDetailStatus = !isStructureNode(node) && ["supporting", "routine", "implementation"].includes(presentationKind)
+    ? `<section class="formal-detail-status ${escapeHtml(presentationKind)}"><div class="detail-label">Why this node is subdued</div><h3>${presentationKind === "implementation" ? "Lean implementation detail" : presentationKind === "routine" ? "Routine formal step" : "Supporting formal prerequisite"}</h3><p>${escapeHtml(node.presentation?.reason || "This declaration is needed on the checked proof path, but is not being presented as a named mathematical milestone.")}</p><p class="muted-note">It is still a genuine Lean dependency, not a gap in the proof. Enable the relevant detail control when you want to keep such nodes visible throughout the graph.</p></section>`
+    : "";
   const focusedGraphNote = state.graphPartial
     ? `<div class="detail-block"><div class="detail-label">Focused dependency slice</div><p>This initial view is an adaptive mathematical neighborhood: it follows actual Lean proof-use dependencies beyond structures, while reserving space for substantive declarations rather than stopping after a fixed number of generations.${(state.graph.partialBoundaryNodes || []).includes(node.id) ? " This declaration has additional indexed prerequisites; use its + marker or double-click it to load the complete landscape." : " Expand a boundary declaration to continue into the complete landscape."}</p></div>`
     : "";
@@ -1713,6 +1717,7 @@ function renderInspector() {
     ${readerTitle}
     ${routeContext}
     ${proofPosition}
+    ${formalDetailStatus}
     ${focusedGraphNote}
     ${readerStatementPanel}
     ${mathematicalStatus}
