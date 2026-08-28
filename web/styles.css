@@ -198,6 +198,10 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .reader-guide { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; background: rgba(219,236,238,.25); }
 .reader-guide ol { margin: 7px 0 0 18px; padding: 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .reader-guide li + li { margin-top: 4px; }
+.quick-starts { display: grid; gap: 5px; margin-top: 9px; padding: 9px; border: 1px solid rgba(63,127,143,.2); border-radius: 6px; background: rgba(255,255,255,.38); color: var(--muted); font-size: 10px; }
+.quick-starts > span { font: 600 9px "DM Mono", ui-monospace, monospace; letter-spacing: .05em; text-transform: uppercase; }
+.quick-starts a { color: var(--blue); font-size: 11px; font-weight: 600; text-decoration: none; }
+.quick-starts a:hover, .quick-starts a:focus { color: var(--ink); text-decoration: underline; }
 .reading-glossary { margin-top: 11px; border-top: 1px solid var(--line); }
 .reading-glossary summary { padding-top: 10px; color: var(--blue); cursor: pointer; font: 600 10px "DM Mono", ui-monospace, monospace; text-transform: uppercase; letter-spacing: .06em; }
 .reading-glossary dl { display: grid; grid-template-columns: max-content 1fr; gap: 7px 9px; margin: 10px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
