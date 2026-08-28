@@ -16,6 +16,7 @@ const versionedAsset = (url) => `${url}${url.includes("?") ? "&" : "?"}v=${encod
 const THEOREMS_URL = versionedAsset("./theorems.json");
 const COMPARISONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/comparisons.json`);
 const READER_STATEMENTS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/reader-statements.json`);
+const ROUTE_NOTES_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/route-notes.json`);
 const SOURCE_REVISIONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/source-revisions.json`);
 const DATA_URLS = [versionedAsset(`${REPO_ROOT}MathNetwork/Graph/project.json`)];
 const comparisonSliceUrl = (comparisonId) => versionedAsset(
@@ -101,6 +102,7 @@ const state = {
   comparisons: [],
   comparisonsByDeclaration: new Map(),
   readerStatements: {},
+  routeNotes: {},
   sourceRevisions: {},
   graphPromise: null,
   graphPartial: false,
@@ -2499,7 +2501,30 @@ async function ensureGraph() {
   }
 }
 
+function applyRouteNotes(graph) {
+  (graph.nodes || []).forEach((node) => {
+    (node.proofs || []).forEach((proof) => {
+      const note = state.routeNotes[proof.declaration];
+      if (!note) return;
+      if (!proof.routeTitle) proof.routeTitle = note.title || "";
+      if (!proof.routeDescription) proof.routeDescription = note.description || "";
+    });
+  });
+  return graph;
+}
+
+function applyRouteNotesToComparisons(comparisons) {
+  return comparisons.map((comparison) => ({
+    ...comparison,
+    routes: (comparison.routes || []).map((route) => {
+      const note = state.routeNotes[route.declaration];
+      return note ? { ...route, title: route.title || note.title || "", description: route.description || note.description || "" } : route;
+    }),
+  }));
+}
+
 function installGraph(graph, sourceName) {
+  applyRouteNotes(graph);
   state.graph = graph;
   state.graphPartial = Boolean(graph.partial);
   const scope = state.graphPartial ? "focused" : "project";
@@ -2532,15 +2557,17 @@ async function loadComparisonSlice(comparisonId) {
 
 async function load() {
   try {
-    const [theoremResponse, comparisonResponse, sourceRevisionResponse, readerStatementsResponse] = await Promise.all([
+    const [theoremResponse, comparisonResponse, sourceRevisionResponse, readerStatementsResponse, routeNotesResponse] = await Promise.all([
       fetch(THEOREMS_URL),
       fetch(COMPARISONS_URL),
       fetch(SOURCE_REVISIONS_URL),
       fetch(READER_STATEMENTS_URL),
+      fetch(ROUTE_NOTES_URL),
     ]);
     if (theoremResponse.ok) state.theorems = await theoremResponse.json();
+    if (routeNotesResponse.ok) state.routeNotes = (await routeNotesResponse.json()).notes || {};
     if (comparisonResponse.ok) {
-      state.comparisons = (await comparisonResponse.json()).comparisons || [];
+      state.comparisons = applyRouteNotesToComparisons((await comparisonResponse.json()).comparisons || []);
       state.comparisonsByDeclaration = new Map(state.comparisons.flatMap((comparison) =>
         (comparison.routes || []).map((route) => [route.declaration, comparison]),
       ));

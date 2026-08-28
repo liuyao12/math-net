@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "1.0",
+  "purpose": "Human-readable route annotations. These notes supplement checked Lean declarations and never assert equivalence or change proof dependencies.",
+  "notes": {
+    "MathNetwork.MathlibSqrt.irrational_sqrt_ratCast_iff_of_nonneg": {
+      "title": "Completed-real square-root criterion",
+      "description": "Apply Mathlib's irrational-square-root criterion over the completed real numbers, then rewrite the rational-square condition into the shared rational form."
+    },
+    "MathNetwork.ComputableSqrt.irrational_sqrt_ratCast_iff_of_nonneg": {
+      "title": "Computable-real square-root criterion",
+      "description": "Apply the computable-analysis criterion over RealRaw, then identify its computable nonsquare condition with the shared rational-square condition."
+    },
+    "MathNetwork.List100.fundamentalTheoremOfCalculus": {
+      "title": "Interval integral over ℝ",
+      "description": "Apply Mathlib's interval-integral fundamental theorem under continuity, differentiability, and interval-integrability hypotheses."
+    },
+    "MathNetwork.ComputableFTC.effectiveFTC_equiv_endpoint": {
+      "title": "Certified Riemann endpoint algorithm",
+      "description": "Show that certified Riemann-sum and endpoint-difference algorithms determine the same computable real under an effective derivative certificate."
+    }
+  }
+}
