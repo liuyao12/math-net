@@ -15,6 +15,7 @@ const APP_REVISION = new URL(import.meta.url).searchParams.get("v") || "dev";
 const versionedAsset = (url) => `${url}${url.includes("?") ? "&" : "?"}v=${encodeURIComponent(APP_REVISION)}`;
 const THEOREMS_URL = versionedAsset("./theorems.json");
 const COMPARISONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/comparisons.json`);
+const READER_STATEMENTS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/reader-statements.json`);
 const SOURCE_REVISIONS_URL = versionedAsset(`${REPO_ROOT}MathNetwork/Graph/source-revisions.json`);
 const DATA_URLS = [versionedAsset(`${REPO_ROOT}MathNetwork/Graph/project.json`)];
 const comparisonSliceUrl = (comparisonId) => versionedAsset(
@@ -98,6 +99,7 @@ const state = {
   graph: null,
   theorems: [],
   comparisons: [],
+  readerStatements: {},
   sourceRevisions: {},
   graphPromise: null,
   graphPartial: false,
@@ -1507,6 +1509,10 @@ function renderInspector() {
     ? `<div class="detail-block"><div class="detail-label">Merged proposition</div><p>Exact checked statement shared by ${node.declarationCount} declarations.${hasProofComparison ? " The independent proof bodies below remain separate routes." : " Some declarations are checked aliases of another theorem; they are retained as provenance, not counted as alternative proofs."}</p></div>`
     : "";
   const comparison = node.comparison;
+  const readerStatement = comparison?.registry && state.readerStatements[comparison.registry];
+  const readerStatementPanel = readerStatement?.statement
+    ? `<div class="detail-block reader-statement"><div class="detail-label">Mathematical statement</div><p>${escapeHtml(readerStatement.statement)}</p><p class="muted-note">Reader-oriented summary; the checked Lean statement follows.</p></div>`
+    : "";
   const allRouteStatement = !activeProof && hasProofComparison && proofList.length > 1
     ? comparison?.alignment === "foundation-aligned"
       ? `<div class="comparison-statements">${proofList.map((proof) => `<div class="comparison-statement"><div class="comparison-statement-label"><span class="proof-color" style="background:${escapeHtml(repositoryColor(repositoryForProof(proof)))}"></span>${escapeHtml((REPOSITORIES[repositoryForProof(proof)] || REPOSITORIES.unknown).label)} route</div><pre class="proof-source pending" data-route-statement="${escapeHtml(proof.id)}"><code>Loading Lean declaration…</code></pre></div>`).join("")}</div>`
@@ -1628,6 +1634,7 @@ function renderInspector() {
     <h2>${escapeHtml(displayLabelFor(node))}</h2>
     ${routeContext}
     ${focusedGraphNote}
+    ${readerStatementPanel}
     <div class="detail-block declaration-signature"><div class="detail-label">${formalStatementHeading}</div>${allRouteStatement || `<pre class="proof-source pending" id="declaration-signature"><code>Loading Lean declaration…</code></pre>`}</div>
     ${mergeNote}${comparisonNote}
     ${node.method && node.statement ? `<div class="detail-block"><div class="detail-label">Method</div><p>${escapeHtml(node.method)}</p></div>` : ""}
@@ -2442,14 +2449,16 @@ async function loadComparisonSlice(comparisonId) {
 
 async function load() {
   try {
-    const [theoremResponse, comparisonResponse, sourceRevisionResponse] = await Promise.all([
+    const [theoremResponse, comparisonResponse, sourceRevisionResponse, readerStatementsResponse] = await Promise.all([
       fetch(THEOREMS_URL),
       fetch(COMPARISONS_URL),
       fetch(SOURCE_REVISIONS_URL),
+      fetch(READER_STATEMENTS_URL),
     ]);
     if (theoremResponse.ok) state.theorems = await theoremResponse.json();
     if (comparisonResponse.ok) state.comparisons = (await comparisonResponse.json()).comparisons || [];
     if (sourceRevisionResponse.ok) state.sourceRevisions = (await sourceRevisionResponse.json()).repositories || {};
+    if (readerStatementsResponse.ok) state.readerStatements = (await readerStatementsResponse.json()).statements || {};
     const exact = state.comparisons.filter((comparison) => !comparison.alignment && comparison.routes?.length > 1).length;
     const aligned = state.comparisons.filter((comparison) => comparison.alignment === "foundation-aligned").length;
     const presentations = state.comparisons.filter((comparison) => comparison.alignment === "presentation" ||

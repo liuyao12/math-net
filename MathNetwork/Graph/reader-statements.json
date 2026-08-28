@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "1.0",
+  "purpose": "Human-readable mathematical statements for curated benchmarks. These guide reader orientation and do not replace the checked Lean declaration.",
+  "statements": {
+    "irrational-sqrt-two": {"statement": "√2 is irrational: √2 ∉ ℚ."},
+    "fermat-prime-two-squares": {"statement": "If p is prime and p ≡ 1 (mod 4), then p = a² + b² for some integers a and b."},
+    "cosine-addition": {"statement": "cos(x + y) = cos x cos y − sin x sin y."},
+    "sine-addition": {"statement": "sin(x + y) = sin x cos y + cos x sin y."},
+    "cosine-subtraction": {"statement": "cos(x − y) = cos x cos y + sin x sin y."},
+    "sine-subtraction": {"statement": "sin(x − y) = sin x cos y − cos x sin y."},
+    "quadratic-polynomial-derivative": {"statement": "For f(x) = x², f′(x) = 2x; this benchmark uses an exact finite rational polynomial evaluator."},
+    "cubic-polynomial-derivative": {"statement": "For f(x) = x³, f′(x) = 3x²; this benchmark uses an exact finite rational polynomial evaluator."},
+    "derivative-uniqueness": {"statement": "At an accumulation point, if a function has two derivatives (within the same set), then those derivative values are equal."},
+    "irrational-sqrt-rational": {"statement": "For a nonnegative rational q, √q is irrational exactly when q is not a square of a rational number."},
+    "effective-fundamental-theorem-of-calculus": {"statement": "Under the usual hypotheses, ∫ₐᵇ f′(x) dx = f(b) − f(a)."},
+    "telescoping-reciprocal-series": {"statement": "The reciprocal triangular series sums to 2: Σₙ≥1 1/(n(n+1)/2) = 2."},
+    "sine-alternating-taylor-bridge": {"statement": "The certified alternating-series interval for sin agrees with the corresponding Taylor partial-sum interval."},
+    "finite-de-moivre-rational-circle": {"statement": "On rational points of the unit circle, taking an n-th power is the same as repeated circle multiplication: a finite geometric De Moivre theorem."},
+    "computable-forty-five-unit-circle": {"statement": "The certified computable values of sin(π/4) and cos(π/4) satisfy sin²(π/4) + cos²(π/4) = 1."},
+    "euler-identity": {"statement": "e^(πi) + 1 = 0."},
+    "finite-rotation-euler-ode-bridge": {"statement": "A finite constant-coefficient rotation ODE expansion agrees exactly with the alternating sine–cosine matrix polynomial from the exponential route."},
+    "four-point-parseval": {"statement": "For the unnormalised four-point Fourier transform, the transformed energy is four times the original energy."},
+    "pi-circle-area-geometric-arctangent": {"statement": "The circle-area construction of π agrees with four geometric arctangent sectors."},
+    "log-two-series-reciprocal-integral": {"statement": "1 − 1/2 + 1/3 − 1/4 + ··· = ∫₁² dx/x = log 2."},
+    "nilakantha-leibniz-pi": {"statement": "The Nilakantha and Leibniz alternating-series algorithms converge to the same value π."}
+  }
+}
