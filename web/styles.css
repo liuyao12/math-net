@@ -250,6 +250,8 @@ code { color: var(--blue); font-family: "DM Mono", ui-monospace, monospace; }
 .proof-map-node { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 10px; padding: 8px 9px; border: 1px solid rgba(63,127,143,.34); border-radius: 6px; color: var(--ink); background: var(--paper); text-align: left; font: 600 11px/1.35 "DM Mono", ui-monospace, monospace; cursor: pointer; overflow-wrap: anywhere; }
 .proof-map-node:hover, .proof-map-node:focus { border-color: var(--teal); background: var(--teal-soft); outline: none; }
 .proof-map-arrow { color: var(--teal); font: 700 16px/1 Manrope, sans-serif; }
+.proof-map-inputs { margin-top: 11px; padding-top: 10px; border-top: 1px solid rgba(63,127,143,.2); color: var(--muted); font-size: 10px; line-height: 1.4; }
+.proof-map-inputs .tag-list { margin-top: 7px; }
 .statement { margin: 0 0 18px; color: var(--ink); line-height: 1.55; }
 .detail-block { margin-top: 18px; padding-top: 15px; border-top: 1px solid var(--line); }
 .mathematical-status { margin-top: 18px; padding: 13px 14px; border: 1px solid var(--line-strong); border-radius: 8px; background: rgba(255,255,255,.42); }

@@ -1548,9 +1548,13 @@ function renderInspector() {
     ? (independentProofs[0] || proofList[0] || null)
     : (proofList.length === 1 ? proofList[0] : null));
   const routePrerequisites = activeProof ? mathematicalPrerequisites(node.id, activeProof.id) : [];
-  const routePrerequisiteNote = routePrerequisites.length
-    ? `<div class="detail-block mathematical-prerequisites"><div class="detail-label">Mathematical prerequisites in this route</div><p>Nearest named results on actual Lean proof-use paths. Compiler and representation details are folded, never removed.</p><div class="tag-list">${routePrerequisites.map(({ node: prerequisite, through, routeDeclaration }) => { const routeName = routeDeclaration ? routeDeclaration.split(".").slice(-2).join(".") : labelFor(prerequisite, state.graph.nodes); return `<button class="neighbor" data-neighbor="${escapeHtml(prerequisite.id)}">${escapeHtml(routeName)}${through ? ` <small>through ${through} formal detail${through === 1 ? "" : "s"}</small>` : ""}</button>`; }).join("")}</div></div>`
-    : proofList.length > 1
+  const routePrerequisiteButtons = routePrerequisites.map(({ node: prerequisite, through, routeDeclaration }) => {
+    const routeName = routeDeclaration ? routeDeclaration.split(".").slice(-2).join(".") : labelFor(prerequisite, state.graph.nodes);
+    return `<button class="neighbor" data-neighbor="${escapeHtml(prerequisite.id)}">${escapeHtml(routeName)}${through ? ` <small>through ${through} formal detail${through === 1 ? "" : "s"}</small>` : ""}</button>`;
+  }).join("");
+  const routePrerequisiteNote = node.id !== state.focusId && routePrerequisites.length
+    ? `<div class="detail-block mathematical-prerequisites"><div class="detail-label">Mathematical prerequisites in this route</div><p>Nearest named results on actual Lean proof-use paths. Compiler and representation details are folded, never removed.</p><div class="tag-list">${routePrerequisiteButtons}</div></div>`
+    : node.id !== state.focusId && proofList.length > 1
       ? `<div class="detail-block mathematical-prerequisites"><div class="detail-label">Mathematical prerequisites</div><p>Select a colored proof route above to see its nearest named prerequisites. The displayed graph can still show all routes together.</p></div>`
       : "";
   const formalizations = (node.formalizations || []).map((item) => {
@@ -1577,10 +1581,14 @@ function renderInspector() {
     : "";
   const focusedCoreNode = node.id === state.focusId && state.coreId ? nodeMap().get(state.coreId) : null;
   const explicitCore = comparison?.mathematicalCore && focusedCoreNode?.namespace === comparison.mathematicalCore;
-  const proofMap = focusedCoreNode && focusedCoreNode.id !== node.id
-    ? `<section class="proof-map"><div class="detail-label">Proof map</div><p>${explicitCore
-      ? "This comparison explicitly identifies the following checked declaration as its shared mathematical core."
-      : "A central named result in this displayed proof neighborhood."}</p><button class="proof-map-node" data-neighbor="${escapeHtml(focusedCoreNode.id)}"><span class="proof-map-arrow" aria-hidden="true">↑</span><span>${escapeHtml(displayLabelFor(focusedCoreNode))}</span></button><p class="muted-note">Read upward from that result to see its prerequisites; the arrows still record only actual Lean proof use.${explicitCore ? "" : " This suggestion is based on its position, mathematical content, and reuse—not proof length."}</p></section>`
+  const proofMap = node.id === state.focusId
+    ? `<section class="proof-map"><div class="detail-label">Proof map</div>${focusedCoreNode && focusedCoreNode.id !== node.id
+      ? `<p>${explicitCore ? "This comparison explicitly identifies the following checked declaration as its shared mathematical core." : "A central named result in this displayed proof neighborhood."}</p><button class="proof-map-node" data-neighbor="${escapeHtml(focusedCoreNode.id)}"><span class="proof-map-arrow" aria-hidden="true">↑</span><span>${escapeHtml(displayLabelFor(focusedCoreNode))}</span></button>`
+      : "<p>Read upward from the selected theorem to follow the actual checked proof uses.</p>"}${routePrerequisiteButtons
+      ? `<div class="proof-map-inputs"><span>Nearest named inputs in the selected route</span><div class="tag-list">${routePrerequisiteButtons}</div></div>`
+      : proofList.length > 1
+        ? "<p class=\"muted-note\">Select a colored proof route to add its nearest named inputs to this outline.</p>"
+        : ""}<p class="muted-note">${focusedCoreNode && focusedCoreNode.id !== node.id ? "Read upward from the central result to see its prerequisites; the arrows still record only actual Lean proof use." : "The graph contains no explanatory relationship arrows."}${explicitCore ? "" : focusedCoreNode && focusedCoreNode.id !== node.id ? " This central-result suggestion is based on position, mathematical content, and reuse—not proof length." : ""}</p></section>`
     : "";
   const proofIdeaPanel = activeProof?.routeDescription
     ? `<div class="detail-block proof-idea"><div class="detail-label">Proof idea · ${escapeHtml((REPOSITORIES[repositoryForProof(activeProof)] || REPOSITORIES.unknown).label)}${activeProof.routeTitle ? ` · ${escapeHtml(activeProof.routeTitle)}` : ""}</div><p>${escapeHtml(activeProof.routeDescription)}</p><p class="muted-note">Curated route description; the dependency graph and checked Lean source below record its formal realization.</p></div>`
