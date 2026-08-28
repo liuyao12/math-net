@@ -1303,6 +1303,8 @@ function proofDependencyDifference(nodeId, proofs) {
 function mathematicalPrerequisites(nodeId, proofId, limit = 7) {
   if (!nodeId || !state.graph) return [];
   const map = nodeMap();
+  const selectedProof = [...map.values()].flatMap((node) => node.proofs || []).find((proof) => proof.id === proofId);
+  const selectedRepository = selectedProof && repositoryForProof(selectedProof);
   const incoming = new Map();
   proofRouteEdges(
     state.graph.edges.filter((edge) => edge.relation === "used-in-proof"),
@@ -1325,7 +1327,7 @@ function mathematicalPrerequisites(nodeId, proofId, limit = 7) {
       (current.distance === 1 && isReaderFacingStructure(candidate));
     if (meaningful) {
       const previous = results.get(candidate.id);
-      const routeProof = current.repository && (candidate.proofs || []).find((proof) => repositoryForProof(proof) === current.repository);
+      const routeProof = selectedRepository && (candidate.proofs || []).find((proof) => repositoryForProof(proof) === selectedRepository);
       if (!previous || current.through < previous.through) {
         results.set(candidate.id, { ...current, node: candidate, routeDeclaration: routeProof?.declaration || "" });
       }
