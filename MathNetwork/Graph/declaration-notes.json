@@ -11,6 +11,26 @@
       "title": "Rational nonsquare bridge",
       "statement": "A rational number fails to be a square in Mathlib exactly when it fails the computable-analysis square test.",
       "why": "It transports the negative form of the rational-square criterion between the two libraries, so the comparison can focus on the distinct square-root constructions rather than on notation for nonsquares."
+    },
+    "Complex.exp_add": {
+      "title": "Exponential addition law",
+      "statement": "For complex numbers z and w, exp(z + w) = exp(z) · exp(w).",
+      "why": "This is the algebraic engine of the complex-exponential route to trigonometric addition formulas. Taking real and imaginary parts after substituting purely imaginary inputs produces cosine and sine identities."
+    },
+    "MathNetwork.Euler.trig_addition_euler_route": {
+      "title": "Euler package for trigonometric addition",
+      "statement": "The complex exponential addition law yields both real addition formulas for cosine and sine at once.",
+      "why": "This local checked declaration makes the common mathematical move explicit: derive the two trigonometric identities together from exp((x + y)i) = exp(xi) exp(yi), then project real and imaginary parts."
+    },
+    "intervalIntegral.integral_eq_sub_of_hasDerivAt_of_le": {
+      "title": "Fundamental theorem for an interval integral",
+      "statement": "If f is continuous on [a,b], differentiable with derivative f′ on its interior, and f′ is integrable, then ∫ₐᵇ f′(x) dx = f(b) − f(a).",
+      "why": "This is Mathlib’s standard-real route for the fundamental theorem of calculus benchmark. Its hypotheses expose the analytic infrastructure that the certified computable route represents differently."
+    },
+    "ComputableAnalysis.FTC.effectiveFTC_equiv_endpoint": {
+      "title": "Effective fundamental theorem equivalence",
+      "statement": "Given a certified derivative on a rational interval, the computable Riemann-sum algorithm and the endpoint-difference algorithm represent the same computable real number.",
+      "why": "This is the computable-analysis analogue of the fundamental theorem in the displayed comparison: it relates two certified algorithms rather than invoking an already completed real-valued integral."
     }
   }
 }
