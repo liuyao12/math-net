@@ -261,12 +261,19 @@ function githubUrlFor(node, item = null) {
 function declarationSource(text, name) {
   const short = name.split(".").pop();
   const escaped = short.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const declaration = new RegExp(`^\\s*(?:(?:protected|private)\\s+)?(?:(?:noncomputable)\\s+)?(theorem|lemma|def|abbrev|example|axiom|opaque|instance|class|structure|inductive)\\s+${escaped}\\b`, "m");
+  // Lean source frequently adds several modifiers (`private`, `unsafe`,
+  // `noncomputable`, …) before a declaration.  Recognising the full family
+  // keeps the inspector on the authored source instead of falling back to an
+  // elaborated declaration type that is much harder for a mathematician to
+  // read.
+  const modifiers = "(?:(?:protected|private|noncomputable|unsafe|partial|scoped|local)\\s+)*";
+  const declarationKinds = "(?:theorem|lemma|def|abbrev|example|axiom|opaque|instance|class|structure|inductive)";
+  const declaration = new RegExp(`^\\s*${modifiers}${declarationKinds}\\s+${escaped}\\b`, "m");
   const match = declaration.exec(text);
   if (!match) return null;
   const start = text.lastIndexOf("\n", match.index) + 1;
   const rest = text.slice(match.index + match[0].length);
-  const next = rest.search(/\n(?=\s*(?:theorem|lemma|def|noncomputable def|example|axiom)\s+)/);
+  const next = rest.search(new RegExp(`\\n(?=\\s*${modifiers}${declarationKinds}\\s+)`));
   return text.slice(start, next < 0 ? text.length : match.index + match[0].length + next + 1).trim();
 }
 
