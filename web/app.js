@@ -1180,8 +1180,9 @@ function renderProofLegend() {
     else if (alignment === "presentation") evidence.presentation += 1;
   });
   const evidenceLegend = `<span class="legend-heading evidence-heading">Comparison evidence</span><span class="legend-item evidence-exact">${evidence.exact} exact merged</span><span class="legend-item evidence-aligned">${evidence.aligned} foundation-aligned</span><span class="legend-item evidence-presentation">${evidence.presentation} checked presentation</span>`;
+  const roleLegend = `<span class="legend-heading role-heading">Mathematical reading</span><span class="legend-item"><span class="role-glyph declaration" aria-hidden="true"></span>declaration</span><span class="legend-item"><span class="role-glyph interface" aria-hidden="true"></span>Lean interface</span><span class="legend-item"><span class="role-glyph foundation" aria-hidden="true"></span>mathematical foundation</span><span class="legend-item"><span class="role-glyph implementation" aria-hidden="true"></span>implementation detail</span>`;
   container.innerHTML = entries.length
-    ? `<span class="legend-heading">Repository colors · nodes and proof arrows</span>${entries.map((entry) => `<span class="legend-item"><span class="legend-dot repository-dot" style="background:${escapeHtml(repositoryColor(entry.id))}"></span><span>${escapeHtml(entry.label)}</span></span>`).join("")}${evidenceLegend}`
+    ? `<span class="legend-heading">Repository colors · nodes and proof arrows</span>${entries.map((entry) => `<span class="legend-item"><span class="legend-dot repository-dot" style="background:${escapeHtml(repositoryColor(entry.id))}"></span><span>${escapeHtml(entry.label)}</span></span>`).join("")}${evidenceLegend}${roleLegend}`
     : "";
 }
 
