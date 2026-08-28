@@ -25,6 +25,7 @@ def input_paths() -> list[Path]:
         ROOT / "MathNetwork" / "Graph" / "semantic-roles.json",
         ROOT / "tools" / "ValidateGraph.py",
         ROOT / "tools" / "ValidateReaderMetadata.py",
+        ROOT / "tools" / "ValidateDeclarationNotes.py",
         ROOT / "tools" / "GenerateExactMergeChecks.py",
         ROOT / "tools" / "BuildCatalogue.py",
         ROOT / "tools" / "GenerateComparisonSlices.py",
@@ -35,6 +36,7 @@ def input_paths() -> list[Path]:
         ROOT / "MathNetwork" / "Graph" / "Extract.lean",
         ROOT / "MathNetwork" / "Graph" / "reader-statements.json",
         ROOT / "MathNetwork" / "Graph" / "route-notes.json",
+        ROOT / "MathNetwork" / "Graph" / "declaration-notes.json",
     ]
     paths.extend(sorted((ROOT / "MathNetwork").rglob("*.lean")))
     # Only committed extractor entrypoints participate. A local editor backup

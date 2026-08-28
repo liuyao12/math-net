@@ -80,6 +80,7 @@ if [[ ! -s "$raw_graph_tmp" ]]; then
 fi
 python3 tools/MergeGraph.py --comparisons "$manifest" --route-audit "$route_audit_tmp" --semantic-roles MathNetwork/Graph/semantic-roles.json < "$raw_graph_tmp" > "$project_tmp"
 python3 tools/ValidateGraph.py "$project_tmp" --comparisons "$manifest"
+python3 tools/ValidateDeclarationNotes.py "$project_tmp" MathNetwork/Graph/declaration-notes.json
 python3 tools/GenerateExactMergeChecks.py "$project_tmp" > "$checks_tmp"
 lake env lean "$checks_tmp"
 python3 tools/BuildCatalogue.py < "$project_tmp" > "$catalogue_tmp"
